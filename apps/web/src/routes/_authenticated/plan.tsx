@@ -16,7 +16,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { pricingPlans, includedOnEveryPlan, planComparison, planTiers, tierByKey } from "@/lib/pricing-plans";
+import {
+  pricingPlans,
+  includedOnEveryPlan,
+  planComparison,
+  planTiers,
+  tierByKey,
+} from "@/lib/pricing-plans";
 import { computeProration, rupees, type Proration } from "@/lib/plan-proration";
 import { usePlanSettings } from "@/lib/use-plan";
 import { startPlanChange, confirmPlanPayment, cancelPendingPlanChange } from "@/lib/plan.functions";
@@ -44,10 +50,36 @@ export const Route = createFileRoute("/_authenticated/plan")({
 
 const RAZORPAY_SRC = "https://checkout.razorpay.com/v1/checkout.js";
 
+/** Razorpay ships no types: it is a script tag, so declare only what we pass and read. */
+type RazorpayResult = {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+};
+
+type RazorpayOptions = {
+  key: string;
+  amount: number;
+  currency: string;
+  order_id: string;
+  name: string;
+  description: string;
+  method: Record<string, boolean>;
+  handler: (result: RazorpayResult) => void;
+  modal: { ondismiss: () => void };
+  theme: { color: string };
+};
+
+declare global {
+  interface Window {
+    Razorpay?: new (options: RazorpayOptions) => { open: () => void };
+  }
+}
+
 function loadRazorpay(): Promise<boolean> {
   return new Promise((resolve) => {
     if (typeof window === "undefined") return resolve(false);
-    if ((window as any).Razorpay) return resolve(true);
+    if (window.Razorpay) return resolve(true);
     const s = document.createElement("script");
     s.src = RAZORPAY_SRC;
     s.onload = () => resolve(true);
@@ -106,10 +138,12 @@ function PlanPage() {
       if (res.kind !== "checkout") return res;
 
       const ok = await loadRazorpay();
-      if (!ok) throw new Error("Could not load the payment window. Check your connection and retry.");
+      const Razorpay = window.Razorpay;
+      if (!ok || !Razorpay)
+        throw new Error("Could not load the payment window. Check your connection and retry.");
 
       await new Promise<void>((resolve, reject) => {
-        const rzp = new (window as any).Razorpay({
+        const rzp = new Razorpay({
           key: res.keyId,
           amount: res.amount,
           currency: res.currency,
@@ -117,7 +151,7 @@ function PlanPage() {
           name: "PG Manager",
           description: `Upgrade to ${res.planName} (prorated)`,
           method: { upi: true, card: true, netbanking: true, wallet: true },
-          handler: async (r: any) => {
+          handler: async (r) => {
             try {
               await confirm({
                 data: {
@@ -139,7 +173,7 @@ function PlanPage() {
 
       return res;
     },
-    onSuccess: (res: any) => {
+    onSuccess: (res) => {
       setTarget(null);
       refresh();
       if (res.kind === "scheduled") {
@@ -160,11 +194,13 @@ function PlanPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const renewal = data ? new Date(data.current_period_end).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }) : "";
+  const renewal = data
+    ? new Date(data.current_period_end).toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : "";
   const status = data?.plan_status ?? "trial";
 
   return (
@@ -173,7 +209,8 @@ function PlanPage() {
         <div>
           <h1 className="page-title">Your plan and billing</h1>
           <p className="page-subtitle">
-            Priced for what you actually run. Upgrades are prorated to the day, downgrades take effect at renewal.
+            Priced for what you actually run. Upgrades are prorated to the day, downgrades take
+            effect at renewal.
           </p>
         </div>
         <Button asChild variant="outline" className="h-11 md:h-9">
@@ -192,11 +229,15 @@ function PlanPage() {
             <CardTitle className="flex flex-wrap items-center gap-3">
               Current plan
               <Badge>{currentTier.name}</Badge>
-              <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusTone[status] ?? statusTone['trial']}`}>
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusTone[status] ?? statusTone["trial"]}`}
+              >
                 {statusLabel[status] ?? status}
               </span>
             </CardTitle>
-            <CardDescription>{pricingPlans.find((p) => p.name === currentTier.name)?.sub}</CardDescription>
+            <CardDescription>
+              {pricingPlans.find((p) => p.name === currentTier.name)?.sub}
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-3">
             <div>
@@ -218,7 +259,8 @@ function PlanPage() {
             {data.pending_plan ? (
               <div className="sm:col-span-3 flex flex-col gap-3 rounded-lg border border-dashed p-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm">
-                  Scheduled change: moving to <strong>{tierByKey(data.pending_plan).name}</strong> on {renewal}.
+                  Scheduled change: moving to <strong>{tierByKey(data.pending_plan).name}</strong>{" "}
+                  on {renewal}.
                 </p>
                 <Button
                   variant="outline"
@@ -267,7 +309,9 @@ function PlanPage() {
                   disabled={isCurrent || !data}
                   onClick={() => setTarget(tier.key)}
                 >
-                  {isCurrent ? "Your current plan" : `${isUpgrade ? "Upgrade" : "Downgrade"} to ${tier.name}`}
+                  {isCurrent
+                    ? "Your current plan"
+                    : `${isUpgrade ? "Upgrade" : "Downgrade"} to ${tier.name}`}
                 </Button>
                 <p className="text-xs text-muted-foreground">
                   {isCurrent
@@ -304,7 +348,8 @@ function PlanPage() {
                 </div>
               ))}
               <p className="pt-1 text-xs text-muted-foreground">
-                Calculated on {preview.daysRemaining} of {preview.periodDays} days remaining in the current cycle.
+                Calculated on {preview.daysRemaining} of {preview.periodDays} days remaining in the
+                current cycle.
               </p>
             </div>
           ) : null}
@@ -331,18 +376,18 @@ function PlanPage() {
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
           <p>
-            <strong className="text-foreground">Upgrades</strong> take effect immediately. You pay the price
-            difference only for the days left in your current cycle, so a mid month upgrade never charges a full
-            extra month. Your renewal date does not move.
+            <strong className="text-foreground">Upgrades</strong> take effect immediately. You pay
+            the price difference only for the days left in your current cycle, so a mid month
+            upgrade never charges a full extra month. Your renewal date does not move.
           </p>
           <p>
-            <strong className="text-foreground">Downgrades</strong> are scheduled, not instant. You keep your
-            current features until the renewal date you already paid for, then the lower price applies. Nothing is
-            charged today and no refund is issued.
+            <strong className="text-foreground">Downgrades</strong> are scheduled, not instant. You
+            keep your current features until the renewal date you already paid for, then the lower
+            price applies. Nothing is charged today and no refund is issued.
           </p>
           <p>
-            <strong className="text-foreground">Payments</strong> run through Razorpay and support UPI, cards,
-            netbanking and wallets. Every change is written to your plan change history.
+            <strong className="text-foreground">Payments</strong> run through Razorpay and support
+            UPI, cards, netbanking and wallets. Every change is written to your plan change history.
           </p>
         </CardContent>
       </Card>

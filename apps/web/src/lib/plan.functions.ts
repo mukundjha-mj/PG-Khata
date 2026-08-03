@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Database } from "@/integrations/supabase/types";
 import { computeProration } from "@/lib/plan-proration";
 import { tierByKey } from "@/lib/pricing-plans";
 
@@ -17,7 +19,10 @@ const validPlan = (p: unknown) => {
   return key;
 };
 
-async function loadSettings(supabase: any, adminId: string): Promise<SettingsRow> {
+async function loadSettings(
+  supabase: SupabaseClient<Database>,
+  adminId: string,
+): Promise<SettingsRow> {
   const { data, error } = await supabase
     .from("settings")
     .select("plan, plan_status, current_period_start, current_period_end, pending_plan")
@@ -67,7 +72,11 @@ export const startPlanChange = createServerFn({ method: "POST" })
     if (proration.amountDue <= 0) {
       const { error } = await supabase
         .from("settings")
-        .update({ plan: data.toPlan, pending_plan: null, plan_updated_at: new Date().toISOString() })
+        .update({
+          plan: data.toPlan,
+          pending_plan: null,
+          plan_updated_at: new Date().toISOString(),
+        })
         .eq("admin_id", userId);
       if (error) throw error;
       await supabase.from("plan_change_history").insert({
@@ -101,10 +110,7 @@ export const startPlanChange = createServerFn({ method: "POST" })
     });
     if (payErr) throw payErr;
 
-    await supabase
-      .from("settings")
-      .update({ pending_plan: data.toPlan })
-      .eq("admin_id", userId);
+    await supabase.from("settings").update({ pending_plan: data.toPlan }).eq("admin_id", userId);
 
     return {
       kind: "checkout" as const,
