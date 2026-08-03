@@ -48,13 +48,20 @@ const DB: Record<string, Row[]> = {
       due_date_offset_days: 5,
       reminder_days_before: 3,
       remind_on_due_date: true,
+      upi_vpa: "asha@okhdfcbank",
+      upi_payee_name: "A House PG",
+      brand_name: "A House",
     },
+    // Owner B deliberately has no UPI ID: reminders must still send.
     {
       admin_id: OWNER_B,
       electricity_rate_per_unit: 9,
       due_date_offset_days: 5,
       reminder_days_before: 3,
       remind_on_due_date: true,
+      upi_vpa: null,
+      upi_payee_name: null,
+      brand_name: "B House",
     },
   ],
   bills: [
@@ -149,8 +156,8 @@ vi.mock("@supabase/supabase-js", () => ({
 }));
 
 vi.mock("@/lib/email.server", () => ({
-  sendTenantEmail: vi.fn(async (_c: unknown, args: { billId: string }) => {
-    written.push({ table: "__email", rows: [{ billId: args.billId }] });
+  sendTenantEmail: vi.fn(async (_c: unknown, args: { billId: string; html: string }) => {
+    written.push({ table: "__email", rows: [{ billId: args.billId, html: args.html }] });
     return { sent: true };
   }),
 }));
@@ -219,5 +226,31 @@ describe("runPaymentReminders cross-owner isolation", () => {
 
     expect(result.candidates).toBe(0);
     expect(written).toHaveLength(0);
+  });
+});
+
+describe("reminder UPI pay link", () => {
+  it("embeds the owner's own VPA and the outstanding balance", async () => {
+    const { runPaymentReminders } = await import("@/lib/reminders.server");
+    await runPaymentReminders({ today: "2026-07-10", adminId: OWNER_A });
+
+    const html = String(
+      written.filter((w) => w.table === "__email").flatMap((w) => w.rows)[0]?.["html"] ?? "",
+    );
+    // The tenant pays owner A directly: the platform must not appear as payee.
+    expect(html).toContain("upi://pay");
+    expect(html).toContain("pa=asha%40okhdfcbank");
+    // bill-a is 5000 outstanding, and UPI needs exactly two decimals.
+    expect(html).toContain("am=5000.00");
+    expect(html).toContain("A%20House%20PG");
+  });
+
+  it("still sends the reminder when the owner has set no UPI ID", async () => {
+    const { runPaymentReminders } = await import("@/lib/reminders.server");
+    await runPaymentReminders({ today: "2026-07-10", adminId: OWNER_B });
+
+    const emails = written.filter((w) => w.table === "__email").flatMap((w) => w.rows);
+    expect(emails).toHaveLength(1);
+    expect(String(emails[0]?.["html"])).not.toContain("upi://pay");
   });
 });

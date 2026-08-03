@@ -9,6 +9,7 @@ import {
   type ReminderKind,
 } from "@/lib/reminder-message";
 import { sendTenantEmail } from "@/lib/email.server";
+import { buildBillNote, tryBuildUpiIntent } from "@/lib/upi";
 
 /** Minimum gap between two overdue reminders for the same bill. */
 const OVERDUE_EVERY_DAYS = 3;
@@ -110,7 +111,11 @@ export async function runPaymentReminders(
 
   const openBillIds = open.map((b) => b.id);
   const [settingsRes, tenantsRes, logsRes, roomsRes] = await Promise.all([
-    supabase.from("settings").select("admin_id, reminder_days_before, remind_on_due_date"),
+    supabase
+      .from("settings")
+      .select(
+        "admin_id, reminder_days_before, remind_on_due_date, upi_vpa, upi_payee_name, brand_name",
+      ),
     supabase.from("tenants").select("id, full_name, email, room_id, status"),
     supabase
       .from("notification_logs")
@@ -191,15 +196,32 @@ export async function runPaymentReminders(
       continue;
     }
 
+    const roomNumber = roomById.get(tenant.room_id)?.room_number ?? "-";
+    const balance = Number(bill.total_amount) - Number(bill.paid_amount);
+
     const data: ReminderData = {
       tenantName: tenant.full_name,
       propertyName: property.name,
-      roomNumber: roomById.get(tenant.room_id)?.room_number ?? "-",
+      roomNumber,
       monthLabel: monthLabel(bill.bill_month),
-      balance: Number(bill.total_amount) - Number(bill.paid_amount),
+      balance,
       dueDate,
       kind,
       daysOverdue: Math.max(0, -diff),
+      // Money moves tenant -> owner directly. A bad VPA or an out-of-range
+      // balance must not abort the whole run: the reminder is still worth
+      // sending without a pay link.
+      ...(() => {
+        const intent = settings?.upi_vpa
+          ? tryBuildUpiIntent({
+              vpa: settings.upi_vpa,
+              payeeName: settings.upi_payee_name || settings.brand_name || property.name,
+              amount: balance,
+              note: buildBillNote(monthLabel(bill.bill_month), roomNumber),
+            })
+          : null;
+        return intent ? { upiIntent: intent } : {};
+      })(),
     };
 
     let email = false;

@@ -540,6 +540,8 @@ export type Database = {
           reminder_days_before: number;
           theme_preference: string;
           updated_at: string;
+          upi_payee_name: string | null;
+          upi_vpa: string | null;
           whatsapp_api_url: string;
           whatsapp_country_code: string;
           whatsapp_enabled: boolean;
@@ -565,6 +567,8 @@ export type Database = {
           reminder_days_before?: number;
           theme_preference?: string;
           updated_at?: string;
+          upi_payee_name?: string | null;
+          upi_vpa?: string | null;
           whatsapp_api_url?: string;
           whatsapp_country_code?: string;
           whatsapp_enabled?: boolean;
@@ -590,6 +594,8 @@ export type Database = {
           reminder_days_before?: number;
           theme_preference?: string;
           updated_at?: string;
+          upi_payee_name?: string | null;
+          upi_vpa?: string | null;
           whatsapp_api_url?: string;
           whatsapp_country_code?: string;
           whatsapp_enabled?: boolean;

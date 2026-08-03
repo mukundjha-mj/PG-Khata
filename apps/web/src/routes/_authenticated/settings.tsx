@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { LogOut } from "lucide-react";
+import { LogOut, QrCode } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { isValidVpa } from "@/lib/upi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +33,8 @@ type Draft = {
   due_date_offset_days: number;
   reminder_days_before: number;
   remind_on_due_date: boolean;
+  upi_vpa: string;
+  upi_payee_name: string;
 };
 
 function SettingsPage() {
@@ -55,6 +58,8 @@ function SettingsPage() {
         due_date_offset_days: data.due_date_offset_days,
         reminder_days_before: data.reminder_days_before,
         remind_on_due_date: data.remind_on_due_date,
+        upi_vpa: data.upi_vpa ?? "",
+        upi_payee_name: data.upi_payee_name ?? "",
       });
     }
   }, [data]);
@@ -65,9 +70,25 @@ function SettingsPage() {
       const { data: userData } = await supabase.auth.getUser();
       const adminId = userData.user?.id;
       if (!adminId) throw new Error("Not signed in");
-      const { error } = await supabase
-        .from("settings")
-        .upsert({ admin_id: adminId, ...draft }, { onConflict: "admin_id" });
+
+      const vpa = draft.upi_vpa.trim();
+      // Caught here so the owner sees which field is wrong, rather than a
+      // constraint violation from settings_upi_vpa_format.
+      if (vpa && !isValidVpa(vpa)) {
+        throw new Error("That UPI ID does not look right. It should look like name@bank.");
+      }
+      const payeeName = draft.upi_payee_name.trim();
+
+      const { error } = await supabase.from("settings").upsert(
+        {
+          admin_id: adminId,
+          ...draft,
+          // Empty strings would fail the VPA format check; absent means absent.
+          upi_vpa: vpa || null,
+          upi_payee_name: payeeName || null,
+        },
+        { onConflict: "admin_id" },
+      );
       if (error) throw error;
     },
     onSuccess: () => {
@@ -164,6 +185,76 @@ function SettingsPage() {
       )}
 
       <BrandingSettingsCard />
+
+      {isLoading || !draft ? null : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Collect rent by UPI</CardTitle>
+            <CardDescription>
+              Tenants get a Pay button in every reminder that opens their UPI app with the amount
+              filled in. Money goes straight from the tenant to your bank account — PGKhata never
+              holds it, and there are no transaction charges.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="s-vpa">Your UPI ID</Label>
+                <Input
+                  id="s-vpa"
+                  placeholder="yourname@okhdfcbank"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={draft.upi_vpa}
+                  onChange={(e) => setDraft({ ...draft, upi_vpa: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Copy this from your GPay, PhonePe or Paytm app.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="s-payee">Name shown to tenants</Label>
+                <Input
+                  id="s-payee"
+                  placeholder="Sunrise PG"
+                  value={draft.upi_payee_name}
+                  onChange={(e) => setDraft({ ...draft, upi_payee_name: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">Leave blank to use your brand name.</p>
+              </div>
+            </div>
+
+            {draft.upi_vpa.trim() ? (
+              isValidVpa(draft.upi_vpa) ? (
+                <div className="flex items-center gap-3 rounded-md border border-border bg-muted/40 px-3 py-2.5">
+                  <QrCode className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">
+                    Reminders will show a Pay button for{" "}
+                    <span className="font-medium text-foreground">{draft.upi_vpa.trim()}</span>.
+                    Send yourself a test bill to check it opens correctly.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-destructive">
+                  That does not look like a UPI ID. It should look like name@bank.
+                </p>
+              )
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Without a UPI ID, reminders still go out — just without a Pay button.
+              </p>
+            )}
+
+            <Button
+              className="w-full sm:w-auto"
+              onClick={() => save.mutate()}
+              disabled={save.isPending}
+            >
+              Save UPI details
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

@@ -11,7 +11,22 @@ export type ReminderData = {
   dueDate: string | null;
   kind: ReminderKind;
   daysOverdue: number;
+  /** Direct owner-collection link. Absent when the owner has set no UPI ID. */
+  upiIntent?: string;
 };
+
+/**
+ * Tenant and property names are owner-supplied and land inside an HTML email,
+ * so they cannot be interpolated raw.
+ */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 function headline(d: ReminderData): string {
   if (d.kind === "before-due") {
@@ -37,12 +52,14 @@ export function buildReminderMessage(d: ReminderData): string {
     `${d.propertyName} · Room ${d.roomNumber}`,
     `Balance due: ${formatMoney(d.balance)}`,
     d.dueDate ? `Due date: ${formatDate(d.dueDate)}` : null,
+    d.upiIntent ? "" : null,
+    d.upiIntent ? `Pay by UPI: ${d.upiIntent}` : null,
     "",
     d.kind === "overdue"
       ? "Please clear the balance at the earliest. Reply here if you have already paid."
       : "Please pay on or before the due date. Reply here if anything looks wrong.",
   ]
-    .filter(Boolean)
+    .filter((line) => line !== null)
     .join("\n");
 }
 
@@ -60,14 +77,22 @@ export function buildReminderEmailHtml(d: ReminderData): string {
       ${d.kind === "overdue" ? "Payment overdue" : "Payment reminder"}
     </h1>
     <p style="margin:0 0 16px;font-size:14px;color:#6b7280;">
-      ${d.propertyName} · Room ${d.roomNumber} · ${d.monthLabel}
+      ${escapeHtml(d.propertyName)} · Room ${escapeHtml(d.roomNumber)} · ${escapeHtml(d.monthLabel)}
     </p>
-    <p style="margin:0 0 16px;font-size:14px;color:#111827;">Hi ${d.tenantName},</p>
-    <p style="margin:0 0 16px;font-size:14px;color:#4b5563;">${headline(d)}</p>
+    <p style="margin:0 0 16px;font-size:14px;color:#111827;">Hi ${escapeHtml(d.tenantName)},</p>
+    <p style="margin:0 0 16px;font-size:14px;color:#4b5563;">${escapeHtml(headline(d))}</p>
     <table style="width:100%;border-collapse:collapse;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;margin-bottom:16px;">
       ${row("Balance due", formatMoney(d.balance), true)}
       ${d.dueDate ? row("Due date", formatDate(d.dueDate)) : ""}
     </table>
+    ${
+      d.upiIntent
+        ? `<a href="${escapeHtml(d.upiIntent)}" style="display:block;padding:12px 16px;margin-bottom:16px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:8px;text-align:center;font-size:15px;font-weight:600;">Pay ${formatMoney(d.balance)} by UPI</a>
+    <p style="margin:0 0 16px;font-size:12px;color:#6b7280;text-align:center;">
+      Opens your UPI app with the amount filled in. Paid directly to your PG owner.
+    </p>`
+        : ""
+    }
     <p style="margin:0;font-size:13px;color:#6b7280;">
       Reply to this email if you have already paid or something looks wrong.
     </p>
