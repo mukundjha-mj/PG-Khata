@@ -77,8 +77,6 @@ function SettingsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-
-
   async function signOut() {
     await queryClient.cancelQueries();
     queryClient.clear();
@@ -154,17 +152,16 @@ function SettingsPage() {
                 onCheckedChange={(v) => setDraft({ ...draft, remind_on_due_date: v })}
               />
             </div>
-            <Button className="w-full sm:w-auto" onClick={() => save.mutate()} disabled={save.isPending}>
+            <Button
+              className="w-full sm:w-auto"
+              onClick={() => save.mutate()}
+              disabled={save.isPending}
+            >
               Save settings
             </Button>
           </CardContent>
         </Card>
       )}
-
-
-
-
-
 
       <BrandingSettingsCard />
 

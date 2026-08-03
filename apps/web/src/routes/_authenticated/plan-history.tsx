@@ -35,10 +35,14 @@ export const Route = createFileRoute("/_authenticated/plan-history")({
       { title: "Plan change history - PG Manager" },
       {
         name: "description",
-        content: "Every upgrade and downgrade on your account with dates, amounts, receipts and the plans you moved between.",
+        content:
+          "Every upgrade and downgrade on your account with dates, amounts, receipts and the plans you moved between.",
       },
       { property: "og:title", content: "Plan change history - PG Manager" },
-      { property: "og:description", content: "Audit trail and receipts for your PG Manager subscription changes." },
+      {
+        property: "og:description",
+        content: "Audit trail and receipts for your PG Manager subscription changes.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -77,7 +81,8 @@ function PlanHistoryPage() {
         <div>
           <h1 className="page-title">Plan change history</h1>
           <p className="page-subtitle">
-            Every upgrade and downgrade, what you moved from and to, what it cost, and a receipt for each change.
+            Every upgrade and downgrade, what you moved from and to, what it cost, and a receipt for
+            each change.
           </p>
         </div>
         <Button asChild variant="outline" className="h-11 md:h-9">
@@ -123,24 +128,26 @@ function PlanHistoryPage() {
                     <p className="font-medium">{rupees(Number(row.amount))}</p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Credit applied</p>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Credit applied
+                    </p>
                     <p className="font-medium">{rupees(Number(row.credit_applied))}</p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Receipt no.</p>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Receipt no.
+                    </p>
                     <p className="font-medium">{receiptNumber(row)}</p>
                   </div>
                 </div>
                 {row.note ? <p className="text-muted-foreground">{row.note}</p> : null}
                 {row.payment_id ? (
-                  <p className="text-xs text-muted-foreground">Payment reference: {row.payment_id}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Payment reference: {row.payment_id}
+                  </p>
                 ) : null}
                 <div className="flex flex-col gap-2 pt-1 sm:flex-row">
-                  <Button
-                    variant="outline"
-                    className="h-11 md:h-9"
-                    onClick={() => setActive(row)}
-                  >
+                  <Button variant="outline" className="h-11 md:h-9" onClick={() => setActive(row)}>
                     <Receipt className="mr-2 h-4 w-4" />
                     View receipt
                   </Button>

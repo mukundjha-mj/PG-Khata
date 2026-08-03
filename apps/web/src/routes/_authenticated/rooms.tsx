@@ -199,9 +199,7 @@ function RoomsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="page-title">Room Inventory &amp; Occupancy</h1>
-          <p className="page-subtitle">
-            Inventory, capacity and rent for each room.
-          </p>
+          <p className="page-subtitle">Inventory, capacity and rent for each room.</p>
         </div>
         <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto">
           <Select value={propertyFilter} onValueChange={setPropertyFilter}>
@@ -236,81 +234,91 @@ function RoomsPage() {
               <DensityToggle density={density} onChange={setDensity} />
             </div>
             <ResponsiveTable
-              labels={["Room","Property","Type","Occupancy","Rent",""]}
+              labels={["Room", "Property", "Type", "Occupancy", "Rent", ""]}
               density={density}
               compactColumns={3}
               virtualize
             >
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Room</TableHead>
-                  <TableHead>Property</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Occupancy</TableHead>
-                  <TableHead className="text-right">Rent</TableHead>
-                  <TableHead className="w-24" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rooms.length === 0 && (
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={6} className="p-0">
-                      <EmptyState
-                        title={properties?.length ? "No rooms in this view" : "No properties yet"}
-                        description={
-                          properties?.length
-                            ? "Switch the property filter or add a room to get started."
-                            : "Add a property first, then create rooms inside it."
-                        }
-                      />
-                    </TableCell>
+                    <TableHead>Room</TableHead>
+                    <TableHead>Property</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Occupancy</TableHead>
+                    <TableHead className="text-right">Rent</TableHead>
+                    <TableHead className="w-24" />
                   </TableRow>
-                )}
-                {rooms.map((room) => {
-                  const occ = occupancy.get(room.id) ?? 0;
-                  const state = occupancyOf(occ, room.capacity);
-                  return (
-                    <TableRow key={room.id}>
-                      <TableCell className="font-medium">{room.room_number}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {propertyName.get(room.property_id) ?? "-"}
-                      </TableCell>
-                      <TableCell className="capitalize text-muted-foreground">
-                        {room.room_type}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={
-                            state === "full"
-                              ? "border-transparent bg-success/15 text-success"
-                              : state === "partial"
-                                ? "border-transparent bg-warning/20 text-warning-foreground"
-                                : "text-muted-foreground"
+                </TableHeader>
+                <TableBody>
+                  {rooms.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="p-0">
+                        <EmptyState
+                          title={properties?.length ? "No rooms in this view" : "No properties yet"}
+                          description={
+                            properties?.length
+                              ? "Switch the property filter or add a room to get started."
+                              : "Add a property first, then create rooms inside it."
                           }
-                        >
-                          {occ}/{room.capacity}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatMoney(room.monthly_rent)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" aria-label={`Edit room ${room.room_number}`} onClick={() => openEdit(room)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" aria-label={`Delete room ${room.room_number}`} onClick={() => setDeleteTarget(room)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        />
                       </TableCell>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                  )}
+                  {rooms.map((room) => {
+                    const occ = occupancy.get(room.id) ?? 0;
+                    const state = occupancyOf(occ, room.capacity);
+                    return (
+                      <TableRow key={room.id}>
+                        <TableCell className="font-medium">{room.room_number}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {propertyName.get(room.property_id) ?? "-"}
+                        </TableCell>
+                        <TableCell className="capitalize text-muted-foreground">
+                          {room.room_type}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={
+                              state === "full"
+                                ? "border-transparent bg-success/15 text-success"
+                                : state === "partial"
+                                  ? "border-transparent bg-warning/20 text-warning-foreground"
+                                  : "text-muted-foreground"
+                            }
+                          >
+                            {occ}/{room.capacity}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatMoney(room.monthly_rent)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`Edit room ${room.room_number}`}
+                              onClick={() => openEdit(room)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`Delete room ${room.room_number}`}
+                              onClick={() => setDeleteTarget(room)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </ResponsiveTable>
           </CardContent>
         </Card>
@@ -320,7 +328,9 @@ function RoomsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editing ? "Edit room" : "Add room"}</DialogTitle>
-            <DialogDescription>Rent here is the default for tenants in this room.</DialogDescription>
+            <DialogDescription>
+              Rent here is the default for tenants in this room.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
@@ -355,9 +365,7 @@ function RoomsPage() {
                 <Label>Type</Label>
                 <Select
                   value={draft.room_type}
-                  onValueChange={(v) =>
-                    setDraft({ ...draft, room_type: v as Draft["room_type"] })
-                  }
+                  onValueChange={(v) => setDraft({ ...draft, room_type: v as Draft["room_type"] })}
                 >
                   <SelectTrigger>
                     <SelectValue />

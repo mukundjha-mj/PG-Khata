@@ -40,7 +40,10 @@ export const Route = createFileRoute("/_authenticated/readings")({
           "Log monthly electricity meter readings per room; units and amounts flow straight into the next bill run.",
       },
       { property: "og:title", content: "Meter readings - PG Manager" },
-      { property: "og:description", content: "Room-wise electricity meter log for accurate billing." },
+      {
+        property: "og:description",
+        content: "Room-wise electricity meter log for accurate billing.",
+      },
     ],
   }),
   component: ReadingsPage,
@@ -213,38 +216,38 @@ function ReadingsPage() {
               description="Create rooms before logging electricity meter readings."
             />
           ) : (
-            <ResponsiveTable labels={["Room","Last reading","On","Units","Amount"]} virtualize>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Room</TableHead>
-                  <TableHead>Last reading</TableHead>
-                  <TableHead>On</TableHead>
-                  <TableHead>Units</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rooms.map((r) => {
-                  const last = latestByRoom.get(r.id);
-                  return (
-                    <TableRow key={r.id}>
-                      <TableCell className="font-medium">{roomLabel(r.id)}</TableCell>
-                      <TableCell>{last ? last.meter_reading : "-"}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {last ? formatDate(last.reading_date) : "-"}
-                      </TableCell>
-                      <TableCell>{last?.units_consumed_since_previous ?? "-"}</TableCell>
-                      <TableCell className="text-right">
-                        {last?.calculated_amount != null
-                          ? formatMoney(last.calculated_amount)
-                          : "-"}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <ResponsiveTable labels={["Room", "Last reading", "On", "Units", "Amount"]} virtualize>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Room</TableHead>
+                    <TableHead>Last reading</TableHead>
+                    <TableHead>On</TableHead>
+                    <TableHead>Units</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rooms.map((r) => {
+                    const last = latestByRoom.get(r.id);
+                    return (
+                      <TableRow key={r.id}>
+                        <TableCell className="font-medium">{roomLabel(r.id)}</TableCell>
+                        <TableCell>{last ? last.meter_reading : "-"}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {last ? formatDate(last.reading_date) : "-"}
+                        </TableCell>
+                        <TableCell>{last?.units_consumed_since_previous ?? "-"}</TableCell>
+                        <TableCell className="text-right">
+                          {last?.calculated_amount != null
+                            ? formatMoney(last.calculated_amount)
+                            : "-"}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </ResponsiveTable>
           )}
         </CardContent>
@@ -263,42 +266,42 @@ function ReadingsPage() {
               description="Record a meter reading above to start tracking electricity usage."
             />
           ) : (
-            <ResponsiveTable labels={["Date","Room","Meter","Units","Amount",""]} virtualize>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Room</TableHead>
-                  <TableHead>Meter</TableHead>
-                  <TableHead>Units</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(readings ?? []).map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell>{formatDate(r.reading_date)}</TableCell>
-                    <TableCell className="font-medium">{roomLabel(r.room_id)}</TableCell>
-                    <TableCell>{r.meter_reading}</TableCell>
-                    <TableCell>{r.units_consumed_since_previous ?? "-"}</TableCell>
-                    <TableCell>
-                      {r.calculated_amount != null ? formatMoney(r.calculated_amount) : "-"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        aria-label="Delete reading"
-                        onClick={() => removeReading.mutate(r.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+            <ResponsiveTable labels={["Date", "Room", "Meter", "Units", "Amount", ""]} virtualize>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Room</TableHead>
+                    <TableHead>Meter</TableHead>
+                    <TableHead>Units</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {(readings ?? []).map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell>{formatDate(r.reading_date)}</TableCell>
+                      <TableCell className="font-medium">{roomLabel(r.room_id)}</TableCell>
+                      <TableCell>{r.meter_reading}</TableCell>
+                      <TableCell>{r.units_consumed_since_previous ?? "-"}</TableCell>
+                      <TableCell>
+                        {r.calculated_amount != null ? formatMoney(r.calculated_amount) : "-"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label="Delete reading"
+                          onClick={() => removeReading.mutate(r.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </ResponsiveTable>
           )}
         </CardContent>

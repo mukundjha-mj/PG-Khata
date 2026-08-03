@@ -16,7 +16,9 @@ export const previewTenantBillFn = createServerFn({ method: "POST" })
 /** Re-run billing for a single tenant + month, leaving every other bill alone. */
 export const rerunTenantBillFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { tenantId: string; month: string; force?: boolean; notify?: boolean }) => input)
+  .inputValidator(
+    (input: { tenantId: string; month: string; force?: boolean; notify?: boolean }) => input,
+  )
   .handler(async ({ data, context }) => {
     const { isValidMonth } = await import("@/lib/billing-run.server");
     const { rerunTenantBill } = await import("@/lib/tenant-billing.server");
@@ -40,4 +42,3 @@ export const rerunTenantBillFn = createServerFn({ method: "POST" })
     });
     return { ...result, notified };
   });
-

@@ -147,6 +147,5 @@ function RootComponent() {
         <Toaster richColors position="top-right" />
       </BrandingProvider>
     </QueryClientProvider>
-
   );
 }

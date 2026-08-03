@@ -114,7 +114,12 @@ export function BrandingSettingsCard() {
         <div className="space-y-2">
           <Label>Logo</Label>
           <div className="flex flex-wrap items-center gap-3 rounded-md border border-border p-3">
-            <BrandMark size={44} src={draft.brand_logo_url} className="rounded-[9px]" alt="Logo preview" />
+            <BrandMark
+              size={44}
+              src={draft.brand_logo_url}
+              className="rounded-[9px]"
+              alt="Logo preview"
+            />
             <input
               ref={fileRef}
               type="file"
@@ -122,7 +127,12 @@ export function BrandingSettingsCard() {
               className="hidden"
               onChange={(e) => onPickLogo(e.target.files?.[0])}
             />
-            <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => fileRef.current?.click()}
+            >
               <Upload className="mr-1.5 h-4 w-4" /> Upload
             </Button>
             {draft.brand_logo_url && (

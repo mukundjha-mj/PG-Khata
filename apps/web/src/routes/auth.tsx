@@ -47,7 +47,6 @@ function AuthPage() {
     },
   });
 
-
   useEffect(() => {
     if (adminExists === false) setMode("setup");
   }, [adminExists]);
@@ -102,9 +101,7 @@ function AuthPage() {
         <div className="mb-7 flex flex-col items-center gap-3 text-center">
           <BrandMark size={44} priority className="rounded-xl" />
           <div className="space-y-1">
-            <h1 className="page-title text-foreground">
-              PG Manager - Owner Sign In
-            </h1>
+            <h1 className="page-title text-foreground">PG Manager - Owner Sign In</h1>
             <p className="text-sm text-muted-foreground">
               The workspace for tenants, rooms and rent billing
             </p>

@@ -24,11 +24,9 @@ export type Proration = {
 };
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
-const days = (from: Date, to: Date) =>
-  Math.round((to.getTime() - from.getTime()) / 86_400_000);
+const days = (from: Date, to: Date) => Math.round((to.getTime() - from.getTime()) / 86_400_000);
 
-export const rupees = (n: number) =>
-  `Rs. ${Math.round(n).toLocaleString("en-IN")}`;
+export const rupees = (n: number) => `Rs. ${Math.round(n).toLocaleString("en-IN")}`;
 
 export function computeProration(input: {
   from: string;
@@ -62,14 +60,23 @@ export function computeProration(input: {
   const lines =
     direction === "upgrade"
       ? [
-          { label: `${toTier.name} for ${daysRemaining} remaining days`, value: rupees(newPlanRemainingCost) },
+          {
+            label: `${toTier.name} for ${daysRemaining} remaining days`,
+            value: rupees(newPlanRemainingCost),
+          },
           { label: `Unused ${fromTier.name} credit`, value: `- ${rupees(creditApplied)}` },
           { label: "Payable now", value: rupees(amountDue) },
-          { label: `From ${end.toLocaleDateString("en-IN")}, billed monthly`, value: `${rupees(toTier.amount)}/month` },
+          {
+            label: `From ${end.toLocaleDateString("en-IN")}, billed monthly`,
+            value: `${rupees(toTier.amount)}/month`,
+          },
         ]
       : direction === "downgrade"
         ? [
-            { label: `${fromTier.name} stays active until`, value: end.toLocaleDateString("en-IN") },
+            {
+              label: `${fromTier.name} stays active until`,
+              value: end.toLocaleDateString("en-IN"),
+            },
             { label: "Charged today", value: "Rs. 0" },
             { label: "From next renewal, billed monthly", value: `${rupees(toTier.amount)}/month` },
           ]

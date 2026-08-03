@@ -32,8 +32,6 @@ const items: { title: string; url: string; icon: AnimatedIconName }[] = [
   { title: "Settings", url: "/settings", icon: "line-md:cog-loop" },
 ];
 
-
-
 export function AppSidebar() {
   const { state, isMobile, setOpenMobile } = useSidebar();
   const collapsed = state === "collapsed" && !isMobile;
@@ -66,7 +64,9 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">Workspace</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+            Workspace
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
@@ -88,7 +88,6 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

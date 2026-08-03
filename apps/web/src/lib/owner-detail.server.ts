@@ -35,7 +35,12 @@ export type QuickFacts = {
   lastPaymentAt: string | null;
   lastPaymentAmount: number;
   /** Newest billing runs: the months bills were created for, most recent first. */
-  billingRuns: { billMonth: string; bills: number; firstCreatedAt: string; lastCreatedAt: string }[];
+  billingRuns: {
+    billMonth: string;
+    bills: number;
+    firstCreatedAt: string;
+    lastCreatedAt: string;
+  }[];
 };
 
 /** Small, fast per-owner facts for the directory quick actions. */
@@ -182,7 +187,9 @@ export async function loadOwnerDetail(db: Admin, adminId: string): Promise<Owner
   const [bills, notifications, history, planPayments] = await Promise.all([
     tenantIds.length
       ? db.from("bills").select("id, total_amount, paid_amount").in("tenant_id", tenantIds)
-      : Promise.resolve({ data: [] as { id: string; total_amount: number; paid_amount: number }[] }),
+      : Promise.resolve({
+          data: [] as { id: string; total_amount: number; paid_amount: number }[],
+        }),
     tenantIds.length
       ? db
           .from("notification_logs")
@@ -190,7 +197,9 @@ export async function loadOwnerDetail(db: Admin, adminId: string): Promise<Owner
           .in("tenant_id", tenantIds)
           .order("sent_at", { ascending: false })
           .limit(2000)
-      : Promise.resolve({ data: [] as { id: string; channel: string; status: string; sent_at: string }[] }),
+      : Promise.resolve({
+          data: [] as { id: string; channel: string; status: string; sent_at: string }[],
+        }),
     db
       .from("plan_change_history")
       .select("id, from_plan, to_plan, direction, amount, credit_applied, note, created_at")

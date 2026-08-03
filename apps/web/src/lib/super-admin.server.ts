@@ -48,7 +48,13 @@ export async function loadAccounts(db: Admin): Promise<AccountRow[]> {
     db.from("user_roles").select("user_id, role").eq("role", "super_admin"),
   ]);
 
-  const err = admins.error || settings.error || properties.error || rooms.error || tenants.error || roles.error;
+  const err =
+    admins.error ||
+    settings.error ||
+    properties.error ||
+    rooms.error ||
+    tenants.error ||
+    roles.error;
   if (err) {
     console.error("[super-admin] load failed", err);
     throw new Error("Unable to load accounts");
@@ -241,4 +247,3 @@ export async function loadPlatformStats(db: Admin): Promise<PlatformStats> {
       .reduce((sum, p) => sum + Number(p.amount ?? 0), 0),
   };
 }
-

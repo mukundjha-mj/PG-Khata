@@ -11,7 +11,6 @@ import { generateMonthlyBills } from "@/lib/billing-run.functions";
 import { RerunTenantBillDialog } from "@/components/rerun-tenant-bill-dialog";
 import { DataPagination, usePagination } from "@/components/data-pagination";
 
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FilterBar } from "@/components/filter-bar";
@@ -182,7 +181,6 @@ function BillsPage() {
     return map;
   }, [readings]);
 
-
   const activeTenants = useMemo(
     () => (data?.tenants ?? []).filter((t) => t.status === "active"),
     [data],
@@ -202,10 +200,7 @@ function BillsPage() {
     [data],
   );
 
-  const billedTenantIds = useMemo(
-    () => new Set((bills ?? []).map((b) => b.tenant_id)),
-    [bills],
-  );
+  const billedTenantIds = useMemo(() => new Set((bills ?? []).map((b) => b.tenant_id)), [bills]);
 
   const rate = Number(data?.settings?.electricity_rate_per_unit ?? 0);
   const dueOffset = Number(data?.settings?.due_date_offset_days ?? 10);
@@ -219,9 +214,6 @@ function BillsPage() {
       monthLabel: monthLabel(bill.bill_month),
     };
   }
-
-
-
 
   function buildDrafts() {
     if (!data) return;
@@ -254,7 +246,6 @@ function BillsPage() {
         };
       }),
     );
-
   }
 
   function patchDraft(id: string, patch: Partial<DraftBill>) {
@@ -342,10 +333,7 @@ function BillsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const pendingApproval = useMemo(
-    () => (bills ?? []).filter((b) => b.approved === false),
-    [bills],
-  );
+  const pendingApproval = useMemo(() => (bills ?? []).filter((b) => b.approved === false), [bills]);
 
   const approveBills = useMutation({
     mutationFn: async (ids: string[]) => {
@@ -368,7 +356,8 @@ function BillsPage() {
   const autoRun = useMutation({
     mutationFn: (m: string) => runBilling({ data: { month: m } }),
     onSuccess: (r) => {
-      if (r.created > 0) toast.success(`${r.created} bill(s) issued, ${r.skipped} already existed.`);
+      if (r.created > 0)
+        toast.success(`${r.created} bill(s) issued, ${r.skipped} already existed.`);
       else toast.info(`Nothing new - ${r.skipped} tenant(s) already billed for this month.`);
       queryClient.invalidateQueries({ queryKey: ["bills", month] });
       setDrafts(null);
@@ -443,8 +432,12 @@ function BillsPage() {
               </SelectContent>
             </Select>
           </div>
-          <Button className="w-full sm:w-auto" variant="outline" onClick={buildDrafts} disabled={!data || data.tenants.length === 0}>
-
+          <Button
+            className="w-full sm:w-auto"
+            variant="outline"
+            onClick={buildDrafts}
+            disabled={!data || data.tenants.length === 0}
+          >
             <Zap className="mr-2 h-4 w-4" />
             Draft &amp; review
           </Button>
@@ -458,15 +451,16 @@ function BillsPage() {
             defaultMonth={month}
             monthLabel={monthLabel}
           />
-          <Button className="w-full sm:w-auto" onClick={() => autoRun.mutate(month)} disabled={autoRun.isPending}>
+          <Button
+            className="w-full sm:w-auto"
+            onClick={() => autoRun.mutate(month)}
+            disabled={autoRun.isPending}
+          >
             <ReceiptText className="mr-2 h-4 w-4" />
             {autoRun.isPending ? "Running…" : "Run monthly billing"}
           </Button>
-
         </div>
-
       </div>
-
 
       {pendingApproval.length > 0 && (
         <Card className="border-warning/40 bg-warning/5">
@@ -518,92 +512,92 @@ function BillsPage() {
           </CardHeader>
           <CardContent>
             <ResponsiveTable
-              labels={["Bill","Tenant","Room","Rent","Units","Electricity","Other","Total"]}
+              labels={["Bill", "Tenant", "Room", "Rent", "Units", "Electricity", "Other", "Total"]}
               virtualize
             >
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">Bill</TableHead>
-                  <TableHead>Tenant</TableHead>
-                  <TableHead>Room</TableHead>
-                  <TableHead className="w-32">Rent</TableHead>
-                  <TableHead className="w-28">Units</TableHead>
-                  <TableHead className="w-32">Electricity</TableHead>
-                  <TableHead className="w-32">Other</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {draftsPage.pageRows.map((d) => (
-                  <TableRow key={d.tenant_id} className={d.include ? "" : "opacity-50"}>
-                    <TableCell>
-                      <input
-                        type="checkbox"
-                        aria-label={`Include ${d.tenant_name}`}
-                        className="h-4 w-4 accent-primary"
-                        checked={d.include}
-                        onChange={(e) => patchDraft(d.tenant_id, { include: e.target.checked })}
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">{d.tenant_name}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {d.room_number}
-                      {d.property_id && (
-                        <span className="ml-1 text-xs">· {propertyName.get(d.property_id)}</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={d.rent_amount}
-                        onChange={(e) =>
-                          patchDraft(d.tenant_id, { rent_amount: Number(e.target.value) || 0 })
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={d.electricity_units}
-                        onChange={(e) =>
-                          patchDraft(d.tenant_id, {
-                            electricity_units: Number(e.target.value) || 0,
-                          })
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={d.electricity_amount}
-                        onChange={(e) =>
-                          patchDraft(d.tenant_id, {
-                            electricity_amount: Number(e.target.value) || 0,
-                          })
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={d.other_charges}
-                        onChange={(e) =>
-                          patchDraft(d.tenant_id, { other_charges: Number(e.target.value) || 0 })
-                        }
-                      />
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatMoney(d.rent_amount + d.electricity_amount + d.other_charges)}
-                    </TableCell>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-10">Bill</TableHead>
+                    <TableHead>Tenant</TableHead>
+                    <TableHead>Room</TableHead>
+                    <TableHead className="w-32">Rent</TableHead>
+                    <TableHead className="w-28">Units</TableHead>
+                    <TableHead className="w-32">Electricity</TableHead>
+                    <TableHead className="w-32">Other</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {draftsPage.pageRows.map((d) => (
+                    <TableRow key={d.tenant_id} className={d.include ? "" : "opacity-50"}>
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          aria-label={`Include ${d.tenant_name}`}
+                          className="h-4 w-4 accent-primary"
+                          checked={d.include}
+                          onChange={(e) => patchDraft(d.tenant_id, { include: e.target.checked })}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">{d.tenant_name}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {d.room_number}
+                        {d.property_id && (
+                          <span className="ml-1 text-xs">· {propertyName.get(d.property_id)}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={d.rent_amount}
+                          onChange={(e) =>
+                            patchDraft(d.tenant_id, { rent_amount: Number(e.target.value) || 0 })
+                          }
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={d.electricity_units}
+                          onChange={(e) =>
+                            patchDraft(d.tenant_id, {
+                              electricity_units: Number(e.target.value) || 0,
+                            })
+                          }
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={d.electricity_amount}
+                          onChange={(e) =>
+                            patchDraft(d.tenant_id, {
+                              electricity_amount: Number(e.target.value) || 0,
+                            })
+                          }
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={d.other_charges}
+                          onChange={(e) =>
+                            patchDraft(d.tenant_id, { other_charges: Number(e.target.value) || 0 })
+                          }
+                        />
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatMoney(d.rent_amount + d.electricity_amount + d.other_charges)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </ResponsiveTable>
             <DataPagination
               page={draftsPage.page}
@@ -615,8 +609,8 @@ function BillsPage() {
               label="draft bills"
             />
             <p className="mt-3 text-xs text-muted-foreground">
-              Electricity is priced at {formatMoney(rate)}/unit and due dates are set{" "}
-              {dueOffset} days after the cycle ends - both come from Settings.
+              Electricity is priced at {formatMoney(rate)}/unit and due dates are set {dueOffset}{" "}
+              days after the cycle ends - both come from Settings.
             </p>
           </CardContent>
         </Card>
@@ -637,49 +631,69 @@ function BillsPage() {
             chips={billChips}
             onReset={resetBillFilters}
             quickChips={[
-              { label: "All", active: statusFilter === "all", onSelect: () => setStatusFilter("all") },
-              { label: "Pending", active: statusFilter === "pending", onSelect: () => setStatusFilter("pending") },
-              { label: "Paid", active: statusFilter === "paid", onSelect: () => setStatusFilter("paid") },
-              { label: "Partial", active: statusFilter === "partial", onSelect: () => setStatusFilter("partial") },
-              { label: "Awaiting approval", active: statusFilter === "unapproved", onSelect: () => setStatusFilter("unapproved") },
+              {
+                label: "All",
+                active: statusFilter === "all",
+                onSelect: () => setStatusFilter("all"),
+              },
+              {
+                label: "Pending",
+                active: statusFilter === "pending",
+                onSelect: () => setStatusFilter("pending"),
+              },
+              {
+                label: "Paid",
+                active: statusFilter === "paid",
+                onSelect: () => setStatusFilter("paid"),
+              },
+              {
+                label: "Partial",
+                active: statusFilter === "partial",
+                onSelect: () => setStatusFilter("partial"),
+              },
+              {
+                label: "Awaiting approval",
+                active: statusFilter === "unapproved",
+                onSelect: () => setStatusFilter("unapproved"),
+              },
             ]}
           >
-          <div className="relative sm:w-44">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              aria-label="Search issued bills by tenant"
-              className="w-full pl-8"
-              placeholder="Search tenant"
-              value={billSearch}
-              onChange={(e) => setBillSearch(e.target.value)}
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-40" aria-label="Filter bills by status">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="paid">Paid</SelectItem>
-              <SelectItem value="partial">Partial</SelectItem>
-              <SelectItem value="unapproved">Awaiting approval</SelectItem>
-            </SelectContent>
-          </Select>
+            <div className="relative sm:w-44">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                aria-label="Search issued bills by tenant"
+                className="w-full pl-8"
+                placeholder="Search tenant"
+                value={billSearch}
+                onChange={(e) => setBillSearch(e.target.value)}
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-40" aria-label="Filter bills by status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="partial">Partial</SelectItem>
+                <SelectItem value="unapproved">Awaiting approval</SelectItem>
+              </SelectContent>
+            </Select>
 
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full sm:w-auto"
-            disabled={(bills ?? []).length === 0}
-            onClick={() => {
-              downloadMonthPdf(bills ?? [], pdfContext, month);
-              toast.success(`Exported ${(bills ?? []).length} bills as PDF.`);
-            }}
-          >
-            <FileDown className="mr-2 h-4 w-4" />
-            Export all as PDF
-          </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto"
+              disabled={(bills ?? []).length === 0}
+              onClick={() => {
+                downloadMonthPdf(bills ?? [], pdfContext, month);
+                toast.success(`Exported ${(bills ?? []).length} bills as PDF.`);
+              }}
+            >
+              <FileDown className="mr-2 h-4 w-4" />
+              Export all as PDF
+            </Button>
           </FilterBar>
         </CardHeader>
         <CardContent>
@@ -699,97 +713,96 @@ function BillsPage() {
             />
           ) : (
             <>
-            <div className="mb-2 md:hidden">
-              <DensityToggle density={density} onChange={setDensity} />
-            </div>
-            <ResponsiveTable
-              labels={["Tenant","Rent","Electricity","Total","Due","Status",""]}
-              density={density}
-              compactColumns={3}
-              virtualize
-            >
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tenant</TableHead>
-                  <TableHead>Rent</TableHead>
-                  <TableHead>Electricity</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Due</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {issuedPage.pageRows.map((b) => (
-                  <TableRow key={b.id}>
-                    <TableCell className="font-medium">
-                      {tenantName.get(b.tenant_id) ?? "Tenant"}
-                      {b.approved === false && (
-                        <button
-                          type="button"
-                          className="ml-2 rounded border border-warning/50 bg-warning/15 px-1.5 py-0.5 text-[11px] font-normal text-warning-foreground"
-                          disabled={approveBills.isPending}
-                          onClick={() => approveBills.mutate([b.id])}
-                          title="Click to approve this bill"
-                        >
-                          Awaiting approval
-                        </button>
-                      )}
-                    </TableCell>
-                    <TableCell>{formatMoney(b.rent_amount)}</TableCell>
-                    <TableCell>{formatMoney(b.electricity_amount)}</TableCell>
-                    <TableCell className="font-medium">{formatMoney(b.total_amount)}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatDate(b.due_date)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={STATUS_STYLE[b.status] ?? ""}>
-                        {b.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        {b.status !== "paid" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              markPaid.mutate({
-                                id: b.id,
-                                total_amount: Number(b.total_amount),
-                              })
-                            }
-                          >
-                            <CheckCircle2 className="mr-1 h-4 w-4" />
-                            Mark paid
-                          </Button>
-                        )}
+              <div className="mb-2 md:hidden">
+                <DensityToggle density={density} onChange={setDensity} />
+              </div>
+              <ResponsiveTable
+                labels={["Tenant", "Rent", "Electricity", "Total", "Due", "Status", ""]}
+                density={density}
+                compactColumns={3}
+                virtualize
+              >
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Tenant</TableHead>
+                      <TableHead>Rent</TableHead>
+                      <TableHead>Electricity</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Due</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {issuedPage.pageRows.map((b) => (
+                      <TableRow key={b.id}>
+                        <TableCell className="font-medium">
+                          {tenantName.get(b.tenant_id) ?? "Tenant"}
+                          {b.approved === false && (
+                            <button
+                              type="button"
+                              className="ml-2 rounded border border-warning/50 bg-warning/15 px-1.5 py-0.5 text-[11px] font-normal text-warning-foreground"
+                              disabled={approveBills.isPending}
+                              onClick={() => approveBills.mutate([b.id])}
+                              title="Click to approve this bill"
+                            >
+                              Awaiting approval
+                            </button>
+                          )}
+                        </TableCell>
+                        <TableCell>{formatMoney(b.rent_amount)}</TableCell>
+                        <TableCell>{formatMoney(b.electricity_amount)}</TableCell>
+                        <TableCell className="font-medium">{formatMoney(b.total_amount)}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {formatDate(b.due_date)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={STATUS_STYLE[b.status] ?? ""}>
+                            {b.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            {b.status !== "paid" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  markPaid.mutate({
+                                    id: b.id,
+                                    total_amount: Number(b.total_amount),
+                                  })
+                                }
+                              >
+                                <CheckCircle2 className="mr-1 h-4 w-4" />
+                                Mark paid
+                              </Button>
+                            )}
 
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label="Download PDF"
-                          onClick={() => downloadBillPdf(b, pdfContext(b))}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label="Delete bill"
-                          onClick={() => deleteBill.mutate(b.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            </ResponsiveTable>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Download PDF"
+                              onClick={() => downloadBillPdf(b, pdfContext(b))}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Delete bill"
+                              onClick={() => deleteBill.mutate(b.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ResponsiveTable>
             </>
           )}
           <DataPagination

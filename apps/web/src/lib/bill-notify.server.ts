@@ -63,8 +63,6 @@ export async function notifyTenantAboutBill(
   const roomNumber = room?.room_number ?? "-";
   const messageType = "bill-generated" as const;
 
-
-
   // Email
   if (!tenant.email) {
     result.email = { sent: false, reason: "Tenant has no email address on file." };

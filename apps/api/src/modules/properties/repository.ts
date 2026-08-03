@@ -17,11 +17,18 @@ function toContract(row: typeof properties.$inferSelect) {
 export function createPropertyRepository(db: Database): PropertyRepository {
   return {
     async list(workspaceId) {
-      const rows = await db.select().from(properties).where(eq(properties.workspaceId, workspaceId)).orderBy(asc(properties.name));
+      const rows = await db
+        .select()
+        .from(properties)
+        .where(eq(properties.workspaceId, workspaceId))
+        .orderBy(asc(properties.name));
       return rows.map(toContract);
     },
     async create(workspaceId, input) {
-      const [row] = await db.insert(properties).values({ workspaceId, ...input }).returning();
+      const [row] = await db
+        .insert(properties)
+        .values({ workspaceId, ...input })
+        .returning();
       if (!row) throw new Error("Property insert returned no row");
       return toContract(row);
     },

@@ -19,7 +19,6 @@ export const Route = createFileRoute("/api/public/hooks/send-reminders")({
           return new Response("Unauthorized", { status: 401 });
         }
 
-
         let today: string | undefined;
         let dryRun = false;
         try {

@@ -39,7 +39,9 @@ export const workspaces = pgTable("workspaces", {
 export const workspaceMemberships = pgTable(
   "workspace_memberships",
   {
-    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
     userId: text("user_id").notNull(),
     role: memberRole("role").notNull().default("owner"),
     createdAt: timestamps.createdAt,
@@ -52,7 +54,9 @@ export const workspaceMemberships = pgTable(
 
 export const properties = pgTable("properties", {
   id: uuid("id").primaryKey().defaultRandom(),
-  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   address: text("address"),
   city: text("city"),
@@ -64,8 +68,12 @@ export const rooms = pgTable(
   "rooms",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
-    propertyId: uuid("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    propertyId: uuid("property_id")
+      .notNull()
+      .references(() => properties.id, { onDelete: "cascade" }),
     roomNumber: text("room_number").notNull(),
     capacity: integer("capacity").notNull().default(1),
     monthlyRent: numeric("monthly_rent", { precision: 12, scale: 2 }).notNull().default("0"),
@@ -73,7 +81,11 @@ export const rooms = pgTable(
     ...timestamps,
   },
   (table) => [
-    uniqueIndex("rooms_workspace_property_number_uq").on(table.workspaceId, table.propertyId, table.roomNumber),
+    uniqueIndex("rooms_workspace_property_number_uq").on(
+      table.workspaceId,
+      table.propertyId,
+      table.roomNumber,
+    ),
     check("rooms_capacity_positive", sql`${table.capacity} > 0`),
     check("rooms_rent_nonnegative", sql`${table.monthlyRent} >= 0`),
   ],
@@ -83,8 +95,12 @@ export const tenants = pgTable(
   "tenants",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
-    roomId: uuid("room_id").notNull().references(() => rooms.id, { onDelete: "restrict" }),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    roomId: uuid("room_id")
+      .notNull()
+      .references(() => rooms.id, { onDelete: "restrict" }),
     fullName: text("full_name").notNull(),
     phone: text("phone").notNull(),
     email: text("email"),
@@ -96,7 +112,10 @@ export const tenants = pgTable(
   },
   (table) => [
     uniqueIndex("tenants_workspace_phone_uq").on(table.workspaceId, table.phone),
-    check("tenants_rent_override_nonnegative", sql`${table.monthlyRentOverride} IS NULL OR ${table.monthlyRentOverride} >= 0`),
+    check(
+      "tenants_rent_override_nonnegative",
+      sql`${table.monthlyRentOverride} IS NULL OR ${table.monthlyRentOverride} >= 0`,
+    ),
   ],
 );
 
@@ -104,12 +123,20 @@ export const bills = pgTable(
   "bills",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
-    propertyId: uuid("property_id").notNull().references(() => properties.id, { onDelete: "restrict" }),
-    tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "restrict" }),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    propertyId: uuid("property_id")
+      .notNull()
+      .references(() => properties.id, { onDelete: "restrict" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
     billMonth: text("bill_month").notNull(),
     rentAmount: numeric("rent_amount", { precision: 12, scale: 2 }).notNull(),
-    electricityAmount: numeric("electricity_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    electricityAmount: numeric("electricity_amount", { precision: 12, scale: 2 })
+      .notNull()
+      .default("0"),
     otherCharges: jsonb("other_charges").notNull().default([]),
     totalAmount: numeric("total_amount", { precision: 12, scale: 2 }).notNull(),
     paidAmount: numeric("paid_amount", { precision: 12, scale: 2 }).notNull().default("0"),
@@ -120,8 +147,15 @@ export const bills = pgTable(
     ...timestamps,
   },
   (table) => [
-    uniqueIndex("bills_workspace_tenant_month_uq").on(table.workspaceId, table.tenantId, table.billMonth),
-    check("bills_amounts_valid", sql`${table.totalAmount} >= 0 AND ${table.paidAmount} >= 0 AND ${table.paidAmount} <= ${table.totalAmount}`),
+    uniqueIndex("bills_workspace_tenant_month_uq").on(
+      table.workspaceId,
+      table.tenantId,
+      table.billMonth,
+    ),
+    check(
+      "bills_amounts_valid",
+      sql`${table.totalAmount} >= 0 AND ${table.paidAmount} >= 0 AND ${table.paidAmount} <= ${table.totalAmount}`,
+    ),
   ],
 );
 
@@ -129,8 +163,12 @@ export const payments = pgTable(
   "payments",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
-    billId: uuid("bill_id").notNull().references(() => bills.id, { onDelete: "restrict" }),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    billId: uuid("bill_id")
+      .notNull()
+      .references(() => bills.id, { onDelete: "restrict" }),
     amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
     method: paymentMethod("method").notNull(),
     reference: text("reference"),

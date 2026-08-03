@@ -88,9 +88,7 @@ export async function runPaymentReminders(
 
   // Scope first: everything downstream is filtered to these properties.
   const propertyQuery = supabase.from("properties").select("id, admin_id, name");
-  const propertiesRes = await (adminId
-    ? propertyQuery.eq("admin_id", adminId)
-    : propertyQuery);
+  const propertiesRes = await (adminId ? propertyQuery.eq("admin_id", adminId) : propertyQuery);
   if (propertiesRes.error) throw new Error(propertiesRes.error.message);
   const ownedPropertyIds = (propertiesRes.data ?? []).map((p) => p.id);
   if (ownedPropertyIds.length === 0) return result;
@@ -106,9 +104,7 @@ export async function runPaymentReminders(
     .not("due_date", "is", null);
   if (error) throw new Error(error.message);
 
-  const open = (bills ?? []).filter(
-    (b) => Number(b.total_amount) - Number(b.paid_amount) > 0.009,
-  );
+  const open = (bills ?? []).filter((b) => Number(b.total_amount) - Number(b.paid_amount) > 0.009);
   result.candidates = open.length;
   if (open.length === 0) return result;
 

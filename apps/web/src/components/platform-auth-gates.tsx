@@ -35,9 +35,7 @@ export function PlatformSignIn() {
       const pre = await lockoutFn({ data: { email } });
       if (pre.locked) {
         setLocked(true);
-        throw new Error(
-          `Too many failed attempts. Try again in ${pre.retryAfterMinutes} minutes.`,
-        );
+        throw new Error(`Too many failed attempts. Try again in ${pre.retryAfterMinutes} minutes.`);
       }
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       const state = await note({ data: { email, succeeded: !error } });
@@ -145,7 +143,9 @@ export function TotpEnroll({ onDone }: { onDone: () => void }) {
     let active = true;
     (async () => {
       const existing = await supabase.auth.mfa.listFactors();
-      const stale = (existing.data?.totp ?? []).find((f) => (f as { status: string }).status !== "verified");
+      const stale = (existing.data?.totp ?? []).find(
+        (f) => (f as { status: string }).status !== "verified",
+      );
       if (stale) await supabase.auth.mfa.unenroll({ factorId: stale.id });
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: "totp",
@@ -191,11 +191,15 @@ export function TotpEnroll({ onDone }: { onDone: () => void }) {
   return (
     <Gate title="Set up two-factor authentication" icon={<KeyRound className="h-5 w-5" />}>
       <p className="text-sm text-muted-foreground">
-        Scan this code with Google Authenticator, 1Password, or any TOTP app, then enter the
-        6-digit code. Platform access is blocked until this is done.
+        Scan this code with Google Authenticator, 1Password, or any TOTP app, then enter the 6-digit
+        code. Platform access is blocked until this is done.
       </p>
       {qr ? (
-        <img src={qr} alt="TOTP enrolment QR code" className="mx-auto h-44 w-44 rounded bg-white p-2" />
+        <img
+          src={qr}
+          alt="TOTP enrolment QR code"
+          className="mx-auto h-44 w-44 rounded bg-white p-2"
+        />
       ) : null}
       {secret ? (
         <p className="break-all text-center text-xs text-muted-foreground">Manual key: {secret}</p>
@@ -220,7 +224,13 @@ export function TotpEnroll({ onDone }: { onDone: () => void }) {
 }
 
 /** Second-factor challenge for an already enrolled platform account. */
-export function TotpChallenge({ onDone, onSignOut }: { onDone: () => void; onSignOut: () => void }) {
+export function TotpChallenge({
+  onDone,
+  onSignOut,
+}: {
+  onDone: () => void;
+  onSignOut: () => void;
+}) {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -228,7 +238,9 @@ export function TotpChallenge({ onDone, onSignOut }: { onDone: () => void; onSig
     e.preventDefault();
     setBusy(true);
     const factors = await supabase.auth.mfa.listFactors();
-    const factor = (factors.data?.totp ?? []).find((f) => (f as { status: string }).status === "verified");
+    const factor = (factors.data?.totp ?? []).find(
+      (f) => (f as { status: string }).status === "verified",
+    );
     if (!factor) {
       setBusy(false);
       toast.error("No authenticator found for this account.");

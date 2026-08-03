@@ -72,12 +72,7 @@ export function AnimatedIcon({
         replayOnHover && "group-hover/icon:scale-110",
       )}
     >
-      <Icon
-        key={replay}
-        icon={name}
-        aria-hidden
-        className={cn("h-4 w-4 shrink-0", className)}
-      />
+      <Icon key={replay} icon={name} aria-hidden className={cn("h-4 w-4 shrink-0", className)} />
     </span>
   );
 }
@@ -86,4 +81,3 @@ export function AnimatedIcon({
 export function Spinner({ className }: { className?: string }) {
   return <AnimatedIcon name="svg-spinners:ring-resize" className={className} />;
 }
-

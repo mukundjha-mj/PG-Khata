@@ -36,11 +36,7 @@ import { EmptyState } from "@/components/empty-state";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { planTiers, type PlanKey } from "@/lib/pricing-plans";
 import { setAccountPlan } from "@/lib/super-admin.functions";
-import {
-  getOwnerDetail,
-  getOwnerQuickFacts,
-  saveOwnerNote,
-} from "@/lib/owner-detail.functions";
+import { getOwnerDetail, getOwnerQuickFacts, saveOwnerNote } from "@/lib/owner-detail.functions";
 
 const PAGE_SIZE = 10;
 
@@ -48,7 +44,9 @@ export const inr = (n: number) =>
   "Rs. " + Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
 const when = (value: string | null | undefined) =>
-  value ? new Date(value).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "Never";
+  value
+    ? new Date(value).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })
+    : "Never";
 
 const day = (value: string | null | undefined) =>
   value ? new Date(value).toLocaleDateString("en-IN", { dateStyle: "medium" }) : "-";
@@ -115,14 +113,17 @@ export function OwnerDirectory({
         a.email.toLowerCase().includes(term) ||
         a.brand_name.toLowerCase().includes(term);
       return (
-        matches && (plan === "all" || a.plan === plan) && (status === "all" || a.plan_status === status)
+        matches &&
+        (plan === "all" || a.plan === plan) &&
+        (status === "all" || a.plan_status === status)
       );
     });
     const sorted = [...rows];
     if (sort === "newest") sorted.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
     if (sort === "oldest") sorted.sort((a, b) => (a.created_at > b.created_at ? 1 : -1));
     if (sort === "tenants") sorted.sort((a, b) => b.tenants - a.tenants);
-    if (sort === "name") sorted.sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
+    if (sort === "name")
+      sorted.sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
     return sorted;
   }, [accounts, term, plan, status, sort]);
 
@@ -234,8 +235,8 @@ export function OwnerDirectory({
                     <p className="truncate font-medium">{a.name || a.brand_name}</p>
                     <p className="truncate text-sm text-muted-foreground">{a.email}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {a.properties} properties - {a.rooms} rooms - {a.tenants} active tenants - joined{" "}
-                      {day(a.created_at)}
+                      {a.properties} properties - {a.rooms} rooms - {a.tenants} active tenants -
+                      joined {day(a.created_at)}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -380,7 +381,10 @@ function QuickActionsDialog({ adminId, onClose }: { adminId: string | null; onCl
               />
               <Row label="Plan" value={data.plan} />
               {data.pendingPlan ? <Row label="Pending change" value={data.pendingPlan} /> : null}
-              <Row label="Current period" value={`${day(data.periodStart)} to ${day(data.periodEnd)}`} />
+              <Row
+                label="Current period"
+                value={`${day(data.periodStart)} to ${day(data.periodEnd)}`}
+              />
               <Row
                 label="Last payment"
                 value={

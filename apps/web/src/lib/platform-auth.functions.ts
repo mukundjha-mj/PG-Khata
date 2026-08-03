@@ -27,7 +27,9 @@ export const notePlatformLogin = createServerFn({ method: "POST" })
 
 /** Current lockout state for an email, without recording an attempt. */
 export const getPlatformLockout = createServerFn({ method: "POST" })
-  .inputValidator((input: { email: string }) => ({ email: String(input.email ?? "").slice(0, 200) }))
+  .inputValidator((input: { email: string }) => ({
+    email: String(input.email ?? "").slice(0, 200),
+  }))
   .handler(async ({ data }) => {
     const { getLockout } = await import("@/lib/platform-auth.server");
     return getLockout(data.email);

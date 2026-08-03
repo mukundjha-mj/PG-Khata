@@ -39,7 +39,9 @@ export function PlanGate({
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <Lock className="h-5 w-5" />
           </div>
-          <CardTitle className="pt-2">{feature} is on the {required.name} plan</CardTitle>
+          <CardTitle className="pt-2">
+            {feature} is on the {required.name} plan
+          </CardTitle>
           <CardDescription>
             You are on {tier.name}. Upgrade to {required.name} to unlock {feature.toLowerCase()}.
             Upgrades are prorated, so you only pay for the days left in this cycle.

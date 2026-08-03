@@ -258,7 +258,6 @@ function TenantsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-
   function openNew() {
     setEditing(null);
     setDraft({ ...emptyDraft, room_id: rooms?.[0]?.id ?? "" });
@@ -298,9 +297,7 @@ function TenantsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="page-title">Tenant Records &amp; KYC</h1>
-          <p className="page-subtitle">
-            Records, room allotment and KYC documents.
-          </p>
+          <p className="page-subtitle">Records, room allotment and KYC documents.</p>
         </div>
         <Button className="w-full sm:w-auto" onClick={openNew} disabled={!rooms?.length}>
           <Plus className="mr-1.5 h-4 w-4" /> Add tenant
@@ -319,9 +316,16 @@ function TenantsPage() {
         ]}
         chips={[
           ...(statusFilter !== "all"
-            ? [{ label: `Status: ${statusFilter.replace("-", " ")}`, onClear: () => setStatusFilter("all") }]
+            ? [
+                {
+                  label: `Status: ${statusFilter.replace("-", " ")}`,
+                  onClear: () => setStatusFilter("all"),
+                },
+              ]
             : []),
-          ...(search.trim() ? [{ label: `Search: ${search.trim()}`, onClear: () => setSearch("") }] : []),
+          ...(search.trim()
+            ? [{ label: `Search: ${search.trim()}`, onClear: () => setSearch("") }]
+            : []),
         ]}
         onReset={() => {
           setStatusFilter("all");
@@ -366,82 +370,92 @@ function TenantsPage() {
               <DensityToggle density={density} onChange={setDensity} />
             </div>
             <ResponsiveTable
-              labels={["Name","Phone","Room","Joined","Status","Rent",""]}
+              labels={["Name", "Phone", "Room", "Joined", "Status", "Rent", ""]}
               density={density}
               compactColumns={3}
               virtualize
             >
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Room</TableHead>
-                  <TableHead>Joined</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Rent</TableHead>
-                  <TableHead className="w-24" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visible.length === 0 && (
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={7} className="p-0">
-                      <EmptyState
-                        title={rooms?.length ? "No tenants match this view" : "No rooms yet"}
-                        description={
-                          rooms?.length
-                            ? "Try clearing the search or status filter to see every tenant."
-                            : "Create a room first, then add tenants and assign them to rooms."
-                        }
-                      />
-                    </TableCell>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Room</TableHead>
+                    <TableHead>Joined</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Rent</TableHead>
+                    <TableHead className="w-24" />
                   </TableRow>
-                )}
-                {tenantPage.pageRows.map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell className="font-medium">{t.full_name}</TableCell>
-                    <TableCell className="text-muted-foreground">{t.phone}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {roomLabel.get(t.room_id) ?? "-"}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatDate(t.joining_date)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={STATUS_STYLES[t.status]}>
-                        {t.status.replace("-", " ")}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatMoney(effectiveRent(t, roomById.get(t.room_id)))}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        {t.status !== "vacated" && (
+                </TableHeader>
+                <TableBody>
+                  {visible.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="p-0">
+                        <EmptyState
+                          title={rooms?.length ? "No tenants match this view" : "No rooms yet"}
+                          description={
+                            rooms?.length
+                              ? "Try clearing the search or status filter to see every tenant."
+                              : "Create a room first, then add tenants and assign them to rooms."
+                          }
+                        />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {tenantPage.pageRows.map((t) => (
+                    <TableRow key={t.id}>
+                      <TableCell className="font-medium">{t.full_name}</TableCell>
+                      <TableCell className="text-muted-foreground">{t.phone}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {roomLabel.get(t.room_id) ?? "-"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatDate(t.joining_date)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={STATUS_STYLES[t.status]}>
+                          {t.status.replace("-", " ")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatMoney(effectiveRent(t, roomById.get(t.room_id)))}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-1">
+                          {t.status !== "vacated" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`Mark ${t.full_name} as vacated`}
+                              title="Mark as vacated"
+                              onClick={() => setVacateTarget(t)}
+                            >
+                              <LogOut className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
-                            aria-label={`Mark ${t.full_name} as vacated`}
-                            title="Mark as vacated"
-                            onClick={() => setVacateTarget(t)}
+                            aria-label={`Edit ${t.full_name}`}
+                            onClick={() => openEdit(t)}
                           >
-                            <LogOut className="h-4 w-4" />
+                            <Pencil className="h-4 w-4" />
                           </Button>
-                        )}
-                        <Button variant="ghost" size="icon" aria-label={`Edit ${t.full_name}`} onClick={() => openEdit(t)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
 
-                        <Button variant="ghost" size="icon" aria-label={`Delete ${t.full_name}`} onClick={() => setDeleteTarget(t)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Delete ${t.full_name}`}
+                            onClick={() => setDeleteTarget(t)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </ResponsiveTable>
             <div className="pb-1 sm:px-6 sm:pb-4">
               <DataPagination
@@ -564,9 +578,7 @@ function TenantsPage() {
                   type="number"
                   min={0}
                   value={draft.security_deposit}
-                  onChange={(e) =>
-                    setDraft({ ...draft, security_deposit: Number(e.target.value) })
-                  }
+                  onChange={(e) => setDraft({ ...draft, security_deposit: Number(e.target.value) })}
                 />
               </div>
               <div className="space-y-1.5">
@@ -696,9 +708,10 @@ function TenantsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Mark {vacateTarget?.full_name} as vacated?</AlertDialogTitle>
             <AlertDialogDescription>
-              Their bed in {vacateTarget ? (roomLabel.get(vacateTarget.room_id) ?? "the room") : "the room"}{" "}
-              is freed immediately and they stop appearing in new bill runs. Past bills and
-              payments stay intact.
+              Their bed in{" "}
+              {vacateTarget ? (roomLabel.get(vacateTarget.room_id) ?? "the room") : "the room"} is
+              freed immediately and they stop appearing in new bill runs. Past bills and payments
+              stay intact.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -712,7 +725,6 @@ function TenantsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
     </div>
   );
 }

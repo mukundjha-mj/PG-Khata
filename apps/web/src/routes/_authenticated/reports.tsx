@@ -63,7 +63,6 @@ function GatedReportsPage() {
   );
 }
 
-
 function ReportsPage() {
   const directory = useDirectory();
   const [month, setMonth] = useState(currentMonth());
@@ -91,7 +90,10 @@ function ReportsPage() {
   const rate = billed > 0 ? Math.round((collected / billed) * 100) : 0;
 
   const byProperty = useMemo(() => {
-    const map = new Map<string, { name: string; billed: number; collected: number; count: number }>();
+    const map = new Map<
+      string,
+      { name: string; billed: number; collected: number; count: number }
+    >();
     for (const b of monthBills) {
       const name = directory.propertyById.get(b.property_id)?.name ?? "Unassigned";
       const row = map.get(b.property_id) ?? { name, billed: 0, collected: 0, count: 0 };
@@ -211,31 +213,34 @@ function ReportsPage() {
                 description="Pick a different month, or generate and issue bills from the Billing screen."
               />
             ) : (
-              <ResponsiveTable labels={["Property","Bills","Billed","Collected","Rate"]} virtualize>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Property</TableHead>
-                    <TableHead>Bills</TableHead>
-                    <TableHead>Billed</TableHead>
-                    <TableHead>Collected</TableHead>
-                    <TableHead className="text-right">Rate</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {propertyPage.pageRows.map((r) => (
-                    <TableRow key={r.name}>
-                      <TableCell className="font-medium">{r.name}</TableCell>
-                      <TableCell className="text-muted-foreground">{r.count}</TableCell>
-                      <TableCell>{formatMoney(r.billed)}</TableCell>
-                      <TableCell>{formatMoney(r.collected)}</TableCell>
-                      <TableCell className="text-right">
-                        {r.billed > 0 ? Math.round((r.collected / r.billed) * 100) : 0}%
-                      </TableCell>
+              <ResponsiveTable
+                labels={["Property", "Bills", "Billed", "Collected", "Rate"]}
+                virtualize
+              >
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Property</TableHead>
+                      <TableHead>Bills</TableHead>
+                      <TableHead>Billed</TableHead>
+                      <TableHead>Collected</TableHead>
+                      <TableHead className="text-right">Rate</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {propertyPage.pageRows.map((r) => (
+                      <TableRow key={r.name}>
+                        <TableCell className="font-medium">{r.name}</TableCell>
+                        <TableCell className="text-muted-foreground">{r.count}</TableCell>
+                        <TableCell>{formatMoney(r.billed)}</TableCell>
+                        <TableCell>{formatMoney(r.collected)}</TableCell>
+                        <TableCell className="text-right">
+                          {r.billed > 0 ? Math.round((r.collected / r.billed) * 100) : 0}%
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </ResponsiveTable>
             )}
             <DataPagination
@@ -257,7 +262,10 @@ function ReportsPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {trend.length === 0 ? (
-              <EmptyState title="No billing history yet" description="Once you issue bills, monthly collection trends appear here." />
+              <EmptyState
+                title="No billing history yet"
+                description="Once you issue bills, monthly collection trends appear here."
+              />
             ) : (
               trend.map(([m, v]) => {
                 const pct = v.billed > 0 ? Math.round((v.collected / v.billed) * 100) : 0;

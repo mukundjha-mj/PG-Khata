@@ -15,7 +15,6 @@ import {
   type DisplayStatus,
 } from "@/lib/billing";
 
-
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
@@ -57,7 +56,6 @@ function useOverview() {
   });
 }
 
-
 function Stat({
   label,
   value,
@@ -83,7 +81,6 @@ function Stat({
       </CardContent>
     </Card>
   );
-
 }
 
 function Dashboard() {
@@ -127,14 +124,11 @@ function Dashboard() {
   };
   for (const b of monthBills) counts[displayStatus(b)] += 1;
 
-
   return (
     <div className="page-stack">
       <div>
         <h1 className="page-title">Property Performance Dashboard</h1>
-        <p className="page-subtitle">
-          Overview of your properties, occupancy and expected rent.
-        </p>
+        <p className="page-subtitle">Overview of your properties, occupancy and expected rent.</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -214,9 +208,7 @@ function Dashboard() {
 
         <Card>
           <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-            <h2 className="section-title">
-              Collections - {monthLabel(thisMonth)}
-            </h2>
+            <h2 className="section-title">Collections - {monthLabel(thisMonth)}</h2>
             <Button asChild variant="ghost" size="sm">
               <Link to="/payments">
                 Open <ArrowRight className="ml-1 h-3.5 w-3.5" />
@@ -263,9 +255,7 @@ function Dashboard() {
                   </div>
                   <div className="rounded-md border border-border p-3">
                     <p className="stat-label">Partial</p>
-                    <p className="subsection-title text-foreground">
-                      {counts["partially-paid"]}
-                    </p>
+                    <p className="subsection-title text-foreground">{counts["partially-paid"]}</p>
                   </div>
                   <div className="rounded-md border border-border p-3">
                     <p className="stat-label">Overdue</p>
@@ -275,15 +265,12 @@ function Dashboard() {
 
                 <p className="text-sm text-muted-foreground">
                   Outstanding this month:{" "}
-                  <span className="font-medium text-foreground">
-                    {formatMoney(outstanding)}
-                  </span>
+                  <span className="font-medium text-foreground">{formatMoney(outstanding)}</span>
                 </p>
               </>
             )}
           </CardContent>
         </Card>
-
       </div>
     </div>
   );

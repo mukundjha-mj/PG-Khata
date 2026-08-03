@@ -23,7 +23,12 @@ export function notFound(request: Request, response: Response) {
   });
 }
 
-export function errorHandler(error: unknown, request: Request, response: Response, _next: NextFunction) {
+export function errorHandler(
+  error: unknown,
+  request: Request,
+  response: Response,
+  _next: NextFunction,
+) {
   if (error instanceof ZodError) {
     const errors: Record<string, string[]> = {};
     for (const issue of error.issues) {
@@ -44,12 +49,15 @@ export function errorHandler(error: unknown, request: Request, response: Respons
   const apiError = error instanceof ApiError ? error : null;
   if (!apiError) request.log?.error({ err: error }, "Unhandled request error");
   const status = apiError?.status ?? 500;
-  return response.status(status).type("application/problem+json").json({
-    type: apiError?.type ?? "about:blank",
-    title: apiError?.title ?? "Internal Server Error",
-    status,
-    detail: apiError?.message ?? "An unexpected error occurred.",
-    instance: request.originalUrl,
-    requestId: request.requestId,
-  });
+  return response
+    .status(status)
+    .type("application/problem+json")
+    .json({
+      type: apiError?.type ?? "about:blank",
+      title: apiError?.title ?? "Internal Server Error",
+      status,
+      detail: apiError?.message ?? "An unexpected error occurred.",
+      instance: request.originalUrl,
+      requestId: request.requestId,
+    });
 }

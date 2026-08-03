@@ -120,7 +120,8 @@ export function buildPlanReceiptPdf(row: PlanChangeRow, party: ReceiptParty): js
     theme: "grid",
   });
 
-  const after = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 300;
+  const after =
+    (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 300;
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);

@@ -41,7 +41,10 @@ export const Route = createFileRoute("/_authenticated/tenant/$tenantId")({
           "Full billing history for a tenant: every bill, payment, balance and downloadable invoice.",
       },
       { property: "og:title", content: "Tenant ledger - PG Manager" },
-      { property: "og:description", content: "Bills, payments and outstanding balance per tenant." },
+      {
+        property: "og:description",
+        content: "Bills, payments and outstanding balance per tenant.",
+      },
     ],
   }),
   component: TenantLedger,
@@ -127,7 +130,10 @@ function TenantLedger() {
             <span>Rent {formatMoney(effectiveRent(tenant, room))}/month</span>
           </p>
         </div>
-        <Badge variant="outline" className={tenant.status === "active" ? "" : "text-muted-foreground"}>
+        <Badge
+          variant="outline"
+          className={tenant.status === "active" ? "" : "text-muted-foreground"}
+        >
           {tenant.status}
         </Badge>
       </div>
@@ -155,7 +161,10 @@ function TenantLedger() {
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {bills.length === 0 ? (
-            <EmptyState title="No bills yet" description="Bills generated for this tenant will be listed here." />
+            <EmptyState
+              title="No bills yet"
+              description="Bills generated for this tenant will be listed here."
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -194,9 +203,7 @@ function TenantLedger() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() =>
-                                setTarget({ bill: b, tenantName: tenant.full_name })
-                              }
+                              onClick={() => setTarget({ bill: b, tenantName: tenant.full_name })}
                             >
                               <IndianRupee className="mr-1 h-4 w-4" />
                               Record
@@ -234,7 +241,10 @@ function TenantLedger() {
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {payments.length === 0 ? (
-            <EmptyState title="No payments yet" description="Payments recorded against this tenant's bills will appear here." />
+            <EmptyState
+              title="No payments yet"
+              description="Payments recorded against this tenant's bills will appear here."
+            />
           ) : (
             <Table>
               <TableHeader>

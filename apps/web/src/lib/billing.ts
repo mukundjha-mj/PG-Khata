@@ -45,7 +45,9 @@ export function balanceOf(bill: Pick<Bill, "total_amount" | "paid_amount">): num
   return Math.max(0, Number(bill.total_amount) - Number(bill.paid_amount));
 }
 
-export function isOverdue(bill: Pick<Bill, "status" | "due_date" | "total_amount" | "paid_amount">) {
+export function isOverdue(
+  bill: Pick<Bill, "status" | "due_date" | "total_amount" | "paid_amount">,
+) {
   if (balanceOf(bill) <= 0) return false;
   if (!bill.due_date) return false;
   return bill.due_date < new Date().toISOString().slice(0, 10);
@@ -103,10 +105,12 @@ export async function recordPayment(input: {
 
 /** Recomputes paid_amount / status / paid_at for a bill from its payments. */
 export async function syncBillTotals(billId: string) {
-  const [{ data: bill, error: billError }, { data: payments, error: payError }] = await Promise.all([
-    supabase.from("bills").select("total_amount, due_date").eq("id", billId).single(),
-    supabase.from("payments").select("amount, paid_at").eq("bill_id", billId),
-  ]);
+  const [{ data: bill, error: billError }, { data: payments, error: payError }] = await Promise.all(
+    [
+      supabase.from("bills").select("total_amount, due_date").eq("id", billId).single(),
+      supabase.from("payments").select("amount, paid_at").eq("bill_id", billId),
+    ],
+  );
   if (billError) throw billError;
   if (payError) throw payError;
 

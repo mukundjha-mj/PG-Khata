@@ -31,10 +31,12 @@ export const propertySchema = z.object({
   updatedAt: isoDateTimeSchema,
 });
 
-export const createPropertySchema = propertySchema.pick({ name: true, address: true, city: true }).extend({
-  address: z.string().trim().max(500).nullable().optional(),
-  city: z.string().trim().max(100).nullable().optional(),
-});
+export const createPropertySchema = propertySchema
+  .pick({ name: true, address: true, city: true })
+  .extend({
+    address: z.string().trim().max(500).nullable().optional(),
+    city: z.string().trim().max(100).nullable().optional(),
+  });
 export type CreatePropertyInput = z.infer<typeof createPropertySchema>;
 export type Property = z.infer<typeof propertySchema>;
 

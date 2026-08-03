@@ -19,11 +19,22 @@ export function createAuth(db: Database, env: AppEnv) {
   });
 }
 
-export function createAuthenticate(auth: ReturnType<typeof createAuth>, db: Database): Authenticate {
+export function createAuthenticate(
+  auth: ReturnType<typeof createAuth>,
+  db: Database,
+): Authenticate {
   return async (request: Request) => {
-    const session = await auth.api.getSession({ headers: new Headers(request.headers as Record<string, string>) });
+    const session = await auth.api.getSession({
+      headers: new Headers(request.headers as Record<string, string>),
+    });
     if (!session) return null;
-    const [membership] = await db.select().from(workspaceMemberships).where(eq(workspaceMemberships.userId, session.user.id)).limit(1);
-    return membership ? { userId: session.user.id, workspaceId: membership.workspaceId, role: membership.role } : null;
+    const [membership] = await db
+      .select()
+      .from(workspaceMemberships)
+      .where(eq(workspaceMemberships.userId, session.user.id))
+      .limit(1);
+    return membership
+      ? { userId: session.user.id, workspaceId: membership.workspaceId, role: membership.role }
+      : null;
   };
 }

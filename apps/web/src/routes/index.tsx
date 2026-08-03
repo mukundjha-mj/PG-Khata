@@ -40,8 +40,7 @@ export const Route = createFileRoute("/")({
           "@type": "SoftwareApplication",
           name: "Basera",
           applicationCategory: "BusinessApplication",
-          description:
-            "Billing and tenant management for PG and hostel owners across India.",
+          description: "Billing and tenant management for PG and hostel owners across India.",
           offers: {
             "@type": "Offer",
             price: "499",
@@ -133,7 +132,6 @@ const steps = [
     body: "See who has paid, who is overdue, and this month's total collection, from your phone, in under a minute.",
   },
 ];
-
 
 function useReveal() {
   useEffect(() => {
@@ -457,7 +455,10 @@ function LandingPage() {
                 <p className="mt-1 mb-6 text-[13.5px] opacity-60">{p.sub}</p>
                 <ul className="mb-8 grow space-y-0.5">
                   {p.items.map((it) => (
-                    <li key={it} className="flex items-center gap-2.5 py-2 text-[14.5px] opacity-90">
+                    <li
+                      key={it}
+                      className="flex items-center gap-2.5 py-2 text-[14.5px] opacity-90"
+                    >
                       <Check />
                       {it}
                     </li>
@@ -512,10 +513,7 @@ function LandingPage() {
                 <tbody>
                   {planComparison.map((row) => (
                     <tr key={row.feature} className="border-b border-line last:border-0">
-                      <th
-                        scope="row"
-                        className="px-6 py-4 text-[14.5px] font-medium text-ink/80"
-                      >
+                      <th scope="row" className="px-6 py-4 text-[14.5px] font-medium text-ink/80">
                         {row.feature}
                       </th>
                       <td className="px-6 py-4 text-[14.5px] text-ink/70">{row.starter}</td>
@@ -539,7 +537,6 @@ function LandingPage() {
           </div>
         </div>
       </section>
-
 
       {/* CTA */}
       <section className="px-6">
@@ -600,7 +597,10 @@ function LandingPage() {
               <Link to="/auth" className="mb-3 block text-[14.5px] opacity-75 hover:opacity-100">
                 Sign in
               </Link>
-              <Link to="/dashboard" className="mb-3 block text-[14.5px] opacity-75 hover:opacity-100">
+              <Link
+                to="/dashboard"
+                className="mb-3 block text-[14.5px] opacity-75 hover:opacity-100"
+              >
                 Dashboard
               </Link>
             </div>

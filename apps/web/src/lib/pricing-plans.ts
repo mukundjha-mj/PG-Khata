@@ -62,12 +62,37 @@ export const planComparison: ComparisonRow[] = [
   { feature: "Properties", starter: "1", growing: "Unlimited", scale: "Unlimited" },
   { feature: "Admin users", starter: "1", growing: "3", scale: "10" },
   { feature: "Email bill delivery", starter: "Yes", growing: "Yes", scale: "Yes" },
-  { feature: "Automatic payment reminders", starter: "Manual only", growing: "Scheduled daily", scale: "Scheduled daily" },
-  { feature: "Custom bill template and logo", starter: "Logo only", growing: "Logo and colors", scale: "Full template" },
-  { feature: "Rent agreement templates", starter: "Included", growing: "Included", scale: "Included" },
+  {
+    feature: "Automatic payment reminders",
+    starter: "Manual only",
+    growing: "Scheduled daily",
+    scale: "Scheduled daily",
+  },
+  {
+    feature: "Custom bill template and logo",
+    starter: "Logo only",
+    growing: "Logo and colors",
+    scale: "Full template",
+  },
+  {
+    feature: "Rent agreement templates",
+    starter: "Included",
+    growing: "Included",
+    scale: "Included",
+  },
   { feature: "Data export (CSV and PDF)", starter: "Yes", growing: "Yes", scale: "Yes" },
-  { feature: "Onboarding", starter: "Self serve guide", growing: "Guided setup call", scale: "Dedicated onboarding" },
-  { feature: "Support", starter: "Email, 48h", growing: "Priority, 24h", scale: "Priority, same day" },
+  {
+    feature: "Onboarding",
+    starter: "Self serve guide",
+    growing: "Guided setup call",
+    scale: "Dedicated onboarding",
+  },
+  {
+    feature: "Support",
+    starter: "Email, 48h",
+    growing: "Priority, 24h",
+    scale: "Priority, same day",
+  },
 ];
 
 export type PricingFaq = { q: string; a: string };

@@ -229,13 +229,7 @@ function NavButton({
   );
 }
 
-export function ConsoleCard({
-  className,
-  children,
-}: {
-  className?: string;
-  children: ReactNode;
-}) {
+export function ConsoleCard({ className, children }: { className?: string; children: ReactNode }) {
   return (
     <section
       className={cn(

@@ -93,7 +93,6 @@ export function RerunTenantBillDialog({ tenants, months, defaultMonth, monthLabe
     >
       <DialogTrigger asChild>
         <Button className="w-full sm:w-auto" variant="outline" size="sm">
-
           <UserCog className="mr-2 h-4 w-4" />
           Re-run for one tenant
         </Button>
@@ -209,10 +208,7 @@ export function RerunTenantBillDialog({ tenants, months, defaultMonth, monthLabe
           <Button variant="ghost" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button
-            disabled={!result || rerun.isPending}
-            onClick={() => rerun.mutate(hasPayments)}
-          >
+          <Button disabled={!result || rerun.isPending} onClick={() => rerun.mutate(hasPayments)}>
             {rerun.isPending
               ? "Saving…"
               : hasPayments
@@ -225,15 +221,7 @@ export function RerunTenantBillDialog({ tenants, months, defaultMonth, monthLabe
   );
 }
 
-function Row({
-  label,
-  value,
-  className,
-}: {
-  label: string;
-  value: string;
-  className?: string;
-}) {
+function Row({ label, value, className }: { label: string; value: string; className?: string }) {
   return (
     <div className={`flex justify-between gap-4 ${className ?? ""}`}>
       <dt>{label}</dt>

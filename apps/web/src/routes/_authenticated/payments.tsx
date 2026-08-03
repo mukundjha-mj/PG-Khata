@@ -149,7 +149,12 @@ function PaymentsPage() {
 
   const chips = [
     ...(filter !== "outstanding"
-      ? [{ label: filter === "overdue" ? "Overdue only" : "All bills", onClear: () => setFilter("outstanding" as Filter) }]
+      ? [
+          {
+            label: filter === "overdue" ? "Overdue only" : "All bills",
+            onClear: () => setFilter("outstanding" as Filter),
+          },
+        ]
       : []),
     ...(search.trim() ? [{ label: `Search: ${search.trim()}`, onClear: () => setSearch("") }] : []),
   ];
@@ -158,7 +163,6 @@ function PaymentsPage() {
     setFilter("outstanding");
     setSearch("");
   }
-
 
   return (
     <div className="page-stack">
@@ -169,19 +173,21 @@ function PaymentsPage() {
             Record what tenants pay - partial payments update the bill balance automatically.
           </p>
         </div>
-        <Button className="w-full sm:w-auto" variant="outline" onClick={() => runReminders()} disabled={reminding}>
+        <Button
+          className="w-full sm:w-auto"
+          variant="outline"
+          onClick={() => runReminders()}
+          disabled={reminding}
+        >
           <BellRing className="mr-2 h-4 w-4" />
           {reminding ? "Sending reminders…" : "Send reminders now"}
         </Button>
       </div>
 
-
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="stat-label">
-              Total outstanding
-            </CardTitle>
+            <CardTitle className="stat-label">Total outstanding</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="stat-value">{formatMoney(outstanding)}</p>
@@ -192,21 +198,15 @@ function PaymentsPage() {
             <CardTitle className="stat-label">Overdue</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="stat-value text-destructive">
-              {formatMoney(overdueTotal)}
-            </p>
+            <p className="stat-value text-destructive">{formatMoney(overdueTotal)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="stat-label">
-              Collected all time
-            </CardTitle>
+            <CardTitle className="stat-label">Collected all time</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="stat-value text-success">
-              {formatMoney(collected)}
-            </p>
+            <p className="stat-value text-success">{formatMoney(collected)}</p>
           </CardContent>
         </Card>
       </div>
@@ -226,8 +226,16 @@ function PaymentsPage() {
             chips={chips}
             onReset={resetFilters}
             quickChips={[
-              { label: "Outstanding", active: filter === "outstanding", onSelect: () => setFilter("outstanding") },
-              { label: "Overdue only", active: filter === "overdue", onSelect: () => setFilter("overdue") },
+              {
+                label: "Outstanding",
+                active: filter === "outstanding",
+                onSelect: () => setFilter("outstanding"),
+              },
+              {
+                label: "Overdue only",
+                active: filter === "overdue",
+                onSelect: () => setFilter("overdue"),
+              },
               { label: "All bills", active: filter === "all", onSelect: () => setFilter("all") },
             ]}
           >
@@ -288,81 +296,81 @@ function PaymentsPage() {
             />
           ) : (
             <>
-            <div className="mb-2 md:hidden">
-              <DensityToggle density={density} onChange={setDensity} />
-            </div>
-            <ResponsiveTable
-              labels={["Tenant","Month","Total","Paid","Balance","Due","Status",""]}
-              density={density}
-              compactColumns={3}
-              virtualize
-            >
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tenant</TableHead>
-                  <TableHead>Month</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Paid</TableHead>
-                  <TableHead>Balance</TableHead>
-                  <TableHead>Due</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {billsPage.pageRows.map((b) => {
-                  const st = displayStatus(b);
-                  return (
-                    <TableRow key={b.id}>
-                      <TableCell className="font-medium">
-                        <Link
-                          to="/tenant/$tenantId"
-                          params={{ tenantId: b.tenant_id }}
-                          className="inline-block py-1.5 hover:underline"
-                        >
-                          {nameOf(b)}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {monthLabel(b.bill_month)}
-                      </TableCell>
-                      <TableCell>{formatMoney(b.total_amount)}</TableCell>
-                      <TableCell>{formatMoney(b.paid_amount)}</TableCell>
-                      <TableCell className="font-medium">{formatMoney(balanceOf(b))}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatDate(b.due_date)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={STATUS_STYLE[st]}>
-                          {STATUS_LABEL[st]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          {balanceOf(b) > 0 && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => setTarget({ bill: b, tenantName: nameOf(b) })}
-                            >
-                              <IndianRupee className="mr-1 h-4 w-4" />
-                              Record
-                            </Button>
-                          )}
-                          <Button asChild size="sm" variant="ghost">
-                            <Link to="/tenant/$tenantId" params={{ tenantId: b.tenant_id }}>
-                              Ledger <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                            </Link>
-                          </Button>
-                        </div>
-                      </TableCell>
+              <div className="mb-2 md:hidden">
+                <DensityToggle density={density} onChange={setDensity} />
+              </div>
+              <ResponsiveTable
+                labels={["Tenant", "Month", "Total", "Paid", "Balance", "Due", "Status", ""]}
+                density={density}
+                compactColumns={3}
+                virtualize
+              >
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Tenant</TableHead>
+                      <TableHead>Month</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Paid</TableHead>
+                      <TableHead>Balance</TableHead>
+                      <TableHead>Due</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-            </ResponsiveTable>
+                  </TableHeader>
+                  <TableBody>
+                    {billsPage.pageRows.map((b) => {
+                      const st = displayStatus(b);
+                      return (
+                        <TableRow key={b.id}>
+                          <TableCell className="font-medium">
+                            <Link
+                              to="/tenant/$tenantId"
+                              params={{ tenantId: b.tenant_id }}
+                              className="inline-block py-1.5 hover:underline"
+                            >
+                              {nameOf(b)}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {monthLabel(b.bill_month)}
+                          </TableCell>
+                          <TableCell>{formatMoney(b.total_amount)}</TableCell>
+                          <TableCell>{formatMoney(b.paid_amount)}</TableCell>
+                          <TableCell className="font-medium">{formatMoney(balanceOf(b))}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {formatDate(b.due_date)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={STATUS_STYLE[st]}>
+                              {STATUS_LABEL[st]}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              {balanceOf(b) > 0 && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setTarget({ bill: b, tenantName: nameOf(b) })}
+                                >
+                                  <IndianRupee className="mr-1 h-4 w-4" />
+                                  Record
+                                </Button>
+                              )}
+                              <Button asChild size="sm" variant="ghost">
+                                <Link to="/tenant/$tenantId" params={{ tenantId: b.tenant_id }}>
+                                  Ledger <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                                </Link>
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </ResponsiveTable>
             </>
           )}
           <DataPagination
@@ -390,38 +398,41 @@ function PaymentsPage() {
               description="Record a payment against a bill and it will show up here."
             />
           ) : (
-            <ResponsiveTable labels={["Tenant","Amount","Method","Reference","Paid on"]} virtualize>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tenant</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Method</TableHead>
-                  <TableHead>Reference</TableHead>
-                  <TableHead>Paid on</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paymentsPage.pageRows.map((p) => {
-                  const bill = billById.get(p.bill_id);
-                  return (
-                    <TableRow key={p.id}>
-                      <TableCell className="font-medium">
-                        {bill ? nameOf(bill) : "Tenant"}
-                      </TableCell>
-                      <TableCell>{formatMoney(p.amount)}</TableCell>
-                      <TableCell className="text-muted-foreground">{p.payment_method}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {p.transaction_ref || "-"}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatDate(p.paid_at)}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <ResponsiveTable
+              labels={["Tenant", "Amount", "Method", "Reference", "Paid on"]}
+              virtualize
+            >
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tenant</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Method</TableHead>
+                    <TableHead>Reference</TableHead>
+                    <TableHead>Paid on</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paymentsPage.pageRows.map((p) => {
+                    const bill = billById.get(p.bill_id);
+                    return (
+                      <TableRow key={p.id}>
+                        <TableCell className="font-medium">
+                          {bill ? nameOf(bill) : "Tenant"}
+                        </TableCell>
+                        <TableCell>{formatMoney(p.amount)}</TableCell>
+                        <TableCell className="text-muted-foreground">{p.payment_method}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {p.transaction_ref || "-"}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {formatDate(p.paid_at)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </ResponsiveTable>
           )}
           <DataPagination

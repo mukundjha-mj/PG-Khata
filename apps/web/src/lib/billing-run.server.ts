@@ -82,9 +82,7 @@ export async function runMonthlyBilling(
   if (result.admins === 0) return result;
 
   const propertyQuery = supabase.from("properties").select("id, admin_id");
-  const properties = await (adminId
-    ? propertyQuery.eq("admin_id", adminId)
-    : propertyQuery);
+  const properties = await (adminId ? propertyQuery.eq("admin_id", adminId) : propertyQuery);
   if (properties.error) throw new Error(properties.error.message);
   const propertyIds = (properties.data ?? []).map((p) => p.id);
   if (propertyIds.length === 0) return result;
@@ -187,7 +185,6 @@ export async function runMonthlyBilling(
       approved_at: approved ? new Date().toISOString() : null,
     });
   }
-
 
   if (rows.length > 0) {
     // ignoreDuplicates keeps concurrent/retried runs safe against the

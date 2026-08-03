@@ -17,11 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { OwnerDirectory } from "@/components/owner-directory";
 import { ConsoleCard, ConsoleLayout, type ConsoleTab } from "@/components/console-layout";
-import {
-  PlatformSignIn,
-  TotpChallenge,
-  TotpEnroll,
-} from "@/components/platform-auth-gates";
+import { PlatformSignIn, TotpChallenge, TotpEnroll } from "@/components/platform-auth-gates";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlatformIdentity } from "@/lib/use-super-admin";
 import { listAuditLog } from "@/lib/platform-auth.functions";
@@ -254,7 +250,13 @@ function Metric({
   );
 }
 
-type AuditRow = { id: string; action: string; actor_email: string; reason: string | null; created_at: string };
+type AuditRow = {
+  id: string;
+  action: string;
+  actor_email: string;
+  reason: string | null;
+  created_at: string;
+};
 
 function Overview({
   stats,
@@ -272,10 +274,7 @@ function Overview({
   onOpenOwners: () => void;
 }) {
   const attention = useMemo(
-    () =>
-      accounts
-        .filter((a) => a.plan_status !== "active" || a.pending_plan)
-        .slice(0, 6),
+    () => accounts.filter((a) => a.plan_status !== "active" || a.pending_plan).slice(0, 6),
     [accounts],
   );
 
@@ -397,7 +396,11 @@ function Overview({
               title="Rent collection"
               detail={`${inr(stats?.outstanding ?? 0)} outstanding`}
             />
-            <HealthRow ok title="Console access" detail="Two factor enforced, audit log append only" />
+            <HealthRow
+              ok
+              title="Console access"
+              detail="Two factor enforced, audit log append only"
+            />
           </div>
         </ConsoleCard>
       </div>
@@ -407,7 +410,13 @@ function Overview({
   );
 }
 
-function Tag({ children, tone = "muted" }: { children: React.ReactNode; tone?: "ok" | "warn" | "muted" }) {
+function Tag({
+  children,
+  tone = "muted",
+}: {
+  children: React.ReactNode;
+  tone?: "ok" | "warn" | "muted";
+}) {
   const cls =
     tone === "ok"
       ? "text-console-ok"
@@ -451,10 +460,35 @@ function Revenue({ stats, loading }: { stats: PlatformStats | undefined; loading
   return (
     <>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric icon={TrendingUp} chip="Monthly" label="Recurring revenue" value={inr(stats.mrr)} hint={`${stats.payingOwners} paying owners`} />
-        <Metric icon={Banknote} chip="Lifetime" label="Plan revenue captured" value={inr(stats.planRevenueCaptured)} hint="Successful plan payments" />
-        <Metric icon={Clock} chip="Trials" chipTone="warn" label="Owners on trial" value={String(stats.trialOwners)} hint="Not yet converted" />
-        <Metric icon={Banknote} chip="This month" label="Rent collected" value={inr(stats.collectedThisMonth)} hint={`${inr(stats.billedThisMonth)} billed`} />
+        <Metric
+          icon={TrendingUp}
+          chip="Monthly"
+          label="Recurring revenue"
+          value={inr(stats.mrr)}
+          hint={`${stats.payingOwners} paying owners`}
+        />
+        <Metric
+          icon={Banknote}
+          chip="Lifetime"
+          label="Plan revenue captured"
+          value={inr(stats.planRevenueCaptured)}
+          hint="Successful plan payments"
+        />
+        <Metric
+          icon={Clock}
+          chip="Trials"
+          chipTone="warn"
+          label="Owners on trial"
+          value={String(stats.trialOwners)}
+          hint="Not yet converted"
+        />
+        <Metric
+          icon={Banknote}
+          chip="This month"
+          label="Rent collected"
+          value={inr(stats.collectedThisMonth)}
+          hint={`${inr(stats.billedThisMonth)} billed`}
+        />
       </div>
 
       <ConsoleCard>
@@ -481,10 +515,34 @@ function Usage({ stats, accounts }: { stats: PlatformStats | undefined; accounts
   return (
     <>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric icon={TrendingUp} chip="Platform" label="Properties" value={String(stats?.properties ?? 0)} hint="Across all owners" />
-        <Metric icon={TrendingUp} chip="Platform" label="Rooms" value={String(stats?.rooms ?? 0)} hint="Managed inventory" />
-        <Metric icon={TrendingUp} chip="Platform" label="Active tenants" value={String(stats?.activeTenants ?? 0)} hint="Currently checked in" />
-        <Metric icon={Banknote} chip="This month" label="Bills raised" value={String(stats?.billsThisMonth ?? 0)} hint={inr(stats?.billedThisMonth ?? 0)} />
+        <Metric
+          icon={TrendingUp}
+          chip="Platform"
+          label="Properties"
+          value={String(stats?.properties ?? 0)}
+          hint="Across all owners"
+        />
+        <Metric
+          icon={TrendingUp}
+          chip="Platform"
+          label="Rooms"
+          value={String(stats?.rooms ?? 0)}
+          hint="Managed inventory"
+        />
+        <Metric
+          icon={TrendingUp}
+          chip="Platform"
+          label="Active tenants"
+          value={String(stats?.activeTenants ?? 0)}
+          hint="Currently checked in"
+        />
+        <Metric
+          icon={Banknote}
+          chip="This month"
+          label="Bills raised"
+          value={String(stats?.billsThisMonth ?? 0)}
+          hint={inr(stats?.billedThisMonth ?? 0)}
+        />
       </div>
 
       <ConsoleCard>
@@ -510,10 +568,26 @@ function Health({ stats }: { stats: PlatformStats | undefined }) {
     <ConsoleCard>
       <CardTitle title="System health" subtitle="Platform wide job status" />
       <div className="mt-4 space-y-3">
-        <HealthRow ok title="Monthly billing run" detail={`${stats?.billsThisMonth ?? 0} bills raised this month`} />
-        <HealthRow ok title="Payment capture" detail={`${inr(stats?.collectedThisMonth ?? 0)} collected this month`} />
-        <HealthRow ok={(stats?.outstanding ?? 0) === 0} title="Outstanding dues" detail={inr(stats?.outstanding ?? 0)} />
-        <HealthRow ok title="Console security" detail="Two factor enforced on every platform session" />
+        <HealthRow
+          ok
+          title="Monthly billing run"
+          detail={`${stats?.billsThisMonth ?? 0} bills raised this month`}
+        />
+        <HealthRow
+          ok
+          title="Payment capture"
+          detail={`${inr(stats?.collectedThisMonth ?? 0)} collected this month`}
+        />
+        <HealthRow
+          ok={(stats?.outstanding ?? 0) === 0}
+          title="Outstanding dues"
+          detail={inr(stats?.outstanding ?? 0)}
+        />
+        <HealthRow
+          ok
+          title="Console security"
+          detail="Two factor enforced on every platform session"
+        />
       </div>
     </ConsoleCard>
   );

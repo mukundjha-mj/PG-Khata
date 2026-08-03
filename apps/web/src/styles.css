@@ -138,7 +138,6 @@
   --sidebar-ring: #b5b5b5;
 }
 
-
 .dark {
   --clay: #ffe0c2;
   --clay-dark: #ffd0a6;
@@ -187,7 +186,6 @@
   --sidebar-border: #27272a;
   --sidebar-ring: #d4d4d8;
 }
-
 
 @layer base {
   * {
@@ -279,7 +277,6 @@
   }
 }
 
-
 /* Attio-style surface helpers */
 @utility surface-panel {
   background-color: var(--color-card);
@@ -294,7 +291,6 @@
     linear-gradient(to bottom, oklch(0.2 0.03 265 / 0.045) 1px, transparent 1px);
   background-size: 44px 44px;
 }
-
 
 .dark {
   --success: #4cc38a;
@@ -356,16 +352,36 @@
     color: var(--color-muted-foreground);
   }
 
-  .rtable tbody td:nth-child(1)::before { content: var(--c1, ""); }
-  .rtable tbody td:nth-child(2)::before { content: var(--c2, ""); }
-  .rtable tbody td:nth-child(3)::before { content: var(--c3, ""); }
-  .rtable tbody td:nth-child(4)::before { content: var(--c4, ""); }
-  .rtable tbody td:nth-child(5)::before { content: var(--c5, ""); }
-  .rtable tbody td:nth-child(6)::before { content: var(--c6, ""); }
-  .rtable tbody td:nth-child(7)::before { content: var(--c7, ""); }
-  .rtable tbody td:nth-child(8)::before { content: var(--c8, ""); }
-  .rtable tbody td:nth-child(9)::before { content: var(--c9, ""); }
-  .rtable tbody td:nth-child(10)::before { content: var(--c10, ""); }
+  .rtable tbody td:nth-child(1)::before {
+    content: var(--c1, "");
+  }
+  .rtable tbody td:nth-child(2)::before {
+    content: var(--c2, "");
+  }
+  .rtable tbody td:nth-child(3)::before {
+    content: var(--c3, "");
+  }
+  .rtable tbody td:nth-child(4)::before {
+    content: var(--c4, "");
+  }
+  .rtable tbody td:nth-child(5)::before {
+    content: var(--c5, "");
+  }
+  .rtable tbody td:nth-child(6)::before {
+    content: var(--c6, "");
+  }
+  .rtable tbody td:nth-child(7)::before {
+    content: var(--c7, "");
+  }
+  .rtable tbody td:nth-child(8)::before {
+    content: var(--c8, "");
+  }
+  .rtable tbody td:nth-child(9)::before {
+    content: var(--c9, "");
+  }
+  .rtable tbody td:nth-child(10)::before {
+    content: var(--c10, "");
+  }
 
   .rtable tbody td[colspan] {
     justify-content: center;

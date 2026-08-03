@@ -34,11 +34,13 @@ export const listAllAccounts = createServerFn({ method: "GET" })
 /** Sets an account's plan directly, with no charge. Platform team only. */
 export const setAccountPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { adminId: string; plan: "starter" | "growing" | "scale"; reason: string }) => {
-    const reason = String(input.reason ?? "").trim();
-    if (reason.length < 4) throw new Error("A reason is required for manual overrides");
-    return { adminId: input.adminId, plan: input.plan, reason: reason.slice(0, 500) };
-  })
+  .inputValidator(
+    (input: { adminId: string; plan: "starter" | "growing" | "scale"; reason: string }) => {
+      const reason = String(input.reason ?? "").trim();
+      if (reason.length < 4) throw new Error("A reason is required for manual overrides");
+      return { adminId: input.adminId, plan: input.plan, reason: reason.slice(0, 500) };
+    },
+  )
   .handler(async ({ data, context }) => {
     const { assertPlatformAdmin, logAction } = await import("@/lib/platform-auth.server");
     const { overridePlan } = await import("@/lib/super-admin.server");

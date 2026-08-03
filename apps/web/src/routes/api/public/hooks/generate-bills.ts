@@ -21,10 +21,8 @@ export const Route = createFileRoute("/api/public/hooks/generate-bills")({
           return new Response("Unauthorized", { status: 401 });
         }
 
-
-        const { runMonthlyBilling, currentMonth, isValidMonth } = await import(
-          "@/lib/billing-run.server"
-        );
+        const { runMonthlyBilling, currentMonth, isValidMonth } =
+          await import("@/lib/billing-run.server");
 
         let month = currentMonth();
         try {

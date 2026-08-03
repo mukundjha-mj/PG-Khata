@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -155,7 +163,15 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
       setTheme,
       refresh: () => void refetch(),
     }),
-    [data?.brand_name, data?.brand_logo_url, brandPrimaryColor, theme, resolvedTheme, setTheme, refetch],
+    [
+      data?.brand_name,
+      data?.brand_logo_url,
+      brandPrimaryColor,
+      theme,
+      resolvedTheme,
+      setTheme,
+      refetch,
+    ],
   );
 
   return <BrandingContext.Provider value={value}>{children}</BrandingContext.Provider>;

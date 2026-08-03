@@ -7,12 +7,7 @@ export type Settings = Tables<"settings">;
 
 export const ROOM_TYPES = ["single", "double", "triple", "dormitory"] as const;
 export const TENANT_STATUSES = ["active", "vacated", "notice-period"] as const;
-export const ADDRESS_PROOF_TYPES = [
-  "Aadhaar",
-  "Passport",
-  "Driving License",
-  "Voter ID",
-] as const;
+export const ADDRESS_PROOF_TYPES = ["Aadhaar", "Passport", "Driving License", "Voter ID"] as const;
 
 const inr = new Intl.NumberFormat("en-IN", {
   style: "currency",

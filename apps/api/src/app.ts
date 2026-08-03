@@ -20,22 +20,34 @@ export function createApp(dependencies: ApiDependencies): Express {
   });
   app.use(pinoHttp({ logger: dependencies.logger, genReqId: (request) => request.requestId }));
   app.use(helmet());
-  app.use(cors({ origin: dependencies.webOrigin, credentials: true, methods: ["GET", "POST", "PUT", "PATCH", "DELETE"] }));
+  app.use(
+    cors({
+      origin: dependencies.webOrigin,
+      credentials: true,
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    }),
+  );
   app.use(express.json({ limit: "1mb" }));
-  app.use(rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: "draft-8", legacyHeaders: false }));
+  app.use(
+    rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: "draft-8", legacyHeaders: false }),
+  );
 
   app.get("/health/live", (_request, response) => {
-    response.json(healthSchema.parse({ status: "ok", service: "pgkhata-api", version: dependencies.buildSha }));
+    response.json(
+      healthSchema.parse({ status: "ok", service: "pgkhata-api", version: dependencies.buildSha }),
+    );
   });
   app.get("/health/ready", async (_request, response, next) => {
     try {
       const ready = await dependencies.ready();
-      response.status(ready ? 200 : 503).json(healthSchema.parse({
-        status: ready ? "ok" : "degraded",
-        service: "pgkhata-api",
-        version: dependencies.buildSha,
-        checks: { database: ready ? "up" : "down" },
-      }));
+      response.status(ready ? 200 : 503).json(
+        healthSchema.parse({
+          status: ready ? "ok" : "degraded",
+          service: "pgkhata-api",
+          version: dependencies.buildSha,
+          checks: { database: ready ? "up" : "down" },
+        }),
+      );
     } catch (error) {
       next(error);
     }

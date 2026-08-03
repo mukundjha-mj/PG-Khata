@@ -124,7 +124,10 @@ function renderBill(doc: jsPDF, bill: Bill, ctx: BillContext) {
 }
 
 function safe(name: string) {
-  return name.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase();
+  return name
+    .replace(/[^a-z0-9]+/gi, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase();
 }
 
 export function downloadBillPdf(bill: Bill, ctx: BillContext) {

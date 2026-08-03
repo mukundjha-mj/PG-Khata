@@ -437,7 +437,9 @@ function RentAgreementGuide() {
                 <div
                   key={p.name}
                   className={`relative flex flex-col rounded-3xl border p-9 transition-transform hover:-translate-y-1 ${
-                    p.popular ? "border-ink bg-ink text-cream lg:scale-[1.04]" : "border-line bg-paper"
+                    p.popular
+                      ? "border-ink bg-ink text-cream lg:scale-[1.04]"
+                      : "border-line bg-paper"
                   }`}
                 >
                   {p.popular ? (
