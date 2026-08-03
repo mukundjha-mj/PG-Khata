@@ -1,0 +1,5 @@
+# Commits that only reformat. Skip them in blame:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# style: apply prettier across the repository
+6dfa3da43b33fae940adc1c9dc27dafe1f6f9082
