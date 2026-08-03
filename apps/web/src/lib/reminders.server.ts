@@ -63,12 +63,18 @@ function serviceClient(): SupabaseClient<Database> {
  *
  * Safe to run repeatedly: a bill is never reminded twice on the same day, and
  * overdue reminders respect a cooldown, both derived from notification_logs.
+ *
+ * This runs with the service role, so it bypasses RLS. Pass `adminId` to
+ * restrict the run to one owner; only the scheduled platform-wide job may omit
+ * it. Without it an owner-triggered call would email every other owner's
+ * tenants and mark their bills overdue.
  */
 export async function runPaymentReminders(
-  options: { today?: string; dryRun?: boolean } = {},
+  options: { today?: string; dryRun?: boolean; adminId?: string } = {},
 ): Promise<ReminderRunResult> {
   const supabase = serviceClient();
   const today = options.today ?? todayIso();
+  const adminId = options.adminId;
   const result: ReminderRunResult = {
     today,
     candidates: 0,
@@ -80,11 +86,21 @@ export async function runPaymentReminders(
     details: [],
   };
 
+  // Scope first: everything downstream is filtered to these properties.
+  const propertyQuery = supabase.from("properties").select("id, admin_id, name");
+  const propertiesRes = await (adminId
+    ? propertyQuery.eq("admin_id", adminId)
+    : propertyQuery);
+  if (propertiesRes.error) throw new Error(propertiesRes.error.message);
+  const ownedPropertyIds = (propertiesRes.data ?? []).map((p) => p.id);
+  if (ownedPropertyIds.length === 0) return result;
+
   const { data: bills, error } = await supabase
     .from("bills")
     .select(
       "id, tenant_id, property_id, bill_month, total_amount, paid_amount, due_date, status, approved",
     )
+    .in("property_id", ownedPropertyIds)
     .eq("approved", true)
     .neq("status", "paid")
     .not("due_date", "is", null);
@@ -96,22 +112,29 @@ export async function runPaymentReminders(
   result.candidates = open.length;
   if (open.length === 0) return result;
 
-  const [propertiesRes, settingsRes, tenantsRes, logsRes] = await Promise.all([
-    supabase.from("properties").select("id, admin_id, name"),
+  const openBillIds = open.map((b) => b.id);
+  const [settingsRes, tenantsRes, logsRes, roomsRes] = await Promise.all([
     supabase.from("settings").select("admin_id, reminder_days_before, remind_on_due_date"),
     supabase.from("tenants").select("id, full_name, email, room_id, status"),
     supabase
       .from("notification_logs")
       .select("bill_id, sent_at, status, message_type")
+      .in("bill_id", openBillIds)
       .eq("message_type", "payment-reminder")
       .eq("status", "sent"),
+    supabase.from("rooms").select("id, room_number"),
   ]);
-  const { data: rooms } = await supabase.from("rooms").select("id, room_number");
+
+  // A failed supporting query must not degrade into a silent skip: an empty
+  // notification_logs result would disable both dedup guards and resend.
+  for (const r of [settingsRes, tenantsRes, logsRes, roomsRes]) {
+    if (r.error) throw new Error(r.error.message);
+  }
 
   const propertyById = new Map((propertiesRes.data ?? []).map((p) => [p.id, p]));
   const settingsByAdmin = new Map((settingsRes.data ?? []).map((s) => [s.admin_id, s]));
   const tenantById = new Map((tenantsRes.data ?? []).map((t) => [t.id, t]));
-  const roomById = new Map((rooms ?? []).map((r) => [r.id, r]));
+  const roomById = new Map((roomsRes.data ?? []).map((r) => [r.id, r]));
 
   // Last successful reminder per bill, used for the same-day and overdue guards.
   const lastReminder = new Map<string, string>();

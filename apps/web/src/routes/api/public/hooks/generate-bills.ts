@@ -42,6 +42,13 @@ export const Route = createFileRoute("/api/public/hooks/generate-bills")({
         try {
           // Scheduled bills land unapproved so an admin reviews them first.
           const result = await runMonthlyBilling(month, { approved: false });
+          console.info("[generate-bills] ok", {
+            month,
+            admins: result.admins,
+            created: result.created,
+            skipped: result.skipped,
+            errors: result.errors.length,
+          });
           return Response.json(result);
         } catch (error) {
           console.error("[generate-bills] failed", error);

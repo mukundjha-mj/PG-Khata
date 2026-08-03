@@ -38,6 +38,13 @@ export const Route = createFileRoute("/api/public/hooks/send-reminders")({
             ...(today ? { today } : {}),
             dryRun,
           });
+          console.info("[send-reminders] ok", {
+            today: result.today,
+            candidates: result.candidates,
+            matched: result.matched,
+            emailSent: result.emailSent,
+            errors: result.errors.length,
+          });
           return Response.json(result);
         } catch (error) {
           console.error("[send-reminders] failed", error);

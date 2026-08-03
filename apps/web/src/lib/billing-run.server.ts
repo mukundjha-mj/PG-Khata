@@ -43,14 +43,20 @@ function round2(n: number) {
  * Idempotent on two levels: existing bills for the month are filtered out
  * before insert, and the `bills_tenant_month_unique` index makes concurrent or
  * retried runs impossible to duplicate (conflicts are ignored, not errors).
+ *
+ * This runs with the service role, so it bypasses RLS. Pass `adminId` to
+ * restrict the run to one owner; only the scheduled platform-wide job may omit
+ * it. Without it an owner-triggered call would create bills across every
+ * account on the platform.
  */
 export async function runMonthlyBilling(
   month: string,
-  options: { approved?: boolean } = {},
+  options: { approved?: boolean; adminId?: string } = {},
 ): Promise<BillingRunResult> {
   // Scheduled runs create bills that wait for admin approval; manual runs are
   // approved on the spot because a human already pressed the button.
   const approved = options.approved !== false;
+  const adminId = options.adminId;
   const supabase = createClient<Database>(
     process.env["SUPABASE_URL"]!,
     process.env["SUPABASE_SERVICE_ROLE_KEY"]!,
@@ -67,21 +73,59 @@ export async function runMonthlyBilling(
     errors: [],
   };
 
-  const [admins, properties, rooms, tenants, settings, existing, readings] = await Promise.all([
-    supabase.from("admins").select("id"),
-    supabase.from("properties").select("id, admin_id"),
-    supabase.from("rooms").select("id, property_id, monthly_rent"),
-    supabase.from("tenants").select("id, room_id, monthly_rent_override, status"),
-    supabase.from("settings").select("admin_id, electricity_rate_per_unit, due_date_offset_days"),
-    supabase.from("bills").select("tenant_id").eq("bill_month", month),
+  // Walk the ownership chain first so every dependent query is already scoped:
+  // admin -> property -> room -> tenant.
+  const adminQuery = supabase.from("admins").select("id");
+  const admins = await (adminId ? adminQuery.eq("id", adminId) : adminQuery);
+  if (admins.error) throw new Error(admins.error.message);
+  result.admins = (admins.data ?? []).length;
+  if (result.admins === 0) return result;
+
+  const propertyQuery = supabase.from("properties").select("id, admin_id");
+  const properties = await (adminId
+    ? propertyQuery.eq("admin_id", adminId)
+    : propertyQuery);
+  if (properties.error) throw new Error(properties.error.message);
+  const propertyIds = (properties.data ?? []).map((p) => p.id);
+  if (propertyIds.length === 0) return result;
+
+  const rooms = await supabase
+    .from("rooms")
+    .select("id, property_id, monthly_rent")
+    .in("property_id", propertyIds);
+  if (rooms.error) throw new Error(rooms.error.message);
+  const roomIds = (rooms.data ?? []).map((r) => r.id);
+  if (roomIds.length === 0) return result;
+
+  const tenants = await supabase
+    .from("tenants")
+    .select("id, room_id, monthly_rent_override, status")
+    .in("room_id", roomIds);
+  if (tenants.error) throw new Error(tenants.error.message);
+  const tenantIds = (tenants.data ?? []).map((t) => t.id);
+
+  const adminIds = (admins.data ?? []).map((a) => a.id);
+  const [settings, existing, readings] = await Promise.all([
+    supabase
+      .from("settings")
+      .select("admin_id, electricity_rate_per_unit, due_date_offset_days")
+      .in("admin_id", adminIds),
+    tenantIds.length > 0
+      ? supabase
+          .from("bills")
+          .select("tenant_id")
+          .eq("bill_month", month)
+          .in("tenant_id", tenantIds)
+      : Promise.resolve({ data: [], error: null } as const),
     supabase
       .from("electricity_readings")
       .select("room_id, units_consumed_since_previous")
+      .in("room_id", roomIds)
       .gte("reading_date", start)
       .lte("reading_date", end),
   ]);
 
-  for (const r of [admins, properties, rooms, tenants, settings, existing, readings]) {
+  for (const r of [settings, existing, readings]) {
     if (r.error) throw new Error(r.error.message);
   }
 
@@ -98,7 +142,6 @@ export async function runMonthlyBilling(
   }
 
   const active = (tenants.data ?? []).filter((t) => t.status === "active");
-  result.admins = (admins.data ?? []).length;
 
   // Electricity is split evenly between the tenants sharing a room this run.
   const tenantsPerRoom = new Map<string, number>();
