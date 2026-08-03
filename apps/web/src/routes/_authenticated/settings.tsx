@@ -35,6 +35,7 @@ type Draft = {
   remind_on_due_date: boolean;
   upi_vpa: string;
   upi_payee_name: string;
+  whatsapp_enabled: boolean;
 };
 
 function SettingsPage() {
@@ -60,6 +61,7 @@ function SettingsPage() {
         remind_on_due_date: data.remind_on_due_date,
         upi_vpa: data.upi_vpa ?? "",
         upi_payee_name: data.upi_payee_name ?? "",
+        whatsapp_enabled: data.whatsapp_enabled,
       });
     }
   }, [data]);
@@ -251,6 +253,40 @@ function SettingsPage() {
               disabled={save.isPending}
             >
               Save UPI details
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {isLoading || !draft ? null : (
+        <Card>
+          <CardHeader>
+            <CardTitle>WhatsApp reminders</CardTitle>
+            <CardDescription>
+              Sends the same reminder over WhatsApp as well as email, using the official WhatsApp
+              Business API. Tenants need a phone number on file.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between rounded-md border border-border px-3 py-2.5">
+              <div>
+                <p className="text-sm font-medium">Also send on WhatsApp</p>
+                <p className="text-xs text-muted-foreground">
+                  Email still goes out either way. A tenant is never chased twice on the same day.
+                </p>
+              </div>
+              <Switch
+                aria-label="Also send reminders on WhatsApp"
+                checked={draft.whatsapp_enabled}
+                onCheckedChange={(v) => setDraft({ ...draft, whatsapp_enabled: v })}
+              />
+            </div>
+            <Button
+              className="w-full sm:w-auto"
+              onClick={() => save.mutate()}
+              disabled={save.isPending}
+            >
+              Save WhatsApp settings
             </Button>
           </CardContent>
         </Card>

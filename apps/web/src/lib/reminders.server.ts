@@ -5,11 +5,13 @@ import {
   buildReminderEmailHtml,
   buildReminderMessage,
   buildReminderSubject,
+  buildReminderTemplate,
   type ReminderData,
   type ReminderKind,
 } from "@/lib/reminder-message";
 import { sendTenantEmail } from "@/lib/email.server";
 import { buildBillNote, tryBuildUpiIntent } from "@/lib/upi";
+import { isWhatsAppConfigured, sendTenantWhatsApp } from "@/lib/whatsapp.server";
 
 /** Minimum gap between two overdue reminders for the same bill. */
 const OVERDUE_EVERY_DAYS = 3;
@@ -19,6 +21,7 @@ export type ReminderRunResult = {
   candidates: number;
   matched: number;
   emailSent: number;
+  whatsappSent: number;
   skipped: number;
   markedOverdue: number;
   errors: string[];
@@ -27,6 +30,7 @@ export type ReminderRunResult = {
     tenant: string;
     kind: ReminderKind;
     email: boolean;
+    whatsapp: boolean;
     reason?: string;
   }>;
 };
@@ -81,6 +85,7 @@ export async function runPaymentReminders(
     candidates: 0,
     matched: 0,
     emailSent: 0,
+    whatsappSent: 0,
     skipped: 0,
     markedOverdue: 0,
     errors: [],
@@ -114,9 +119,9 @@ export async function runPaymentReminders(
     supabase
       .from("settings")
       .select(
-        "admin_id, reminder_days_before, remind_on_due_date, upi_vpa, upi_payee_name, brand_name",
+        "admin_id, reminder_days_before, remind_on_due_date, upi_vpa, upi_payee_name, brand_name, whatsapp_enabled, whatsapp_country_code",
       ),
-    supabase.from("tenants").select("id, full_name, email, room_id, status"),
+    supabase.from("tenants").select("id, full_name, email, phone, room_id, status"),
     supabase
       .from("notification_logs")
       .select("bill_id, sent_at, status, message_type")
@@ -191,6 +196,7 @@ export async function runPaymentReminders(
         tenant: tenant.full_name,
         kind,
         email: false,
+        whatsapp: false,
         reason: "Dry run",
       });
       continue;
@@ -225,6 +231,7 @@ export async function runPaymentReminders(
     };
 
     let email = false;
+    let whatsapp = false;
     const reasons: string[] = [];
 
     if (!tenant.email) {
@@ -243,12 +250,33 @@ export async function runPaymentReminders(
       else reasons.push(`Email: ${res.reason ?? "failed"}`);
     }
 
-    if (email) lastReminder.set(bill.id, today);
+    if (settings?.whatsapp_enabled && isWhatsAppConfigured()) {
+      if (!tenant.phone) {
+        reasons.push("WhatsApp: no phone number on file");
+      } else {
+        const res = await sendTenantWhatsApp(supabase, {
+          tenantId: tenant.id,
+          billId: bill.id,
+          phone: tenant.phone,
+          dialCode: settings.whatsapp_country_code ?? "91",
+          template: buildReminderTemplate(data),
+          messageType: "payment-reminder",
+        });
+        whatsapp = res.sent;
+        if (res.sent) result.whatsappSent += 1;
+        else reasons.push(`WhatsApp: ${res.reason ?? "failed"}`);
+      }
+    }
+
+    // Any successful channel closes the day for this bill, so a tenant who has
+    // both email and WhatsApp is not chased twice on the same day.
+    if (email || whatsapp) lastReminder.set(bill.id, today);
     result.details.push({
       billId: bill.id,
       tenant: tenant.full_name,
       kind,
       email,
+      whatsapp,
       ...(reasons.length ? { reason: reasons.join(" · ") } : {}),
     });
   }

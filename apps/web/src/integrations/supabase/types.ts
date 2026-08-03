@@ -542,10 +542,8 @@ export type Database = {
           updated_at: string;
           upi_payee_name: string | null;
           upi_vpa: string | null;
-          whatsapp_api_url: string;
           whatsapp_country_code: string;
           whatsapp_enabled: boolean;
-          whatsapp_session: string;
         };
         Insert: {
           admin_id?: string;
@@ -569,10 +567,8 @@ export type Database = {
           updated_at?: string;
           upi_payee_name?: string | null;
           upi_vpa?: string | null;
-          whatsapp_api_url?: string;
           whatsapp_country_code?: string;
           whatsapp_enabled?: boolean;
-          whatsapp_session?: string;
         };
         Update: {
           admin_id?: string;
@@ -596,10 +592,8 @@ export type Database = {
           updated_at?: string;
           upi_payee_name?: string | null;
           upi_vpa?: string | null;
-          whatsapp_api_url?: string;
           whatsapp_country_code?: string;
           whatsapp_enabled?: boolean;
-          whatsapp_session?: string;
         };
         Relationships: [
           {

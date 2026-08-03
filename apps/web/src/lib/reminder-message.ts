@@ -99,3 +99,36 @@ export function buildReminderEmailHtml(d: ReminderData): string {
   </div>
 </body></html>`;
 }
+
+/** Template name that must be approved in the Meta Business account. */
+export const REMINDER_TEMPLATE_NAME = "rent_payment_reminder";
+
+/**
+ * Maps a reminder onto the approved WhatsApp template's body parameters.
+ *
+ * Meta rejects free-form text for business-initiated messages, so the wording
+ * lives in the approved template and only these substitutions vary. The order
+ * must match {{1}}..{{5}} exactly — a reordering here silently sends the room
+ * number where the amount belongs, because Meta validates the count, not the
+ * meaning.
+ *
+ * Template body as submitted:
+ *   Hi {{1}}, your rent for {{2}} at {{3}} is {{4}}. Due: {{5}}.
+ */
+export function buildReminderTemplate(d: ReminderData): {
+  name: string;
+  languageCode: string;
+  bodyParameters: string[];
+} {
+  return {
+    name: REMINDER_TEMPLATE_NAME,
+    languageCode: "en",
+    bodyParameters: [
+      d.tenantName,
+      d.monthLabel,
+      `${d.propertyName} Room ${d.roomNumber}`,
+      formatMoney(d.balance),
+      d.dueDate ? formatDate(d.dueDate) : "as soon as possible",
+    ],
+  };
+}
