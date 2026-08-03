@@ -5,6 +5,9 @@ import { defineConfig } from "vite";
 import tsConfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
+  // The monorepo keeps environment files at the repository root. Vite still
+  // exposes only values prefixed with VITE_ to browser code.
+  envDir: "../..",
   plugins: [
     tsConfigPaths(),
     tailwindcss(),

@@ -8,6 +8,11 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+coverage
+test-results
+playwright-report
+.turbo
+.cache
 dist
 dist-ssr
 .output
@@ -20,6 +25,10 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Local integration-test services
+.minio
+.redis
 
 # Wrangler / Cloudflare
 .wrangler/
