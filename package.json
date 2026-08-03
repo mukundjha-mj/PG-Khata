@@ -7,16 +7,11 @@
     "node": ">=22 <25"
   },
   "scripts": {
-    "dev": "pnpm --parallel --filter @pgkhata/web --filter @pgkhata/api --filter @pgkhata/worker dev",
-    "dev:web": "pnpm --filter @pgkhata/web dev",
-    "dev:api": "pnpm --filter @pgkhata/api dev",
-    "dev:worker": "pnpm --filter @pgkhata/worker dev",
+    "dev": "pnpm --filter @pgkhata/web dev",
     "build": "pnpm -r --if-present build",
     "lint": "pnpm -r --if-present lint",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",
-    "test:unit": "pnpm -r --if-present test:unit",
-    "test:integration": "pnpm -r --if-present test:integration",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"

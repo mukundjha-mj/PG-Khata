@@ -1,21 +1,15 @@
 # PGKhata
 
-PGKhata is a PG and hostel operations platform. The repository is organized as
-a modular monorepo so the frontend, API, and background worker can be deployed
-independently while sharing validated contracts.
+PGKhata is a PG and hostel operations platform: rooms, tenants, electricity
+readings, monthly billing, and payment tracking for Indian PG owners.
 
-## Applications
+## Layout
 
-- `apps/web` - existing TanStack Start owner and platform application.
-- `apps/api` - Express 5 REST API and Better Auth boundary.
-- `apps/worker` - BullMQ background processing.
+- `apps/web` - the application. TanStack Start, React 19, and Supabase for
+  auth, Postgres, and storage.
 
-## Shared packages
-
-- `packages/contracts` - Zod request/response contracts and OpenAPI metadata.
-- `packages/db` - Drizzle schema, migrations, and database access.
-- `packages/config` - shared runtime configuration and logging.
-- `packages/test-utils` - integration-test infrastructure and fixtures.
+The repository keeps the pnpm workspace layout so a second deployable can be
+added later without another restructure, but there is only one today.
 
 ## Development
 
@@ -32,5 +26,15 @@ Run the full quality gate with:
 pnpm check
 ```
 
-The migration from direct Supabase browser access is incremental. See
-`docs/backend-migration.md` before moving or removing legacy data paths.
+## Status
+
+The product does not yet close its core loop. Reminders are email-only, and
+there is no payment webhook, so payments cannot be reconciled automatically.
+Both are the current priority.
+
+An Express, Drizzle, and BullMQ backend was started and then removed: it had
+reached one module while the shipping application had grown past seventeen
+thousand lines, so it was two codebases of maintenance for no delivered
+behaviour. The schema and contract design is kept outside this repository, in
+`data-points/reference-backend`, for whenever a separate backend is actually
+warranted.
