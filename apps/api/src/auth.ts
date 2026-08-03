@@ -3,7 +3,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import type { Database } from "@pgkhata/db";
 import { workspaceMemberships } from "@pgkhata/db";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import type { AppEnv } from "@pgkhata/config";
 import type { Authenticate } from "./types.js";
 
@@ -32,6 +32,9 @@ export function createAuthenticate(
       .select()
       .from(workspaceMemberships)
       .where(eq(workspaceMemberships.userId, session.user.id))
+      // Deterministic: an unordered limit(1) would let a user who belongs to
+      // two workspaces resolve to a different tenant between requests.
+      .orderBy(asc(workspaceMemberships.createdAt), asc(workspaceMemberships.workspaceId))
       .limit(1);
     return membership
       ? { userId: session.user.id, workspaceId: membership.workspaceId, role: membership.role }

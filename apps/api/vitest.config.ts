@@ -11,7 +11,7 @@ export default defineConfig({
       // neither can be meaningfully covered. auth.ts and the repositories are
       // NOT excluded: they need integration tests against a real database.
       exclude: ["src/server.ts", "src/openapi/write.ts", "src/types.ts"],
-      thresholds: { lines: 50, statements: 50, functions: 60, branches: 50 },
+      thresholds: { lines: 80, statements: 80, functions: 80, branches: 70 },
     },
   },
 });
