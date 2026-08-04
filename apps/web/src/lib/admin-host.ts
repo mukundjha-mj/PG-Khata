@@ -1,5 +1,5 @@
 /**
- * The super admin console is served from its own subdomain, e.g. admin.basera.app.
+ * The super admin console is served from its own subdomain, e.g. admin.pgkhata.com.
  * Owners never see it on the main site.
  */
 export function isAdminHost(hostname: string | undefined | null): boolean {

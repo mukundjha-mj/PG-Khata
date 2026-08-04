@@ -8,6 +8,7 @@ import {
   pricingFaqs,
 } from "@/lib/pricing-plans";
 import { onAdminHost } from "@/lib/admin-host";
+import { BRAND, appUrl, siteUrl } from "@/lib/site";
 
 export const Route = createFileRoute("/")({
   beforeLoad: () => {
@@ -15,30 +16,32 @@ export const Route = createFileRoute("/")({
   },
   head: () => ({
     meta: [
-      { title: "Basera - PG Billing, Sorted." },
+      { title: `${BRAND} - PG Billing, Sorted.` },
       {
         name: "description",
-        content:
-          "Basera generates rent, electricity and other charges for every PG tenant on the 1st, sends the bill with a UPI QR, and tracks who has paid.",
+        content: `${BRAND} generates rent, electricity and other charges for every PG tenant on the 1st, sends the bill with a UPI QR, and tracks who has paid.`,
       },
-      { property: "og:title", content: "Basera - PG Billing, Sorted." },
+      { property: "og:title", content: `${BRAND} - PG Billing, Sorted.` },
       {
         property: "og:description",
         content:
           "Automatic monthly rent and electricity bills for PG and hostel owners, with UPI payments and collection tracking.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "/" },
+      { property: "og:url", content: siteUrl("/") },
       { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: "canonical", href: "/" }],
+    // Absolute: the same build answers on the app and console subdomains, so a
+    // relative canonical would point each host at itself.
+    links: [{ rel: "canonical", href: siteUrl("/") }],
     scripts: [
       {
         type: "application/ld+json",
         children: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "SoftwareApplication",
-          name: "Basera",
+          name: BRAND,
+          url: siteUrl("/"),
           applicationCategory: "BusinessApplication",
           description: "Billing and tenant management for PG and hostel owners across India.",
           offers: {
@@ -188,7 +191,7 @@ function LandingPage() {
   useReveal();
 
   return (
-    <div className="basera min-h-screen overflow-x-hidden bg-cream font-body text-ink">
+    <div className="marketing min-h-screen overflow-x-hidden bg-cream font-body text-ink">
       <div className="grain" aria-hidden="true" />
 
       <nav
@@ -198,7 +201,7 @@ function LandingPage() {
         <div className="mx-auto flex max-w-[1180px] items-center justify-between px-6">
           <span className="flex items-center gap-2 font-display text-2xl font-bold">
             <span className="inline-block h-3 w-3 rotate-45 rounded-[3px] bg-clay" />
-            Basera
+            {BRAND}
           </span>
           <div className="hidden items-center gap-9 text-sm font-medium md:flex">
             <a href="#features" className="opacity-75 transition-opacity hover:opacity-100">
@@ -210,19 +213,19 @@ function LandingPage() {
             <a href="#pricing" className="opacity-75 transition-opacity hover:opacity-100">
               Pricing
             </a>
-            <Link
-              to="/auth"
+            <a
+              href={appUrl("/auth")}
               className="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-cream transition-all hover:-translate-y-px hover:bg-clay"
             >
               Start free trial
-            </Link>
+            </a>
           </div>
-          <Link
-            to="/auth"
+          <a
+            href={appUrl("/auth")}
             className="rounded-full bg-ink px-4 py-2.5 text-sm font-semibold text-cream md:hidden"
           >
             Sign in
-          </Link>
+          </a>
         </div>
       </nav>
 
@@ -248,17 +251,17 @@ function LandingPage() {
               <em className="text-clay italic">the reminders.</em>
             </h1>
             <p className="mt-7 mb-9 max-w-[460px] text-[19px] leading-relaxed text-ink/70">
-              Basera generates every tenant's rent, electricity and other charges on the 1st, then
+              {BRAND} generates every tenant's rent, electricity and other charges on the 1st, then
               sends the bill with a UPI QR and payment link. You just watch the money come in.
             </p>
             <div className="flex flex-wrap items-center gap-4">
-              <Link
-                to="/auth"
+              <a
+                href={appUrl("/auth")}
                 className="inline-flex items-center gap-2.5 rounded-full bg-clay px-7 py-4 text-[15.5px] font-semibold text-paper shadow-[0_14px_30px_-10px_rgba(193,91,62,0.55)] transition-transform hover:-translate-y-0.5"
               >
                 Start your free month
                 <Arrow />
-              </Link>
+              </a>
               <a
                 href="#how"
                 className="border-b-2 border-ink px-2 py-4 text-[15px] font-semibold transition-opacity hover:opacity-60"
@@ -281,13 +284,13 @@ function LandingPage() {
           </div>
 
           <div className="relative mx-auto w-full max-w-[420px]">
-            <div className="float-chip absolute -top-4 -left-3 z-20 flex items-center gap-2.5 rounded-2xl bg-paper px-4 py-3 text-[13.5px] font-semibold shadow-[var(--basera-shadow)] sm:-left-7">
+            <div className="float-chip absolute -top-4 -left-3 z-20 flex items-center gap-2.5 rounded-2xl bg-paper px-4 py-3 text-[13.5px] font-semibold shadow-[var(--marketing-shadow)] sm:-left-7">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sage-light text-sage">
                 <Check />
               </span>
               Bill sent
             </div>
-            <div className="relative z-10 rotate-2 rounded-[22px] border border-line bg-paper p-7 shadow-[var(--basera-shadow)]">
+            <div className="relative z-10 rotate-2 rounded-[22px] border border-line bg-paper p-7 shadow-[var(--marketing-shadow)]">
               <div className="flex items-start justify-between border-b border-dashed border-line pb-4">
                 <div>
                   <p className="text-[15px] font-semibold">Rahul Verma, Room 204</p>
@@ -322,7 +325,7 @@ function LandingPage() {
                 </span>
               </div>
             </div>
-            <div className="float-chip absolute right-0 -bottom-4 z-20 flex items-center gap-2.5 rounded-2xl bg-paper px-4 py-3 text-[13.5px] font-semibold shadow-[var(--basera-shadow)] sm:-right-8">
+            <div className="float-chip absolute right-0 -bottom-4 z-20 flex items-center gap-2.5 rounded-2xl bg-paper px-4 py-3 text-[13.5px] font-semibold shadow-[var(--marketing-shadow)] sm:-right-8">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gold/25 text-clay-dark">
                 <Check />
               </span>
@@ -355,7 +358,7 @@ function LandingPage() {
       <section id="features" className="px-6 py-28">
         <div className="reveal mx-auto max-w-[1180px]">
           <p className="text-[13px] font-bold tracking-[0.08em] text-clay uppercase">
-            What Basera does
+            What {BRAND} does
           </p>
           <h2 className="mt-4 max-w-[640px] font-display text-[clamp(32px,3.6vw,48px)] font-semibold">
             One dashboard. Every bill sent for you.
@@ -367,7 +370,7 @@ function LandingPage() {
             {features.map((f) => (
               <article
                 key={f.title}
-                className="rounded-[20px] border border-line bg-paper p-8 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[var(--basera-shadow)]"
+                className="rounded-[20px] border border-line bg-paper p-8 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[var(--marketing-shadow)]"
               >
                 <span
                   className={`mb-5 flex h-12 w-12 items-center justify-center rounded-[13px] ${f.tint}`}
@@ -464,8 +467,8 @@ function LandingPage() {
                     </li>
                   ))}
                 </ul>
-                <Link
-                  to="/auth"
+                <a
+                  href={appUrl("/auth")}
                   className={`rounded-full border-[1.5px] py-3.5 text-center text-[14.5px] font-semibold ${
                     p.popular
                       ? "border-clay bg-clay text-paper"
@@ -473,7 +476,7 @@ function LandingPage() {
                   }`}
                 >
                   Start free trial
-                </Link>
+                </a>
               </div>
             ))}
           </div>
@@ -547,13 +550,13 @@ function LandingPage() {
           <p className="mt-5 mb-8 text-[17px] text-ink/60">
             Set up your first property free, no card required.
           </p>
-          <Link
-            to="/auth"
+          <a
+            href={appUrl("/auth")}
             className="inline-flex items-center gap-2.5 rounded-full bg-clay px-7 py-4 text-[15.5px] font-semibold text-paper shadow-[0_14px_30px_-10px_rgba(193,91,62,0.55)] transition-transform hover:-translate-y-0.5"
           >
             Start your free month
             <Arrow />
-          </Link>
+          </a>
         </div>
       </section>
 
@@ -563,7 +566,7 @@ function LandingPage() {
           <div className="max-w-[300px]">
             <span className="flex items-center gap-2 font-display text-2xl font-bold">
               <span className="inline-block h-3 w-3 rotate-45 rounded-[3px] bg-clay" />
-              Basera
+              {BRAND}
             </span>
             <p className="mt-3 text-[14.5px] text-ink/60">
               Billing and tenant management for PG and hostel owners across India.
@@ -594,20 +597,23 @@ function LandingPage() {
               <h4 className="mb-4 text-[13px] font-bold tracking-wide uppercase opacity-50">
                 Company
               </h4>
-              <Link to="/auth" className="mb-3 block text-[14.5px] opacity-75 hover:opacity-100">
+              <a
+                href={appUrl("/auth")}
+                className="mb-3 block text-[14.5px] opacity-75 hover:opacity-100"
+              >
                 Sign in
-              </Link>
-              <Link
-                to="/dashboard"
+              </a>
+              <a
+                href={appUrl("/dashboard")}
                 className="mb-3 block text-[14.5px] opacity-75 hover:opacity-100"
               >
                 Dashboard
-              </Link>
+              </a>
             </div>
           </div>
         </div>
         <div className="flex flex-wrap justify-between gap-3 pt-6 text-[13px] text-ink/50">
-          <span>2026 Basera. Made for PG owners, not tech teams.</span>
+          <span>2026 {BRAND}. Made for PG owners, not tech teams.</span>
           <span>Mumbai, Bengaluru, Delhi NCR</span>
         </div>
       </footer>

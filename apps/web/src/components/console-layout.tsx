@@ -67,7 +67,7 @@ export function ConsoleLayout({
           <ShieldCheck className="h-5 w-5 text-console-bg" />
         </div>
         <div className="leading-tight">
-          <p className="console-display text-base font-semibold">Basera</p>
+          <p className="console-display text-base font-semibold">PGKhata</p>
           <p className="text-[11px] uppercase tracking-[0.18em] text-console-muted">Control</p>
         </div>
       </div>

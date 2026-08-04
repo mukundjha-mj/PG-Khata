@@ -70,7 +70,7 @@ export function PlatformSignIn() {
             {mode === "signin" ? "Platform sign in" : "Create platform account"}
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Restricted to the Basera platform team. PG owners sign in on the main site.
+            Restricted to the PGKhata platform team. PG owners sign in on the main site.
           </p>
         </CardHeader>
         <CardContent>
@@ -149,7 +149,7 @@ export function TotpEnroll({ onDone }: { onDone: () => void }) {
       if (stale) await supabase.auth.mfa.unenroll({ factorId: stale.id });
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: "totp",
-        friendlyName: `Basera console ${Date.now()}`,
+        friendlyName: `PGKhata console ${Date.now()}`,
       });
       if (!active) return;
       if (error) {

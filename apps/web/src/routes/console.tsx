@@ -28,13 +28,13 @@ export const Route = createFileRoute("/console")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Basera Control - Super admin" },
+      { title: "PGKhata Control - Super admin" },
       {
         name: "description",
-        content: "Internal Basera platform console for managing every PG owner account.",
+        content: "Internal PGKhata platform console for managing every PG owner account.",
       },
-      { property: "og:title", content: "Basera Control - Super admin" },
-      { property: "og:description", content: "Internal console for the Basera platform team." },
+      { property: "og:title", content: "PGKhata Control - Super admin" },
+      { property: "og:description", content: "Internal console for the PGKhata platform team." },
       { property: "og:type", content: "website" },
       { name: "robots", content: "noindex, nofollow" },
       { name: "twitter:card", content: "summary" },
@@ -100,7 +100,7 @@ function ConsolePage() {
       <div className="console-shell dark min-h-screen p-6">
         <EmptyState
           title="No platform access"
-          description="This console is limited to the Basera platform team. PG owner accounts cannot be used here."
+          description="This console is limited to the PGKhata platform team. PG owner accounts cannot be used here."
         />
       </div>
     );

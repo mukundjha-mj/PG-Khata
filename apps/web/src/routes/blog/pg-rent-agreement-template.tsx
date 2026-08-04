@@ -3,8 +3,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { pricingPlans } from "@/lib/pricing-plans";
 import { pgRentAgreementTemplate } from "@/lib/pg-rent-agreement-template";
+import { BRAND, appUrl, siteUrl } from "@/lib/site";
 
-const PAGE_URL = "https://basera.app/blog/pg-rent-agreement-template";
+const PAGE_URL = siteUrl("/blog/pg-rent-agreement-template");
 const TITLE = "PG Rent Agreement Format: Free Template for Owners";
 const DESCRIPTION =
   "A clause by clause guide to drafting a PG rent agreement in India, with a free downloadable format covering deposit, electricity, notice period and house rules.";
@@ -30,8 +31,8 @@ export const Route = createFileRoute("/blog/pg-rent-agreement-template")({
           headline: TITLE,
           description: DESCRIPTION,
           mainEntityOfPage: PAGE_URL,
-          author: { "@type": "Organization", name: "Basera" },
-          publisher: { "@type": "Organization", name: "Basera" },
+          author: { "@type": "Organization", name: BRAND },
+          publisher: { "@type": "Organization", name: BRAND },
         }),
       },
       {
@@ -44,7 +45,7 @@ export const Route = createFileRoute("/blog/pg-rent-agreement-template")({
               "@type": "ListItem",
               position: 1,
               name: "Home",
-              item: "https://basera.app/",
+              item: siteUrl("/"),
             },
             { "@type": "ListItem", position: 2, name: "PG rent agreement format", item: PAGE_URL },
           ],
@@ -228,21 +229,21 @@ function RentAgreementGuide() {
   useReveal();
 
   return (
-    <div className="basera min-h-screen overflow-x-hidden bg-cream font-body text-ink">
+    <div className="marketing min-h-screen overflow-x-hidden bg-cream font-body text-ink">
       <div className="grain" aria-hidden="true" />
 
       <nav className="border-b border-line bg-cream/85 py-4 backdrop-blur-lg">
         <div className="mx-auto flex max-w-[1180px] items-center justify-between px-6">
           <Link to="/" className="flex items-center gap-2 font-display text-2xl font-bold">
             <span className="inline-block h-3 w-3 rotate-45 rounded-[3px] bg-clay" />
-            Basera
+            {BRAND}
           </Link>
-          <Link
-            to="/auth"
+          <a
+            href={appUrl("/auth")}
             className="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-cream transition-all hover:-translate-y-px hover:bg-clay"
           >
             Start free trial
-          </Link>
+          </a>
         </div>
       </nav>
 
@@ -414,7 +415,7 @@ function RentAgreementGuide() {
               </h2>
               <p className="mt-4 text-[16.5px] leading-relaxed text-ink/70">
                 The agreement fixes the numbers: monthly fee, due date, deposit, electricity rate
-                and opening meter reading. Basera then runs them every month. Store the tenant
+                and opening meter reading. {BRAND} then runs them every month. Store the tenant
                 record with the ID proof, set the room and rent, and on the 1st every active tenant
                 gets a bill with rent, electricity on meter readings and any other charges, with a
                 UPI QR inside it. Paid bills mark themselves and overdue ones get reminders.
@@ -466,8 +467,8 @@ function RentAgreementGuide() {
                       </li>
                     ))}
                   </ul>
-                  <Link
-                    to="/auth"
+                  <a
+                    href={appUrl("/auth")}
                     className={`rounded-full border-[1.5px] py-3.5 text-center text-[14.5px] font-semibold ${
                       p.popular
                         ? "border-clay bg-clay text-paper"
@@ -475,7 +476,7 @@ function RentAgreementGuide() {
                     }`}
                   >
                     Start free trial
-                  </Link>
+                  </a>
                 </div>
               ))}
             </div>
@@ -485,7 +486,7 @@ function RentAgreementGuide() {
 
       <footer className="mx-auto max-w-[1180px] px-6 pb-10">
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-6 text-[13px] text-ink/50">
-          <span>2026 Basera. Made for PG owners, not tech teams.</span>
+          <span>2026 {BRAND}. Made for PG owners, not tech teams.</span>
           <Link to="/" className="hover:text-clay">
             Back to home
           </Link>
