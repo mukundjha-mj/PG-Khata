@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { adminExists as checkAdminExists } from "@/lib/admin-setup.functions";
 import { Spinner } from "@/components/animated-icon";
 import { BrandMark } from "@/components/brand-mark";
 import { toast } from "sonner";
@@ -9,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BRAND } from "@/lib/site";
 
 // The generated route tree imports every route module eagerly, so a static
 // import would put the Supabase client in the shared entry chunk and ship it to
@@ -18,13 +17,13 @@ const getSupabase = async () => (await import("@/integrations/supabase/client"))
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Admin Sign In - PG Manager" },
+      { title: `Sign in - ${BRAND}` },
       {
         name: "description",
         content:
           "Secure sign-in for the PG owner's management console: tenants, rooms, rent and electricity billing.",
       },
-      { property: "og:title", content: "Admin Sign In - PG Manager" },
+      { property: "og:title", content: `Sign in - ${BRAND}` },
       {
         property: "og:description",
         content: "Secure sign-in for the PG management and billing console.",
@@ -42,18 +41,6 @@ function AuthPage() {
   const [name, setName] = useState("");
   const [mode, setMode] = useState<"signin" | "setup">("signin");
   const [busy, setBusy] = useState(false);
-
-  const { data: adminExists, isLoading: checking } = useQuery({
-    queryKey: ["admin-exists"],
-    queryFn: async () => {
-      const result = await checkAdminExists();
-      return result.exists;
-    },
-  });
-
-  useEffect(() => {
-    if (adminExists === false) setMode("setup");
-  }, [adminExists]);
 
   useEffect(() => {
     void getSupabase().then((supabase) =>
@@ -108,7 +95,7 @@ function AuthPage() {
         <div className="mb-7 flex flex-col items-center gap-3 text-center">
           <BrandMark size={44} priority className="rounded-xl" />
           <div className="space-y-1">
-            <h1 className="page-title text-foreground">PG Manager - Owner Sign In</h1>
+            <h1 className="page-title text-foreground">{BRAND}</h1>
             <p className="text-sm text-muted-foreground">
               The workspace for tenants, rooms and rent billing
             </p>
@@ -118,12 +105,12 @@ function AuthPage() {
         <Card className="border-border/80 shadow-sm">
           <CardHeader>
             <CardTitle className="text-base">
-              {mode === "setup" ? "Create the admin account" : "Sign in"}
+              {mode === "setup" ? "Create your account" : "Sign in"}
             </CardTitle>
             <CardDescription>
               {mode === "setup"
-                ? "This is a one-time setup. Sign-up closes once this account exists."
-                : "Only the PG owner can access this console."}
+                ? "Start managing your PG. Your properties and tenants stay private to you."
+                : "Welcome back."}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -163,11 +150,21 @@ function AuthPage() {
                   required
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={busy || checking}>
+              <Button type="submit" className="w-full" disabled={busy}>
                 {busy && <Spinner className="mr-2 h-4 w-4" />}
-                {mode === "setup" ? "Create admin account" : "Sign in"}
+                {mode === "setup" ? "Create account" : "Sign in"}
               </Button>
             </form>
+            <p className="mt-4 text-center text-sm text-muted-foreground">
+              {mode === "setup" ? "Already have an account?" : "New here?"}{" "}
+              <button
+                type="button"
+                onClick={() => setMode(mode === "setup" ? "signin" : "setup")}
+                className="font-medium text-foreground underline underline-offset-4"
+              >
+                {mode === "setup" ? "Sign in" : "Create an account"}
+              </button>
+            </p>
           </CardContent>
         </Card>
       </div>
