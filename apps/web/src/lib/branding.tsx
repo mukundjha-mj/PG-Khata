@@ -8,11 +8,12 @@ import {
   type ReactNode,
 } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { BRAND } from "@/lib/site";
 
 export type ThemeMode = "light" | "dark" | "system";
 
 export const DEFAULT_BRAND_COLOR = "#644a40";
-export const DEFAULT_BRAND_NAME = "PG Manager";
+export const DEFAULT_BRAND_NAME = BRAND;
 
 export const BRAND_COLOR_PRESETS = [
   { label: "Clay", value: "#644a40" },

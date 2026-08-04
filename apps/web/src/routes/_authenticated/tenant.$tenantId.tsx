@@ -30,17 +30,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { BRAND } from "@/lib/site";
 
 export const Route = createFileRoute("/_authenticated/tenant/$tenantId")({
   head: () => ({
     meta: [
-      { title: "Tenant ledger - PG Manager" },
+      { title: `Tenant ledger - ${BRAND}` },
       {
         name: "description",
         content:
           "Full billing history for a tenant: every bill, payment, balance and downloadable invoice.",
       },
-      { property: "og:title", content: "Tenant ledger - PG Manager" },
+      { property: "og:title", content: `Tenant ledger - ${BRAND}` },
       {
         property: "og:description",
         content: "Bills, payments and outstanding balance per tenant.",

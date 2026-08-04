@@ -26,20 +26,21 @@ import {
 import { computeProration, rupees, type Proration } from "@/lib/plan-proration";
 import { usePlanSettings } from "@/lib/use-plan";
 import { startPlanChange, confirmPlanPayment, cancelPendingPlanChange } from "@/lib/plan.functions";
+import { BRAND } from "@/lib/site";
 
 export const Route = createFileRoute("/_authenticated/plan")({
   head: () => ({
     meta: [
-      { title: "Your plan and billing - PG Manager" },
+      { title: `Your plan and billing - ${BRAND}` },
       {
         name: "description",
         content:
           "See your current tier, renewal date and payment status, and upgrade or downgrade with clear prorated pricing.",
       },
-      { property: "og:title", content: "Your plan and billing - PG Manager" },
+      { property: "og:title", content: `Your plan and billing - ${BRAND}` },
       {
         property: "og:description",
-        content: "Manage your PG Manager subscription with prorated upgrades and UPI checkout.",
+        content: `Manage your ${BRAND} subscription with prorated upgrades and UPI checkout.`,
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -148,7 +149,7 @@ function PlanPage() {
           amount: res.amount,
           currency: res.currency,
           order_id: res.orderId,
-          name: "PG Manager",
+          name: BRAND,
           description: `Upgrade to ${res.planName} (prorated)`,
           method: { upi: true, card: true, netbanking: true, wallet: true },
           handler: async (r) => {

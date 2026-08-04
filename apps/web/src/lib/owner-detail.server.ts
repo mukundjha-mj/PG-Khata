@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { BRAND } from "@/lib/site";
 
 type Admin = SupabaseClient<Database>;
 
@@ -246,7 +247,7 @@ export async function loadOwnerDetail(db: Admin, adminId: string): Promise<Owner
       email: adminRow.data.email,
       phone: adminRow.data.phone,
       created_at: adminRow.data.created_at,
-      brandName: settings.data?.brand_name ?? "PG Manager",
+      brandName: settings.data?.brand_name ?? BRAND,
     },
     quick,
     portfolio: {

@@ -12,16 +12,17 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BrandingSettingsCard } from "@/components/branding-settings-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BRAND } from "@/lib/site";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
     meta: [
-      { title: "Settings - PG Manager" },
+      { title: `Settings - ${BRAND}` },
       {
         name: "description",
         content: "Billing defaults: electricity rate, due-date offset and reminder preferences.",
       },
-      { property: "og:title", content: "Settings - PG Manager" },
+      { property: "og:title", content: `Settings - ${BRAND}` },
       { property: "og:description", content: "Billing defaults and reminder preferences." },
     ],
   }),

@@ -45,17 +45,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { BRAND } from "@/lib/site";
 
 export const Route = createFileRoute("/_authenticated/payments")({
   head: () => ({
     meta: [
-      { title: "Payments & dues - PG Manager" },
+      { title: `Payments & dues - ${BRAND}` },
       {
         name: "description",
         content:
           "Record tenant payments, track partial payments and see every outstanding or overdue bill at a glance.",
       },
-      { property: "og:title", content: "Payments & dues - PG Manager" },
+      { property: "og:title", content: `Payments & dues - ${BRAND}` },
       { property: "og:description", content: "Outstanding dues and payment history for your PG." },
     ],
   }),

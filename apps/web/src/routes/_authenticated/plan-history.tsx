@@ -28,20 +28,21 @@ import {
   receiptTitle,
   type PlanChangeRow,
 } from "@/lib/plan-receipt";
+import { BRAND } from "@/lib/site";
 
 export const Route = createFileRoute("/_authenticated/plan-history")({
   head: () => ({
     meta: [
-      { title: "Plan change history - PG Manager" },
+      { title: `Plan change history - ${BRAND}` },
       {
         name: "description",
         content:
           "Every upgrade and downgrade on your account with dates, amounts, receipts and the plans you moved between.",
       },
-      { property: "og:title", content: "Plan change history - PG Manager" },
+      { property: "og:title", content: `Plan change history - ${BRAND}` },
       {
         property: "og:description",
-        content: "Audit trail and receipts for your PG Manager subscription changes.",
+        content: `Audit trail and receipts for your ${BRAND} subscription changes.`,
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

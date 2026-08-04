@@ -29,17 +29,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { BRAND } from "@/lib/site";
 
 export const Route = createFileRoute("/_authenticated/readings")({
   head: () => ({
     meta: [
-      { title: "Meter readings - PG Manager" },
+      { title: `Meter readings - ${BRAND}` },
       {
         name: "description",
         content:
           "Log monthly electricity meter readings per room; units and amounts flow straight into the next bill run.",
       },
-      { property: "og:title", content: "Meter readings - PG Manager" },
+      { property: "og:title", content: `Meter readings - ${BRAND}` },
       {
         property: "og:description",
         content: "Room-wise electricity meter log for accurate billing.",

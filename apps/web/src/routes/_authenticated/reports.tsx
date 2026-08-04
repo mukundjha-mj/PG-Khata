@@ -38,17 +38,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { BRAND } from "@/lib/site";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
     meta: [
-      { title: "Reports - PG Manager" },
+      { title: `Reports - ${BRAND}` },
       {
         name: "description",
         content:
           "Monthly collection reports: billed vs collected, overdue amounts and property-wise breakdown with CSV export.",
       },
-      { property: "og:title", content: "Reports - PG Manager" },
+      { property: "og:title", content: `Reports - ${BRAND}` },
       { property: "og:description", content: "Collection performance across your PG properties." },
     ],
   }),

@@ -3,9 +3,6 @@ import type { Database } from "@/integrations/supabase/types";
 
 export type Admin = SupabaseClient<Database>;
 
-/** Emails allowed to hold a platform (super admin) account. */
-export const PLATFORM_EMAILS = ["mukundjha204+admin@gmail.com"];
-
 export const LOCKOUT_WINDOW_MINUTES = 15;
 export const LOCKOUT_THRESHOLD = 5;
 

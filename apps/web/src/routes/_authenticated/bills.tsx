@@ -38,17 +38,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { BRAND } from "@/lib/site";
 
 export const Route = createFileRoute("/_authenticated/bills")({
   head: () => ({
     meta: [
-      { title: "Billing - PG Manager" },
+      { title: `Billing - ${BRAND}` },
       {
         name: "description",
         content:
           "Generate monthly rent and electricity bills, review drafts before saving, and track payment status.",
       },
-      { property: "og:title", content: "Billing - PG Manager" },
+      { property: "og:title", content: `Billing - ${BRAND}` },
       {
         property: "og:description",
         content: "Draft, review and issue monthly PG bills in one place.",

@@ -35,16 +35,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { BRAND } from "@/lib/site";
 
 export const Route = createFileRoute("/_authenticated/properties")({
   head: () => ({
     meta: [
-      { title: "Properties - PG Manager" },
+      { title: `Properties - ${BRAND}` },
       {
         name: "description",
         content: "Add and manage the PG properties you operate, with address and billing mode.",
       },
-      { property: "og:title", content: "Properties - PG Manager" },
+      { property: "og:title", content: `Properties - ${BRAND}` },
       { property: "og:description", content: "Manage the PG properties you operate." },
     ],
   }),

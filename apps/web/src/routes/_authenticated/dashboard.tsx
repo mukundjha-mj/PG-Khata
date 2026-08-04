@@ -14,16 +14,17 @@ import {
   monthLabel,
   type DisplayStatus,
 } from "@/lib/billing";
+import { BRAND } from "@/lib/site";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
-      { title: "Dashboard - PG Manager" },
+      { title: `Dashboard - ${BRAND}` },
       {
         name: "description",
         content: "Occupancy, tenant count and expected monthly collection for your PG properties.",
       },
-      { property: "og:title", content: "Dashboard - PG Manager" },
+      { property: "og:title", content: `Dashboard - ${BRAND}` },
       { property: "og:description", content: "Occupancy and collection overview for your PGs." },
     ],
   }),

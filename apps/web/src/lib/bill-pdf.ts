@@ -2,6 +2,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { Tables } from "@/integrations/supabase/types";
 import { formatDate } from "@/lib/pg";
+import { BRAND } from "@/lib/site";
 
 // jsPDF's built-in Helvetica has no rupee glyph, so PDFs use "Rs." instead.
 function formatMoney(value: number | string | null | undefined): string {
@@ -40,7 +41,7 @@ function renderBill(doc: jsPDF, bill: Bill, ctx: BillContext) {
   doc.setTextColor(INK[0], INK[1], INK[2]);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(18);
-  doc.text(ctx.property?.name ?? "PG Manager", m, 60);
+  doc.text(ctx.property?.name ?? BRAND, m, 60);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);

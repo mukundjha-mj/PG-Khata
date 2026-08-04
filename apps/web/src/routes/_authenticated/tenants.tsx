@@ -60,17 +60,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { BRAND } from "@/lib/site";
 
 export const Route = createFileRoute("/_authenticated/tenants")({
   head: () => ({
     meta: [
-      { title: "Tenants - PG Manager" },
+      { title: `Tenants - ${BRAND}` },
       {
         name: "description",
         content:
           "Tenant records with room allotment, rent, deposit, KYC documents and joining details.",
       },
-      { property: "og:title", content: "Tenants - PG Manager" },
+      { property: "og:title", content: `Tenants - ${BRAND}` },
       { property: "og:description", content: "Tenant records, room allotment and KYC documents." },
     ],
   }),

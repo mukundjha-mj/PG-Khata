@@ -47,16 +47,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { BRAND } from "@/lib/site";
 
 export const Route = createFileRoute("/_authenticated/rooms")({
   head: () => ({
     meta: [
-      { title: "Rooms - PG Manager" },
+      { title: `Rooms - ${BRAND}` },
       {
         name: "description",
         content: "Room inventory with type, capacity, base rent and live occupancy per property.",
       },
-      { property: "og:title", content: "Rooms - PG Manager" },
+      { property: "og:title", content: `Rooms - ${BRAND}` },
       { property: "og:description", content: "Room inventory and occupancy for each PG property." },
     ],
   }),

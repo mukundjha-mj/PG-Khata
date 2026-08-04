@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { BRAND } from "@/lib/site";
 
 export type AccountRow = {
   id: string;
@@ -95,7 +96,7 @@ export async function loadAccounts(db: Admin): Promise<AccountRow[]> {
       plan_status: s?.plan_status ?? "trial",
       pending_plan: s?.pending_plan ?? null,
       current_period_end: s?.current_period_end ?? null,
-      brand_name: s?.brand_name ?? "PG Manager",
+      brand_name: s?.brand_name ?? BRAND,
       properties: propCount.get(a.id) ?? 0,
       rooms: roomCount.get(a.id) ?? 0,
       tenants: tenantCount.get(a.id) ?? 0,
