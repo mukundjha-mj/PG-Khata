@@ -79,15 +79,19 @@ export async function sendTenantEmail(
     messageType: Database["public"]["Enums"]["message_type"];
   },
 ): Promise<{ sent: boolean; reason?: string }> {
-  const resendKey = process.env["RESEND_API_KEY"];
+  // Hosting dashboards hand back "" for a variable that was added but never
+  // filled, so blank is treated as unset here — an empty key or From reaches
+  // Resend as a malformed request and fails every send.
+  const resendKey = process.env["RESEND_API_KEY"]?.trim();
   if (!resendKey) {
     return { sent: false, reason: "Email is not connected yet." };
   }
 
-  // Falls back to Resend's shared test domain, which only delivers to the
-  // account owner. Production sets RESEND_FROM_EMAIL to an address on a domain
-  // verified in Resend; anything else is rejected on every send.
-  const from = process.env["RESEND_FROM_EMAIL"] ?? "PGKhata <onboarding@resend.dev>";
+  const from = process.env["RESEND_FROM_EMAIL"]?.trim();
+  if (!from) {
+    return { sent: false, reason: "RESEND_FROM_EMAIL is not set." };
+  }
+
   let errorMessage: string | null = null;
   let providerId: string | null = null;
 
