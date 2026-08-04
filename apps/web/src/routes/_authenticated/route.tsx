@@ -3,11 +3,14 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useBranding } from "@/lib/branding";
-import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
+    // The generated route tree imports every route module eagerly, so a static
+    // import here would put the Supabase client in the shared entry chunk and
+    // ship it to marketing visitors who never sign in.
+    const { supabase } = await import("@/integrations/supabase/client");
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) throw redirect({ to: "/auth" });
     // Platform team accounts are not PG owners and must never load the owner app.

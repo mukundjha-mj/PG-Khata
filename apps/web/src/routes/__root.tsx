@@ -10,9 +10,9 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import { BrandingProvider } from "@/lib/branding";
+import { BRAND } from "@/lib/site";
 
 function NotFoundComponent() {
   return (
@@ -76,14 +76,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "PG Manager - Tenants, Rooms & Rent Billing" },
+      { title: `${BRAND} - Tenants, Rooms & Rent Billing` },
       {
         name: "description",
         content:
           "Admin console for PG and hostel owners: manage tenants, rooms, occupancy and monthly rent billing in one place.",
       },
-      { name: "author", content: "PG Manager" },
-      { property: "og:title", content: "PG Manager - Tenants, Rooms & Rent Billing" },
+      { name: "author", content: BRAND },
+      { property: "og:title", content: `${BRAND} - Tenants, Rooms & Rent Billing` },
       {
         property: "og:description",
         content: "Manage PG tenants, rooms, occupancy and monthly rent billing.",
@@ -131,12 +131,29 @@ function RootComponent() {
   const router = useRouter();
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
-      router.invalidate();
-      if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
+    // The root wraps the marketing pages too, so the Supabase client is loaded
+    // here rather than imported at module scope — otherwise every visitor to
+    // the landing page downloads the auth client to run a listener that will
+    // never fire for them.
+    let unsubscribe: (() => void) | undefined;
+    let cancelled = false;
+
+    void import("@/integrations/supabase/client").then(({ supabase }) => {
+      const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+        if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+        router.invalidate();
+        if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
+      });
+      // The effect can be torn down before the import resolves; without this
+      // the listener would outlive it and keep invalidating a stale router.
+      if (cancelled) sub.subscription.unsubscribe();
+      else unsubscribe = () => sub.subscription.unsubscribe();
     });
-    return () => sub.subscription.unsubscribe();
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
   }, [router, queryClient]);
 
   return (

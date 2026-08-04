@@ -5,11 +5,15 @@ import { adminExists as checkAdminExists } from "@/lib/admin-setup.functions";
 import { Spinner } from "@/components/animated-icon";
 import { BrandMark } from "@/components/brand-mark";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+// The generated route tree imports every route module eagerly, so a static
+// import would put the Supabase client in the shared entry chunk and ship it to
+// marketing visitors who never sign in.
+const getSupabase = async () => (await import("@/integrations/supabase/client")).supabase;
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -52,15 +56,18 @@ function AuthPage() {
   }, [adminExists]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard", replace: true });
-    });
+    void getSupabase().then((supabase) =>
+      supabase.auth.getSession().then(({ data }) => {
+        if (data.session) navigate({ to: "/dashboard", replace: true });
+      }),
+    );
   }, [navigate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     try {
+      const supabase = await getSupabase();
       if (mode === "setup") {
         const { error } = await supabase.auth.signUp({
           email,

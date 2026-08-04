@@ -8,7 +8,6 @@ import {
   type ReactNode,
 } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 
 export type ThemeMode = "light" | "dark" | "system";
 
@@ -102,6 +101,10 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
   const { data, refetch } = useQuery({
     queryKey: ["branding"],
     queryFn: async () => {
+      // Imported here, not at module scope: this provider wraps every route,
+      // including the marketing pages, and a static import drags the whole
+      // Supabase client into the entry chunk for visitors who never sign in.
+      const { supabase } = await import("@/integrations/supabase/client");
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) return null;
       const { data, error } = await supabase
