@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { effectiveRent, formatDate, formatMoney } from "@/lib/pg";
 import { downloadBillPdf, downloadMonthPdf, type Bill, type BillContext } from "@/lib/bill-pdf";
+import { balanceOf, recordPayment } from "@/lib/billing";
 import { generateMonthlyBills } from "@/lib/billing-run.functions";
 import { RerunTenantBillDialog } from "@/components/rerun-tenant-bill-dialog";
 import { DataPagination, usePagination } from "@/components/data-pagination";
@@ -303,20 +304,27 @@ function BillsPage() {
   });
 
   const markPaid = useMutation({
-    mutationFn: async (bill: { id: string; total_amount: number }) => {
-      const { error } = await supabase
-        .from("bills")
-        .update({
-          status: "paid",
-          paid_amount: bill.total_amount,
-          paid_at: new Date().toISOString(),
-        })
-        .eq("id", bill.id);
-      if (error) throw error;
+    // Writing paid_amount straight onto the bill leaves no payments row, so the
+    // ledger and the bill disagree — and the next recorded payment re-syncs
+    // paid_amount from payments alone, silently erasing this amount. Settle the
+    // outstanding balance through the ledger instead.
+    mutationFn: async (bill: { id: string; total_amount: number; paid_amount: number }) => {
+      const balance = balanceOf(bill);
+      if (balance <= 0) throw new Error("Nothing left to pay on this bill.");
+      await recordPayment({
+        billId: bill.id,
+        amount: balance,
+        // The shortcut never asks how the tenant paid; guessing would put a
+        // wrong method in the owner's ledger.
+        method: "other",
+        paidAt: new Date().toISOString().slice(0, 10),
+        notes: "Marked paid from the bills list",
+      });
     },
     onSuccess: () => {
       toast.success("Bill marked as paid.");
       queryClient.invalidateQueries({ queryKey: ["bills", month] });
+      queryClient.invalidateQueries({ queryKey: ["payments-recent"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -772,6 +780,7 @@ function BillsPage() {
                                   markPaid.mutate({
                                     id: b.id,
                                     total_amount: Number(b.total_amount),
+                                    paid_amount: Number(b.paid_amount),
                                   })
                                 }
                               >
