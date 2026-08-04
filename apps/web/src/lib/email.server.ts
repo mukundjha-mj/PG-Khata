@@ -85,9 +85,8 @@ export async function sendTenantEmail(
   }
 
   // Falls back to Resend's shared test domain, which only delivers to the
-  // account owner. Production sets RESEND_FROM_EMAIL to the verified
-  // transactional domain (notify.pgkhata.com), kept separate from the
-  // marketing domain so a campaign complaint cannot sink bill delivery.
+  // account owner. Production sets RESEND_FROM_EMAIL to an address on a domain
+  // verified in Resend; anything else is rejected on every send.
   const from = process.env["RESEND_FROM_EMAIL"] ?? "PGKhata <onboarding@resend.dev>";
   let errorMessage: string | null = null;
   let providerId: string | null = null;
