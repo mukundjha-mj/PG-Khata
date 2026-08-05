@@ -60,7 +60,14 @@ function AuthPage() {
           email,
           password,
           options: {
-            emailRedirectTo: window.location.origin,
+            // The app host serves the marketing landing page at `/`, so
+            // redirecting to the bare origin drops a freshly confirmed owner on
+            // the pricing page next to a "Sign in" button — while they are in
+            // fact signed in. Send them where they were trying to go.
+            //
+            // Supabase only honours this if the origin is in the project's
+            // Redirect URLs allowlist; otherwise it falls back to Site URL.
+            emailRedirectTo: `${window.location.origin}/dashboard`,
             data: { name },
           },
         });
@@ -70,11 +77,13 @@ function AuthPage() {
           password,
         });
         if (signInError) {
-          toast.success("Admin account created. Check your email to confirm, then sign in.");
+          // Expected whenever email confirmation is on: the account exists but
+          // has no session yet.
+          toast.success("Account created. Check your email to confirm, then sign in.");
           setMode("signin");
           return;
         }
-        toast.success("Admin account created");
+        toast.success("Account created");
         navigate({ to: "/dashboard", replace: true });
         return;
       }

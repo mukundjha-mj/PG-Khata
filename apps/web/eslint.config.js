@@ -6,7 +6,9 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", ".output", ".vinxi"] },
+  // Build output. `.vercel` and `.nitro` hold Nitro's bundled server — hundreds
+  // of KB per file — and linting them stalls the run for minutes.
+  { ignores: ["dist", ".output", ".vinxi", ".vercel", ".nitro"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
