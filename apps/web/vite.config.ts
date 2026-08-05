@@ -1,6 +1,7 @@
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
+import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
 import tsConfigPaths from "vite-tsconfig-paths";
 
@@ -38,6 +39,10 @@ export default defineConfig({
       // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
       server: { entry: "server" },
     }),
+    // The app server-renders, so `dist/` alone is not deployable — the host
+    // needs a runtime. Nitro turns the SSR build into whatever the platform
+    // expects; on Vercel it auto-detects and writes .vercel/output.
+    nitro(),
     viteReact(),
   ],
 });

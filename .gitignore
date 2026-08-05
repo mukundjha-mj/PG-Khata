@@ -19,6 +19,9 @@ dist-ssr
 .vinxi
 .tanstack/**
 .nitro
+# Nitro's vercel preset writes the deployable build here, and the Vercel CLI
+# drops project linkage in the same folder.
+.vercel
 *.local
 
 # Local environment files may contain credentials.
