@@ -31,6 +31,7 @@ import { Route as BlogPgRentAgreementTemplateRouteImport } from './routes/blog/p
 import { Route as AuthenticatedTenantTenantIdRouteImport } from './routes/_authenticated/tenant.$tenantId'
 import { Route as ApiPublicHooksGenerateBillsRouteImport } from './routes/api/public/hooks/generate-bills'
 import { Route as ApiPublicHooksPlanLifecycleRouteImport } from './routes/api/public/hooks/plan-lifecycle'
+import { Route as ApiPublicHooksRazorpayRouteImport } from './routes/api/public/hooks/razorpay'
 import { Route as ApiPublicHooksSendRemindersRouteImport } from './routes/api/public/hooks/send-reminders'
 
 const IndexRoute = IndexRouteImport.update({
@@ -147,6 +148,11 @@ const ApiPublicHooksPlanLifecycleRoute =
     path: '/api/public/hooks/plan-lifecycle',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksRazorpayRoute = ApiPublicHooksRazorpayRouteImport.update({
+  id: '/api/public/hooks/razorpay',
+  path: '/api/public/hooks/razorpay',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksSendRemindersRoute =
   ApiPublicHooksSendRemindersRouteImport.update({
     id: '/api/public/hooks/send-reminders',
@@ -176,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/tenant/$tenantId': typeof AuthenticatedTenantTenantIdRoute
   '/api/public/hooks/generate-bills': typeof ApiPublicHooksGenerateBillsRoute
   '/api/public/hooks/plan-lifecycle': typeof ApiPublicHooksPlanLifecycleRoute
+  '/api/public/hooks/razorpay': typeof ApiPublicHooksRazorpayRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
 }
 export interface FileRoutesByTo {
@@ -200,6 +207,7 @@ export interface FileRoutesByTo {
   '/tenant/$tenantId': typeof AuthenticatedTenantTenantIdRoute
   '/api/public/hooks/generate-bills': typeof ApiPublicHooksGenerateBillsRoute
   '/api/public/hooks/plan-lifecycle': typeof ApiPublicHooksPlanLifecycleRoute
+  '/api/public/hooks/razorpay': typeof ApiPublicHooksRazorpayRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
 }
 export interface FileRoutesById {
@@ -226,6 +234,7 @@ export interface FileRoutesById {
   '/_authenticated/tenant/$tenantId': typeof AuthenticatedTenantTenantIdRoute
   '/api/public/hooks/generate-bills': typeof ApiPublicHooksGenerateBillsRoute
   '/api/public/hooks/plan-lifecycle': typeof ApiPublicHooksPlanLifecycleRoute
+  '/api/public/hooks/razorpay': typeof ApiPublicHooksRazorpayRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
 }
 export interface FileRouteTypes {
@@ -252,6 +261,7 @@ export interface FileRouteTypes {
     | '/tenant/$tenantId'
     | '/api/public/hooks/generate-bills'
     | '/api/public/hooks/plan-lifecycle'
+    | '/api/public/hooks/razorpay'
     | '/api/public/hooks/send-reminders'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -276,6 +286,7 @@ export interface FileRouteTypes {
     | '/tenant/$tenantId'
     | '/api/public/hooks/generate-bills'
     | '/api/public/hooks/plan-lifecycle'
+    | '/api/public/hooks/razorpay'
     | '/api/public/hooks/send-reminders'
   id:
     | '__root__'
@@ -301,6 +312,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tenant/$tenantId'
     | '/api/public/hooks/generate-bills'
     | '/api/public/hooks/plan-lifecycle'
+    | '/api/public/hooks/razorpay'
     | '/api/public/hooks/send-reminders'
   fileRoutesById: FileRoutesById
 }
@@ -315,6 +327,7 @@ export interface RootRouteChildren {
   BlogPgRentAgreementTemplateRoute: typeof BlogPgRentAgreementTemplateRoute
   ApiPublicHooksGenerateBillsRoute: typeof ApiPublicHooksGenerateBillsRoute
   ApiPublicHooksPlanLifecycleRoute: typeof ApiPublicHooksPlanLifecycleRoute
+  ApiPublicHooksRazorpayRoute: typeof ApiPublicHooksRazorpayRoute
   ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
 }
 
@@ -474,6 +487,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksPlanLifecycleRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/razorpay': {
+      id: '/api/public/hooks/razorpay'
+      path: '/api/public/hooks/razorpay'
+      fullPath: '/api/public/hooks/razorpay'
+      preLoaderRoute: typeof ApiPublicHooksRazorpayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/send-reminders': {
       id: '/api/public/hooks/send-reminders'
       path: '/api/public/hooks/send-reminders'
@@ -528,6 +548,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogPgRentAgreementTemplateRoute: BlogPgRentAgreementTemplateRoute,
   ApiPublicHooksGenerateBillsRoute: ApiPublicHooksGenerateBillsRoute,
   ApiPublicHooksPlanLifecycleRoute: ApiPublicHooksPlanLifecycleRoute,
+  ApiPublicHooksRazorpayRoute: ApiPublicHooksRazorpayRoute,
   ApiPublicHooksSendRemindersRoute: ApiPublicHooksSendRemindersRoute,
 }
 export const routeTree = rootRouteImport

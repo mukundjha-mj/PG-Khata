@@ -35,18 +35,6 @@ async function loadSettings(
 }
 
 /**
- * Whether a paid order was a renewal of the existing cycle or an upgrade into a
- * higher tier. An upgrade always targets a strictly higher tier than the plan
- * currently on the account; anything else (same tier, or the lower tier of a
- * scheduled downgrade) is a renewal of the next cycle.
- *
- * Derived rather than stored so no column has to be backfilled onto orders that
- * were already created before renewals existed.
- */
-const isRenewalOrder = (currentPlan: string, targetPlan: string) =>
-  planRank(targetPlan) <= planRank(currentPlan);
-
-/**
  * Starts a renewal for the next billing cycle. Charges the full month at list
  * price, so there is no proration: this buys a fresh cycle rather than changing
  * tier mid-cycle. A scheduled downgrade is honoured here, which is the point at
@@ -202,7 +190,14 @@ export const startPlanChange = createServerFn({ method: "POST" })
     };
   });
 
-/** Verifies a Razorpay payment and applies the upgrade. */
+/**
+ * Confirms a payment from the browser callback so the page updates immediately.
+ *
+ * The Razorpay webhook is the authoritative path and applies the same payment
+ * through the same code; whichever arrives first wins and the other is a no-op.
+ * The two guards here are the ones the webhook cannot make: the checkout
+ * signature the client returned, and that the order belongs to this account.
+ */
 export const confirmPlanPayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { orderId: string; paymentId: string; signature: string }) => ({
@@ -211,13 +206,14 @@ export const confirmPlanPayment = createServerFn({ method: "POST" })
     signature: String(input.signature),
   }))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
     const { verifyRazorpaySignature } = await import("@/lib/plan-checkout.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    // Scoped to this account, so one owner cannot confirm another's order.
     const { data: payment, error } = await supabaseAdmin
       .from("plan_payments")
-      .select("*")
+      .select("id, status")
       .eq("provider_order_id", data.orderId)
       .eq("admin_id", userId)
       .maybeSingle();
@@ -225,93 +221,28 @@ export const confirmPlanPayment = createServerFn({ method: "POST" })
     if (!payment) throw new Error("Payment record not found");
 
     if (!verifyRazorpaySignature(data)) {
+      // neq guards a payment the webhook already confirmed: a bad client
+      // signature must not be able to flip a captured payment to failed.
       await supabaseAdmin
         .from("plan_payments")
         .update({ status: "failed", provider_payment_id: data.paymentId })
-        .eq("id", payment.id);
+        .eq("id", payment.id)
+        .neq("status", "paid");
       throw new Error("Payment could not be verified");
     }
 
-    if (payment.status === "paid") return { ok: true as const, plan: payment.target_plan };
+    const { applyPaidPayment } = await import("@/lib/plan-apply.server");
+    const result = await applyPaidPayment({
+      orderId: data.orderId,
+      paymentId: data.paymentId,
+      source: "browser",
+    });
 
-    const settings = await loadSettings(supabase, userId);
-    const renewal = isRenewalOrder(settings.plan, payment.target_plan);
-
-    await supabaseAdmin
-      .from("plan_payments")
-      .update({ status: "paid", provider_payment_id: data.paymentId })
-      .eq("id", payment.id);
-
-    const now = new Date().toISOString();
-    const base = {
-      plan: payment.target_plan,
-      pending_plan: null,
-      plan_status: "active",
-      plan_updated_at: now,
-      last_payment_amount: payment.amount,
-      last_payment_at: now,
+    return {
+      ok: true as const,
+      plan: result.plan,
+      ...(result.periodEnd ? { periodEnd: result.periodEnd } : {}),
     };
-
-    if (renewal) {
-      // A renewal buys the next cycle, so the period dates move. An upgrade
-      // keeps them: it was already prorated against this cycle.
-      const upcoming = nextPeriod({ periodEnd: settings.current_period_end });
-      const { error: upErr } = await supabase
-        .from("settings")
-        .update({
-          ...base,
-          current_period_start: upcoming.start,
-          current_period_end: upcoming.end,
-        })
-        .eq("admin_id", userId);
-      if (upErr) throw upErr;
-
-      const tier = tierByKey(payment.target_plan);
-      const moved = settings.plan !== payment.target_plan;
-      await supabase.from("plan_change_history").insert({
-        admin_id: userId,
-        from_plan: settings.plan,
-        to_plan: payment.target_plan,
-        direction: "renewal",
-        amount: payment.amount,
-        credit_applied: 0,
-        days_remaining: 0,
-        note: moved
-          ? `Renewed on the ${tier.name} plan, the scheduled change you asked for. Paid up to ${formatDate(upcoming.end)}.`
-          : `Renewed ${tier.name}. Paid up to ${formatDate(upcoming.end)}.`,
-        payment_id: data.paymentId,
-      });
-
-      return {
-        ok: true as const,
-        plan: payment.target_plan as string,
-        periodEnd: upcoming.end,
-      };
-    }
-
-    const proration = computeProration({
-      from: settings.plan,
-      to: payment.target_plan,
-      periodStart: settings.current_period_start,
-      periodEnd: settings.current_period_end,
-    });
-
-    const { error: upErr } = await supabase.from("settings").update(base).eq("admin_id", userId);
-    if (upErr) throw upErr;
-
-    await supabase.from("plan_change_history").insert({
-      admin_id: userId,
-      from_plan: proration.from,
-      to_plan: payment.target_plan,
-      direction: "upgrade",
-      amount: payment.amount,
-      credit_applied: proration.creditApplied,
-      days_remaining: proration.daysRemaining,
-      note: proration.summary,
-      payment_id: data.paymentId,
-    });
-
-    return { ok: true as const, plan: payment.target_plan as string };
   });
 
 /** Cancels a scheduled downgrade before it takes effect. */
