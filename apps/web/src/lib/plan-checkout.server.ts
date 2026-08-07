@@ -51,7 +51,28 @@ export function verifyRazorpaySignature(input: {
   const expected = createHmac("sha256", keySecret)
     .update(`${input.orderId}|${input.paymentId}`)
     .digest("hex");
+  return hmacEquals(expected, input.signature);
+}
+
+/**
+ * Verifies a webhook delivery from Razorpay.
+ *
+ * Two things differ from checkout verification above and both matter: the HMAC
+ * is taken over the raw request body, so the bytes must not have been through
+ * JSON.parse and re-serialised, and it is keyed by the webhook secret from the
+ * dashboard rather than the API key secret.
+ */
+export function verifyRazorpayWebhook(rawBody: string, signature: string | null) {
+  const secret = process.env["RAZORPAY_WEBHOOK_SECRET"];
+  if (!secret) throw new Error("RAZORPAY_WEBHOOK_SECRET is not configured");
+  if (!signature) return false;
+  const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
+  return hmacEquals(expected, signature);
+}
+
+/** Length-safe constant-time compare. timingSafeEqual throws on length mismatch. */
+function hmacEquals(expected: string, provided: string) {
   const a = Buffer.from(expected);
-  const b = Buffer.from(input.signature ?? "");
+  const b = Buffer.from(provided ?? "");
   return a.length === b.length && timingSafeEqual(a, b);
 }
