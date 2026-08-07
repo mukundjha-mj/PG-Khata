@@ -30,6 +30,24 @@ export function siteUrl(path: string): string {
 }
 
 /**
+ * Where Supabase sends an owner back to after they act on an emailed auth link
+ * — confirmation, password recovery — or return from an OAuth provider.
+ *
+ * Every path passed here must be covered by the project's Redirect URLs
+ * allowlist in the Supabase dashboard. Supabase does not error on a target
+ * that is missing from the list: it silently substitutes the project's Site
+ * URL, which on the app host serves the marketing landing page. An owner then
+ * lands on the pricing table beside a "Sign in" button while already holding a
+ * valid session.
+ *
+ * `origin` is a parameter rather than a read of `window.location` so this stays
+ * a pure function the test suite can cover; the app has no DOM test setup.
+ */
+export function authRedirect(origin: string, path: string): string {
+  return `${origin}${path}`;
+}
+
+/**
  * Hostnames that must never be indexed: the owner app and the internal
  * console. Both serve the same build as the marketing site, so without this
  * every page would be indexed two or three times over.
