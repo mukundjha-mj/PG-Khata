@@ -609,12 +609,46 @@ function LandingPage() {
               >
                 Dashboard
               </a>
+              <Link
+                to="/contact-us"
+                className="mb-3 block text-[14.5px] opacity-75 hover:opacity-100"
+              >
+                Contact us
+              </Link>
+            </div>
+            <div>
+              <h4 className="mb-4 text-[13px] font-bold tracking-wide uppercase opacity-50">
+                Legal
+              </h4>
+              <Link
+                to="/terms"
+                className="mb-3 block text-[14.5px] opacity-75 hover:opacity-100"
+              >
+                Terms and Conditions
+              </Link>
+              <Link
+                to="/privacy"
+                className="mb-3 block text-[14.5px] opacity-75 hover:opacity-100"
+              >
+                Privacy Policy
+              </Link>
+              <Link
+                to="/shipping-policy"
+                className="mb-3 block text-[14.5px] opacity-75 hover:opacity-100"
+              >
+                Shipping Policy
+              </Link>
+              <Link
+                to="/cancellation-and-refunds"
+                className="mb-3 block text-[14.5px] opacity-75 hover:opacity-100"
+              >
+                Cancellation and Refunds
+              </Link>
             </div>
           </div>
         </div>
         <div className="flex flex-wrap justify-between gap-3 pt-6 text-[13px] text-ink/50">
-          <span>2026 {BRAND}. Made for PG owners, not tech teams.</span>
-          <span>Mumbai, Bengaluru, Delhi NCR</span>
+          <span>2026 {BRAND}. Registered in Noida, Uttar Pradesh, India.</span>
         </div>
       </footer>
     </div>

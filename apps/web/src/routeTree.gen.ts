@@ -12,10 +12,15 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as CancellationAndRefundsRouteImport } from './routes/cancellation-and-refunds'
 import { Route as ConsoleRouteImport } from './routes/console'
+import { Route as ContactUsRouteImport } from './routes/contact-us'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as ShippingPolicyRouteImport } from './routes/shipping-policy'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AuthenticatedBillsRouteImport } from './routes/_authenticated/bills'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedPaymentsRouteImport } from './routes/_authenticated/payments'
@@ -48,9 +53,24 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CancellationAndRefundsRoute = CancellationAndRefundsRouteImport.update({
+  id: '/cancellation-and-refunds',
+  path: '/cancellation-and-refunds',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ConsoleRoute = ConsoleRouteImport.update({
   id: '/console',
   path: '/console',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactUsRoute = ContactUsRouteImport.update({
+  id: '/contact-us',
+  path: '/contact-us',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -63,9 +83,19 @@ const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
   path: '/robots.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShippingPolicyRoute = ShippingPolicyRouteImport.update({
+  id: '/shipping-policy',
+  path: '/shipping-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedBillsRoute = AuthenticatedBillsRouteImport.update({
@@ -163,10 +193,15 @@ const ApiPublicHooksSendRemindersRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/cancellation-and-refunds': typeof CancellationAndRefundsRoute
   '/console': typeof ConsoleRoute
+  '/contact-us': typeof ContactUsRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/shipping-policy': typeof ShippingPolicyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms': typeof TermsRoute
   '/bills': typeof AuthenticatedBillsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/payments': typeof AuthenticatedPaymentsRoute
@@ -188,10 +223,15 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/cancellation-and-refunds': typeof CancellationAndRefundsRoute
   '/console': typeof ConsoleRoute
+  '/contact-us': typeof ContactUsRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/shipping-policy': typeof ShippingPolicyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms': typeof TermsRoute
   '/bills': typeof AuthenticatedBillsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/payments': typeof AuthenticatedPaymentsRoute
@@ -215,10 +255,15 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/cancellation-and-refunds': typeof CancellationAndRefundsRoute
   '/console': typeof ConsoleRoute
+  '/contact-us': typeof ContactUsRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/shipping-policy': typeof ShippingPolicyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms': typeof TermsRoute
   '/_authenticated/bills': typeof AuthenticatedBillsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/payments': typeof AuthenticatedPaymentsRoute
@@ -242,10 +287,15 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/cancellation-and-refunds'
     | '/console'
+    | '/contact-us'
+    | '/privacy'
     | '/reset-password'
     | '/robots.txt'
+    | '/shipping-policy'
     | '/sitemap.xml'
+    | '/terms'
     | '/bills'
     | '/dashboard'
     | '/payments'
@@ -267,10 +317,15 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/cancellation-and-refunds'
     | '/console'
+    | '/contact-us'
+    | '/privacy'
     | '/reset-password'
     | '/robots.txt'
+    | '/shipping-policy'
     | '/sitemap.xml'
+    | '/terms'
     | '/bills'
     | '/dashboard'
     | '/payments'
@@ -293,10 +348,15 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/cancellation-and-refunds'
     | '/console'
+    | '/contact-us'
+    | '/privacy'
     | '/reset-password'
     | '/robots.txt'
+    | '/shipping-policy'
     | '/sitemap.xml'
+    | '/terms'
     | '/_authenticated/bills'
     | '/_authenticated/dashboard'
     | '/_authenticated/payments'
@@ -320,10 +380,15 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  CancellationAndRefundsRoute: typeof CancellationAndRefundsRoute
   ConsoleRoute: typeof ConsoleRoute
+  ContactUsRoute: typeof ContactUsRoute
+  PrivacyRoute: typeof PrivacyRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
+  ShippingPolicyRoute: typeof ShippingPolicyRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TermsRoute: typeof TermsRoute
   BlogPgRentAgreementTemplateRoute: typeof BlogPgRentAgreementTemplateRoute
   ApiPublicHooksGenerateBillsRoute: typeof ApiPublicHooksGenerateBillsRoute
   ApiPublicHooksPlanLifecycleRoute: typeof ApiPublicHooksPlanLifecycleRoute
@@ -354,11 +419,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cancellation-and-refunds': {
+      id: '/cancellation-and-refunds'
+      path: '/cancellation-and-refunds'
+      fullPath: '/cancellation-and-refunds'
+      preLoaderRoute: typeof CancellationAndRefundsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/console': {
       id: '/console'
       path: '/console'
       fullPath: '/console'
       preLoaderRoute: typeof ConsoleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact-us': {
+      id: '/contact-us'
+      path: '/contact-us'
+      fullPath: '/contact-us'
+      preLoaderRoute: typeof ContactUsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -375,11 +461,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RobotsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/shipping-policy': {
+      id: '/shipping-policy'
+      path: '/shipping-policy'
+      fullPath: '/shipping-policy'
+      preLoaderRoute: typeof ShippingPolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/bills': {
@@ -541,10 +641,15 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  CancellationAndRefundsRoute: CancellationAndRefundsRoute,
   ConsoleRoute: ConsoleRoute,
+  ContactUsRoute: ContactUsRoute,
+  PrivacyRoute: PrivacyRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
+  ShippingPolicyRoute: ShippingPolicyRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TermsRoute: TermsRoute,
   BlogPgRentAgreementTemplateRoute: BlogPgRentAgreementTemplateRoute,
   ApiPublicHooksGenerateBillsRoute: ApiPublicHooksGenerateBillsRoute,
   ApiPublicHooksPlanLifecycleRoute: ApiPublicHooksPlanLifecycleRoute,
