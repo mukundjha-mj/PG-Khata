@@ -151,18 +151,30 @@ function AuthPage() {
           },
         });
         if (error) throw error;
+        // Supabase deliberately returns a success-shaped response when the
+        // address already has an account, so from here a real signup and a
+        // collision are indistinguishable. Anything below that branches on
+        // which one happened hands this form back the enumeration oracle the
+        // reset branch above is careful to avoid.
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (signInError) {
-          // Expected whenever email confirmation is on: the account exists but
-          // has no session yet.
-          toast.success("Account created. Check your email to confirm, then sign in.");
+          // Three situations reach this line and only the first created
+          // anything: confirmation is pending on a new account; the address
+          // already has a password and it is not this one; the address is
+          // Google-only and has no password at all. One message has to hold in
+          // all three. `signin` mode carries both escape hatches — the Google
+          // button and "Forgot password?", which sets a password on an account
+          // that has none.
+          toast.success("Check your email to continue, or sign in if you already have an account.");
           setMode("signin");
           return;
         }
-        toast.success("Account created");
+        // Only reachable with email confirmation off, so "account created"
+        // would be a guess about a dashboard setting; this is true either way.
+        toast.success("You're signed in.");
         navigate({ to: "/dashboard", replace: true });
         return;
       }
