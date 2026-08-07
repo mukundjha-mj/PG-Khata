@@ -44,9 +44,23 @@ export const receiptDate = (value: string) =>
 
 export type ReceiptLine = { label: string; value: string };
 
+/** Human label for a plan_change_history direction. */
+export const directionLabel = (direction: string) =>
+  direction === "upgrade" ? "Upgrade" : direction === "renewal" ? "Renewal" : "Downgrade";
+
 /** The billing breakdown shown both on screen and in the PDF. */
 export function receiptLines(row: PlanChangeRow): ReceiptLine[] {
   const to = tierByKey(row.to_plan);
+
+  // A renewal buys a whole cycle at list price, so the from/to and remaining-day
+  // comparisons a proration receipt needs would all read as zero or identical.
+  if (row.direction === "renewal") {
+    return [
+      { label: `${to.name} plan, one month`, value: money(to.amount) },
+      { label: "Billing cycle", value: "30 days" },
+    ];
+  }
+
   const from = tierByKey(row.from_plan);
   const lines: ReceiptLine[] = [
     { label: `${to.name} plan, monthly list price`, value: money(to.amount) },
@@ -60,7 +74,11 @@ export function receiptLines(row: PlanChangeRow): ReceiptLine[] {
 }
 
 export function receiptTitle(row: PlanChangeRow) {
-  return row.direction === "upgrade" ? "UPGRADE RECEIPT" : "PLAN CHANGE RECEIPT";
+  return row.direction === "upgrade"
+    ? "UPGRADE RECEIPT"
+    : row.direction === "renewal"
+      ? "RENEWAL RECEIPT"
+      : "PLAN CHANGE RECEIPT";
 }
 
 const INK: [number, number, number] = [15, 23, 42];
@@ -102,8 +120,10 @@ export function buildPlanReceiptPdf(row: PlanChangeRow, party: ReceiptParty): js
     `Email: ${party.accountEmail || "-"}`,
   ];
   const meta = [
-    `Change: ${tierByKey(row.from_plan).name} to ${tierByKey(row.to_plan).name}`,
-    `Type: ${row.direction === "upgrade" ? "Upgrade" : "Downgrade"}`,
+    row.direction === "renewal" && row.from_plan === row.to_plan
+      ? `Plan: ${tierByKey(row.to_plan).name}`
+      : `Change: ${tierByKey(row.from_plan).name} to ${tierByKey(row.to_plan).name}`,
+    `Type: ${directionLabel(row.direction)}`,
     row.payment_id ? `Payment ref: ${row.payment_id}` : "Payment ref: not applicable",
   ];
   left.forEach((line, i) => doc.text(line, m, 116 + i * 14));

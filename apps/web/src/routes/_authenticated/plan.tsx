@@ -25,7 +25,13 @@ import {
 } from "@/lib/pricing-plans";
 import { computeProration, rupees, type Proration } from "@/lib/plan-proration";
 import { usePlanSettings } from "@/lib/use-plan";
-import { startPlanChange, confirmPlanPayment, cancelPendingPlanChange } from "@/lib/plan.functions";
+import {
+  startPlanChange,
+  startPlanRenewal,
+  confirmPlanPayment,
+  cancelPendingPlanChange,
+} from "@/lib/plan.functions";
+import { describePlanPeriod, formatDate, GRACE_DAYS } from "@/lib/plan-period";
 import { BRAND } from "@/lib/site";
 
 export const Route = createFileRoute("/_authenticated/plan")({
@@ -103,10 +109,11 @@ const statusLabel: Record<string, string> = {
 
 function PlanPage() {
   const queryClient = useQueryClient();
-  const { data, isLoading } = usePlanSettings();
+  const { data, isLoading, isError, refetch } = usePlanSettings();
   const [target, setTarget] = useState<string | null>(null);
 
   const start = useServerFn(startPlanChange);
+  const renewPlan = useServerFn(startPlanRenewal);
   const confirm = useServerFn(confirmPlanPayment);
   const cancelPending = useServerFn(cancelPendingPlanChange);
 
@@ -133,45 +140,58 @@ function PlanPage() {
     queryClient.invalidateQueries({ queryKey: ["plan-history"] });
   };
 
+  /**
+   * Opens Razorpay for an order and resolves once the payment is verified
+   * server side. Shared by upgrades and renewals: only the label differs.
+   */
+  const openCheckout = async (order: {
+    keyId: string;
+    amount: number;
+    currency: string;
+    orderId: string;
+    planName: string;
+    description: string;
+  }) => {
+    const ok = await loadRazorpay();
+    const Razorpay = window.Razorpay;
+    if (!ok || !Razorpay)
+      throw new Error("Could not load the payment window. Check your connection and retry.");
+
+    await new Promise<void>((resolve, reject) => {
+      const rzp = new Razorpay({
+        key: order.keyId,
+        amount: order.amount,
+        currency: order.currency,
+        order_id: order.orderId,
+        name: BRAND,
+        description: order.description,
+        method: { upi: true, card: true, netbanking: true, wallet: true },
+        handler: async (r) => {
+          try {
+            await confirm({
+              data: {
+                orderId: r.razorpay_order_id,
+                paymentId: r.razorpay_payment_id,
+                signature: r.razorpay_signature,
+              },
+            });
+            resolve();
+          } catch (e) {
+            reject(e as Error);
+          }
+        },
+        modal: { ondismiss: () => reject(new Error("Payment cancelled")) },
+        theme: { color: "#2563eb" },
+      });
+      rzp.open();
+    });
+  };
+
   const change = useMutation({
     mutationFn: async (toPlan: string) => {
       const res = await start({ data: { toPlan } });
       if (res.kind !== "checkout") return res;
-
-      const ok = await loadRazorpay();
-      const Razorpay = window.Razorpay;
-      if (!ok || !Razorpay)
-        throw new Error("Could not load the payment window. Check your connection and retry.");
-
-      await new Promise<void>((resolve, reject) => {
-        const rzp = new Razorpay({
-          key: res.keyId,
-          amount: res.amount,
-          currency: res.currency,
-          order_id: res.orderId,
-          name: BRAND,
-          description: `Upgrade to ${res.planName} (prorated)`,
-          method: { upi: true, card: true, netbanking: true, wallet: true },
-          handler: async (r) => {
-            try {
-              await confirm({
-                data: {
-                  orderId: r.razorpay_order_id,
-                  paymentId: r.razorpay_payment_id,
-                  signature: r.razorpay_signature,
-                },
-              });
-              resolve();
-            } catch (e) {
-              reject(e as Error);
-            }
-          },
-          modal: { ondismiss: () => reject(new Error("Payment cancelled")) },
-          theme: { color: "#2563eb" },
-        });
-        rzp.open();
-      });
-
+      await openCheckout({ ...res, description: `Upgrade to ${res.planName} (prorated)` });
       return res;
     },
     onSuccess: (res) => {
@@ -186,6 +206,22 @@ function PlanPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const renew = useMutation({
+    mutationFn: async () => {
+      const res = await renewPlan({});
+      await openCheckout({
+        ...res,
+        description: `${res.planName} plan, one month`,
+      });
+      return res;
+    },
+    onSuccess: () => {
+      refresh();
+      toast.success("Payment received. Your plan is renewed.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const cancel = useMutation({
     mutationFn: () => cancelPending({}),
     onSuccess: () => {
@@ -195,14 +231,21 @@ function PlanPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const renewal = data
-    ? new Date(data.current_period_end).toLocaleDateString("en-IN", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      })
-    : "";
+  const renewal = data ? formatDate(data.current_period_end) : "";
   const status = data?.plan_status ?? "trial";
+
+  const period = data
+    ? describePlanPeriod({
+        periodEnd: data.current_period_end,
+        planStatus: data.plan_status,
+      })
+    : null;
+
+  // The plan the renewal actually bills, honouring a scheduled downgrade.
+  const renewingTier =
+    data?.pending_plan && tierByKey(data.pending_plan).rank < currentTier.rank
+      ? tierByKey(data.pending_plan)
+      : currentTier;
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 p-4 sm:p-6">
@@ -222,8 +265,50 @@ function PlanPage() {
         </Button>
       </div>
 
-      {isLoading || !data ? (
+      {isLoading ? (
         <Skeleton className="h-40 w-full" />
+      ) : isError ? (
+        <Card className="border-destructive/40">
+          <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="font-medium">Could not load your billing details</p>
+              <p className="text-sm text-muted-foreground">
+                The connection to your account failed. Nothing is wrong with your plan or your
+                payments, and nothing has been charged.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              className="h-11 shrink-0 md:h-9"
+              onClick={() => void refetch()}
+            >
+              Try again
+            </Button>
+          </CardContent>
+        </Card>
+      ) : !data ? (
+        // A missing settings row used to leave this page on a skeleton forever
+        // with every button dead and no reason given. The owner cannot create
+        // the row themselves, so say so plainly instead of looking broken.
+        <Card className="border-destructive/40">
+          <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="font-medium">Your account setup is incomplete</p>
+              <p className="text-sm text-muted-foreground">
+                Your billing profile is missing, so your plan cannot be shown or changed. Your
+                properties, tenants and bills are unaffected. Reload first, and if this stays put
+                contact support with the email you signed in with.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              className="h-11 shrink-0 md:h-9"
+              onClick={() => void refetch()}
+            >
+              Reload
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <Card>
           <CardHeader>
@@ -257,6 +342,29 @@ function PlanPage() {
                   : "No payment yet"}
               </p>
             </div>
+            {period?.needsPayment ? (
+              <div
+                className={`sm:col-span-3 flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between ${
+                  period.isOverdue
+                    ? "border-destructive/40 bg-destructive/5"
+                    : "border-amber-500/40 bg-amber-500/5"
+                }`}
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{period.title}</p>
+                  <p className="text-sm text-muted-foreground">{period.detail}</p>
+                </div>
+                <Button
+                  className="h-11 shrink-0 md:h-9"
+                  disabled={renew.isPending}
+                  onClick={() => renew.mutate()}
+                >
+                  {renew.isPending
+                    ? "Opening checkout..."
+                    : `Pay ${rupees(renewingTier.amount)} for a month`}
+                </Button>
+              </div>
+            ) : null}
             {data.pending_plan ? (
               <div className="sm:col-span-3 flex flex-col gap-3 rounded-lg border border-dashed p-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm">
@@ -385,6 +493,17 @@ function PlanPage() {
             <strong className="text-foreground">Downgrades</strong> are scheduled, not instant. You
             keep your current features until the renewal date you already paid for, then the lower
             price applies. Nothing is charged today and no refund is issued.
+          </p>
+          <p>
+            <strong className="text-foreground">Renewals</strong> are charged a month at a time at
+            list price, with no proration. You get {GRACE_DAYS} buffer days after your renewal date
+            to pay, and the app keeps working normally through them. Paying inside the buffer keeps
+            your existing billing date, so it never drifts earlier month after month.
+          </p>
+          <p>
+            <strong className="text-foreground">A missed payment never locks you out.</strong> Your
+            tenants, bills and history stay exactly where they are and the app stays fully usable
+            even after the buffer ends. We will keep reminding you, not shut you off mid month.
           </p>
           <p>
             <strong className="text-foreground">Payments</strong> run through Razorpay and support

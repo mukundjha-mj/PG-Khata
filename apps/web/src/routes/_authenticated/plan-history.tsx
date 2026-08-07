@@ -21,6 +21,7 @@ import { rupees } from "@/lib/plan-proration";
 import { useBranding } from "@/lib/branding";
 import { useCurrentUser } from "@/lib/use-current-user";
 import {
+  directionLabel,
   downloadPlanReceipt,
   receiptDate,
   receiptLines,
@@ -110,11 +111,17 @@ function PlanHistoryPage() {
             <Card key={row.id}>
               <CardHeader className="pb-2">
                 <CardTitle className="flex flex-wrap items-center gap-2">
-                  {tierByKey(row.from_plan).name}
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                  {tierByKey(row.to_plan).name}
-                  <Badge variant={row.direction === "upgrade" ? "default" : "secondary"}>
-                    {row.direction === "upgrade" ? "Upgrade" : "Downgrade"}
+                  {row.direction === "renewal" && row.from_plan === row.to_plan ? (
+                    tierByKey(row.to_plan).name
+                  ) : (
+                    <>
+                      {tierByKey(row.from_plan).name}
+                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                      {tierByKey(row.to_plan).name}
+                    </>
+                  )}
+                  <Badge variant={row.direction === "downgrade" ? "secondary" : "default"}>
+                    {directionLabel(row.direction)}
                   </Badge>
                 </CardTitle>
               </CardHeader>
