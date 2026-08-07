@@ -30,6 +30,7 @@ import { Route as AuthenticatedTenantsRouteImport } from './routes/_authenticate
 import { Route as BlogPgRentAgreementTemplateRouteImport } from './routes/blog/pg-rent-agreement-template'
 import { Route as AuthenticatedTenantTenantIdRouteImport } from './routes/_authenticated/tenant.$tenantId'
 import { Route as ApiPublicHooksGenerateBillsRouteImport } from './routes/api/public/hooks/generate-bills'
+import { Route as ApiPublicHooksPlanLifecycleRouteImport } from './routes/api/public/hooks/plan-lifecycle'
 import { Route as ApiPublicHooksSendRemindersRouteImport } from './routes/api/public/hooks/send-reminders'
 
 const IndexRoute = IndexRouteImport.update({
@@ -140,6 +141,12 @@ const ApiPublicHooksGenerateBillsRoute =
     path: '/api/public/hooks/generate-bills',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksPlanLifecycleRoute =
+  ApiPublicHooksPlanLifecycleRouteImport.update({
+    id: '/api/public/hooks/plan-lifecycle',
+    path: '/api/public/hooks/plan-lifecycle',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSendRemindersRoute =
   ApiPublicHooksSendRemindersRouteImport.update({
     id: '/api/public/hooks/send-reminders',
@@ -168,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/blog/pg-rent-agreement-template': typeof BlogPgRentAgreementTemplateRoute
   '/tenant/$tenantId': typeof AuthenticatedTenantTenantIdRoute
   '/api/public/hooks/generate-bills': typeof ApiPublicHooksGenerateBillsRoute
+  '/api/public/hooks/plan-lifecycle': typeof ApiPublicHooksPlanLifecycleRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
 }
 export interface FileRoutesByTo {
@@ -191,6 +199,7 @@ export interface FileRoutesByTo {
   '/blog/pg-rent-agreement-template': typeof BlogPgRentAgreementTemplateRoute
   '/tenant/$tenantId': typeof AuthenticatedTenantTenantIdRoute
   '/api/public/hooks/generate-bills': typeof ApiPublicHooksGenerateBillsRoute
+  '/api/public/hooks/plan-lifecycle': typeof ApiPublicHooksPlanLifecycleRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
 }
 export interface FileRoutesById {
@@ -216,6 +225,7 @@ export interface FileRoutesById {
   '/blog/pg-rent-agreement-template': typeof BlogPgRentAgreementTemplateRoute
   '/_authenticated/tenant/$tenantId': typeof AuthenticatedTenantTenantIdRoute
   '/api/public/hooks/generate-bills': typeof ApiPublicHooksGenerateBillsRoute
+  '/api/public/hooks/plan-lifecycle': typeof ApiPublicHooksPlanLifecycleRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
 }
 export interface FileRouteTypes {
@@ -241,6 +251,7 @@ export interface FileRouteTypes {
     | '/blog/pg-rent-agreement-template'
     | '/tenant/$tenantId'
     | '/api/public/hooks/generate-bills'
+    | '/api/public/hooks/plan-lifecycle'
     | '/api/public/hooks/send-reminders'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -264,6 +275,7 @@ export interface FileRouteTypes {
     | '/blog/pg-rent-agreement-template'
     | '/tenant/$tenantId'
     | '/api/public/hooks/generate-bills'
+    | '/api/public/hooks/plan-lifecycle'
     | '/api/public/hooks/send-reminders'
   id:
     | '__root__'
@@ -288,6 +300,7 @@ export interface FileRouteTypes {
     | '/blog/pg-rent-agreement-template'
     | '/_authenticated/tenant/$tenantId'
     | '/api/public/hooks/generate-bills'
+    | '/api/public/hooks/plan-lifecycle'
     | '/api/public/hooks/send-reminders'
   fileRoutesById: FileRoutesById
 }
@@ -301,6 +314,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   BlogPgRentAgreementTemplateRoute: typeof BlogPgRentAgreementTemplateRoute
   ApiPublicHooksGenerateBillsRoute: typeof ApiPublicHooksGenerateBillsRoute
+  ApiPublicHooksPlanLifecycleRoute: typeof ApiPublicHooksPlanLifecycleRoute
   ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
 }
 
@@ -453,6 +467,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksGenerateBillsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/plan-lifecycle': {
+      id: '/api/public/hooks/plan-lifecycle'
+      path: '/api/public/hooks/plan-lifecycle'
+      fullPath: '/api/public/hooks/plan-lifecycle'
+      preLoaderRoute: typeof ApiPublicHooksPlanLifecycleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/send-reminders': {
       id: '/api/public/hooks/send-reminders'
       path: '/api/public/hooks/send-reminders'
@@ -506,6 +527,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   BlogPgRentAgreementTemplateRoute: BlogPgRentAgreementTemplateRoute,
   ApiPublicHooksGenerateBillsRoute: ApiPublicHooksGenerateBillsRoute,
+  ApiPublicHooksPlanLifecycleRoute: ApiPublicHooksPlanLifecycleRoute,
   ApiPublicHooksSendRemindersRoute: ApiPublicHooksSendRemindersRoute,
 }
 export const routeTree = rootRouteImport
