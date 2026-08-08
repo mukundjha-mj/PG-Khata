@@ -51,7 +51,7 @@ export function verifyRazorpaySignature(input: {
   const expected = createHmac("sha256", keySecret)
     .update(`${input.orderId}|${input.paymentId}`)
     .digest("hex");
-  return hmacEquals(expected, input.signature);
+  return constantTimeEqual(expected, input.signature);
 }
 
 /**
@@ -67,11 +67,11 @@ export function verifyRazorpayWebhook(rawBody: string, signature: string | null)
   if (!secret) throw new Error("RAZORPAY_WEBHOOK_SECRET is not configured");
   if (!signature) return false;
   const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
-  return hmacEquals(expected, signature);
+  return constantTimeEqual(expected, signature);
 }
 
 /** Length-safe constant-time compare. timingSafeEqual throws on length mismatch. */
-function hmacEquals(expected: string, provided: string) {
+export function constantTimeEqual(expected: string, provided: string | null | undefined) {
   const a = Buffer.from(expected);
   const b = Buffer.from(provided ?? "");
   return a.length === b.length && timingSafeEqual(a, b);
