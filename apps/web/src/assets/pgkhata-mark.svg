@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Rubber-stamp outline: an octagon, like an official ledger stamp. -->
+  <path
+    d="M20 4H44L60 20V44L44 60H20L4 44V20L20 4Z"
+    fill="#f1efe4"
+    stroke="#161b2e"
+    stroke-width="3"
+    stroke-linejoin="round"
+  />
+  <!-- Three ledger rule lines, each shorter than the last: a bill's line items. -->
+  <rect x="16" y="22" width="32" height="3" rx="1" fill="#161b2e" />
+  <rect x="16" y="30" width="26" height="3" rx="1" fill="#161b2e" />
+  <rect x="16" y="38" width="20" height="3" rx="1" fill="#161b2e" />
+  <!-- Stamp check-mark, offset bottom-right, in stamp red: the "settled" mark. -->
+  <path
+    d="M40 45L46 51L58 37"
+    stroke="#b3261e"
+    stroke-width="4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+</svg>

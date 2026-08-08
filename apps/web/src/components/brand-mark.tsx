@@ -26,14 +26,26 @@ export function BrandMark({ className, size = 32, priority = false, src, alt }: 
         )}
         style={{ width: size, height: size }}
       >
+        {/* Ledger-stamp mark: three bill line-items and a settled checkmark,
+            drawn in currentColor so it follows the app theme (incl. dark mode)
+            instead of the fixed manila/stamp-red palette used on marketing pages. */}
         <svg
           viewBox="0 0 24 24"
           width={size * 0.58}
           height={size * 0.58}
-          fill="currentColor"
+          fill="none"
+          stroke="currentColor"
           aria-hidden="true"
         >
-          <path d="M12 2.5 21.5 12 12 21.5 2.5 12 12 2.5Zm0 5.2L7.7 12l4.3 4.3L16.3 12 12 7.7Z" />
+          <rect x="4" y="8" width="12" height="2" rx="0.8" fill="currentColor" />
+          <rect x="4" y="12" width="9.5" height="2" rx="0.8" fill="currentColor" />
+          <rect x="4" y="16" width="7" height="2" rx="0.8" fill="currentColor" />
+          <path
+            d="M14.5 17.5 17 20l4.5-5.5"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       </span>
     );

@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { BRAND, appUrl } from "@/lib/site";
+import logoMark from "@/assets/logo-mark.png";
 
 type NavLink = { href: string; label: string };
 
@@ -32,9 +33,7 @@ export function MarketingNav({ links = DEFAULT_LINKS }: { links?: NavLink[] }) {
             to="/"
             className="flex items-center gap-2 font-marketing-display text-xl font-bold tracking-tight text-ink"
           >
-            <span className="grid h-6 w-6 place-items-center border border-ink text-[10px] font-marketing-mono font-bold">
-              ₹
-            </span>
+            <img src={logoMark} alt="" className="h-7 w-7" width={28} height={28} />
             {BRAND}
           </Link>
           <div className="hidden items-center gap-8 text-sm font-medium md:flex">
@@ -63,7 +62,8 @@ export function MarketingNav({ links = DEFAULT_LINKS }: { links?: NavLink[] }) {
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="bg-cream text-ink">
-          <SheetTitle className="font-marketing-display text-lg font-bold text-ink">
+          <SheetTitle className="flex items-center gap-2 font-marketing-display text-lg font-bold text-ink">
+            <img src={logoMark} alt="" className="h-6 w-6" width={24} height={24} />
             {BRAND}
           </SheetTitle>
           <nav className="mt-6 flex flex-col gap-1 text-base font-medium">

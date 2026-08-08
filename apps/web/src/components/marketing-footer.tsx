@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 
 import { BRAND, appUrl } from "@/lib/site";
+import logoMark from "@/assets/logo-mark.png";
 
 const linkClass = "mb-3 block text-[14.5px] text-ink/70 hover:text-ink";
 
@@ -11,9 +12,7 @@ export function MarketingFooter({ maxWidth = "1180px" }: { maxWidth?: string }) 
       <div className="flex flex-wrap justify-between gap-8 border-t-2 border-ink pt-8">
         <div className="max-w-[300px]">
           <span className="flex items-center gap-2 font-marketing-display text-lg font-bold text-ink">
-            <span className="grid h-6 w-6 place-items-center border border-ink text-[10px] font-marketing-mono font-bold">
-              ₹
-            </span>
+            <img src={logoMark} alt="" className="h-6 w-6" width={24} height={24} />
             {BRAND}
           </span>
           <p className="mt-3 text-[14.5px] text-ink/60">
