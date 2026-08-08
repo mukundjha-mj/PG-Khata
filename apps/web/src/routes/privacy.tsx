@@ -1,6 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
-import { BRAND, appUrl, siteUrl } from "@/lib/site";
+import { BRAND, siteUrl } from "@/lib/site";
+import { MarketingNav } from "@/components/marketing-nav";
+import { MarketingFooter } from "@/components/marketing-footer";
 
 const PAGE_URL = siteUrl("/privacy");
 const TITLE = `Privacy Policy - ${BRAND}`;
@@ -75,49 +77,35 @@ const sections = [
 
 function PrivacyPage() {
   return (
-    <div className="marketing min-h-screen bg-cream font-body text-ink">
-      <nav className="border-b border-line bg-cream/85 py-4 backdrop-blur-lg">
-        <div className="mx-auto flex max-w-[760px] items-center justify-between px-6">
-          <Link to="/" className="flex items-center gap-2 font-display text-2xl font-bold">
-            <span className="inline-block h-3 w-3 rotate-45 rounded-[3px] bg-clay" />
-            {BRAND}
-          </Link>
-          <a
-            href={appUrl("/auth")}
-            className="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-cream transition-all hover:-translate-y-px hover:bg-clay"
-          >
-            Start free trial
-          </a>
-        </div>
-      </nav>
+    <div className="marketing min-h-screen bg-cream font-marketing-body text-ink">
+      <MarketingNav />
 
-      <main className="px-6 py-16">
+      <main className="px-6 pt-32 pb-16">
         <div className="mx-auto max-w-[760px]">
-          <p className="text-[13px] font-bold tracking-[0.08em] text-clay uppercase">Legal</p>
-          <h1 className="mt-4 font-display text-[clamp(32px,4.4vw,52px)] leading-[1.08] font-semibold">
+          <span className="font-marketing-mono text-[13px] font-semibold tracking-[0.06em] text-clay">
+            Ref. Legal
+          </span>
+          <h1 className="mt-3 font-marketing-display text-[clamp(30px,4vw,46px)] leading-[1.1] font-bold text-ink">
             Privacy Policy
           </h1>
-          <p className="mt-4 text-[15px] text-ink/55">Last updated {UPDATED}</p>
+          <p className="mt-3 font-marketing-mono text-[13px] text-ink/55">
+            Last updated {UPDATED}
+          </p>
 
-          <div className="mt-10 space-y-9">
+          <div className="mt-10 border-t-2 border-ink">
             {sections.map((s) => (
-              <section key={s.title}>
-                <h2 className="font-display text-[21px] font-semibold">{s.title}</h2>
-                <p className="mt-2.5 text-[16px] leading-relaxed text-ink/70">{s.body}</p>
+              <section key={s.title} className="border-b border-line py-6">
+                <h2 className="font-marketing-display text-[18px] font-bold text-ink">
+                  {s.title}
+                </h2>
+                <p className="mt-2 text-[15px] leading-relaxed text-ink/70">{s.body}</p>
               </section>
             ))}
           </div>
         </div>
       </main>
 
-      <footer className="mx-auto max-w-[760px] px-6 pb-16">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-6 text-[13px] text-ink/50">
-          <span>2026 {BRAND}. Registered in Noida, Uttar Pradesh, India.</span>
-          <Link to="/" className="hover:text-clay">
-            Back to home
-          </Link>
-        </div>
-      </footer>
+      <MarketingFooter maxWidth="760px" />
     </div>
   );
 }

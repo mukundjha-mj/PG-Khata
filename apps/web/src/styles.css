@@ -70,6 +70,11 @@
   /* Marketing palette (fixed brand colours, landing page only) */
   --font-display: "Fraunces", ui-serif, Georgia, serif;
   --font-body: "Sora", ui-sans-serif, system-ui, sans-serif;
+  /* Utility-bill document register: scoped to .marketing, never the global
+     --font-display, which the dashboard and console also depend on. */
+  --font-marketing-display: "Archivo Narrow", "Inter Tight", ui-sans-serif, sans-serif;
+  --font-marketing-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
+  --font-marketing-body: "Work Sans", ui-sans-serif, system-ui, sans-serif;
   --color-clay: var(--clay);
   --color-clay-dark: var(--clay-dark);
   --color-ink: var(--ink);
@@ -78,7 +83,6 @@
   --color-sage: var(--sage);
   --color-sage-light: var(--sage-light);
   --color-paper: var(--paper);
-  --color-gold: var(--gold);
   --color-line: var(--line);
 }
 
@@ -86,18 +90,18 @@
   --radius: 0.5rem;
   --font-sans: "Sora", "Inter Tight", ui-sans-serif, system-ui, sans-serif;
 
-  /* Marketing palette, aligned with the app theme */
-  --clay: #644a40;
-  --clay-dark: #582d1d;
-  --ink: #202020;
-  --cream: #f9f9f9;
-  --cream-2: #efefef;
-  --sage: #646464;
-  --sage-light: #e8e8e8;
-  --paper: #fcfcfc;
-  --gold: #ffdfb5;
-  --line: #d8d8d8;
-  --marketing-shadow: 0 20px 60px -20px rgba(32, 32, 32, 0.22);
+  /* Marketing palette: utility-bill document register (manila paper, blue-black
+     ink, rubber-stamp red) — deliberately distinct from the app theme above. */
+  --clay: #b3261e;
+  --clay-dark: #7a1a15;
+  --ink: #161b2e;
+  --cream: #f1efe4;
+  --cream-2: #e9e6d6;
+  --sage: #5c5744;
+  --sage-light: #e3ddc4;
+  --paper: #fbfaf5;
+  --line: #c9c4ac;
+  --marketing-shadow: 2px 2px 0 0 rgba(22, 27, 46, 0.14);
 
   --background: #f9f9f9;
   --foreground: #202020;
@@ -139,19 +143,16 @@
 }
 
 .dark {
-  --clay: #ffe0c2;
-  --clay-dark: #ffd0a6;
-  --ink: #eeeeee;
-  --cream: #111111;
-  --cream-2: #191919;
-  --sage: #b4b4b4;
-  --sage-light: #2a2a2a;
-  --paper: #191919;
-  /* Gold only ever sits on inverted (bg-ink) surfaces, which become light in
-     dark mode, so it flips to a dark warm brown to keep readable contrast. */
-  --gold: #7a4a1f;
-  --line: #2a2a2a;
-  --marketing-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.6);
+  --clay: #e35d51;
+  --clay-dark: #f08981;
+  --ink: #e9e6d6;
+  --cream: #14151d;
+  --cream-2: #1b1c26;
+  --sage: #a8a38c;
+  --sage-light: #262a30;
+  --paper: #1b1c26;
+  --line: #2f313c;
+  --marketing-shadow: 2px 2px 0 0 rgba(0, 0, 0, 0.5);
 
   --background: #111111;
   --foreground: #eeeeee;
@@ -453,7 +454,15 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
+/* Visible by default: content must not depend on JS to be seen. The
+   observer below only opts in to the entrance animation once it confirms
+   it can run, so a slow connection or a JS error never hides the page. */
 .marketing .reveal {
+  opacity: 1;
+  transform: none;
+}
+
+.marketing.js-reveal-ready .reveal {
   opacity: 0;
   transform: translateY(24px);
   transition:
@@ -461,37 +470,83 @@
     transform 0.7s ease;
 }
 
-.marketing .reveal.in {
+.marketing.js-reveal-ready .reveal.in {
   opacity: 1;
   transform: translateY(0);
 }
 
-.marketing .float-chip {
-  animation: marketing-floaty 5s ease-in-out infinite;
-}
-
-.marketing .float-chip:last-of-type {
-  animation-delay: 1s;
-}
-
-@keyframes marketing-floaty {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .marketing .float-chip {
-    animation: none;
-  }
   .marketing .reveal {
     opacity: 1;
     transform: none;
   }
+}
+
+/* Utility-bill document grammar. */
+.marketing .field-box {
+  position: relative;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.marketing .field-box::before {
+  content: attr(data-label);
+  position: absolute;
+  top: -0.55rem;
+  left: 0.75rem;
+  padding: 0 0.375rem;
+  background: var(--cream);
+  font-family: var(--font-marketing-mono);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sage);
+}
+
+.marketing .perforated {
+  border-left: 2px dashed var(--line);
+}
+
+.marketing .stamp {
+  display: inline-flex;
+  align-items: center;
+  transform: rotate(-4deg);
+  border: 2px solid var(--clay);
+  border-radius: 2px;
+  padding: 0.2rem 0.6rem;
+  font-family: var(--font-marketing-mono);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--clay);
+}
+
+.marketing .barcode {
+  height: 2rem;
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--ink) 0px,
+    var(--ink) 2px,
+    transparent 2px,
+    transparent 3px,
+    var(--ink) 3px,
+    var(--ink) 4px,
+    transparent 4px,
+    transparent 7px
+  );
+  opacity: 0.85;
+}
+
+.marketing .ledger-lines {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 27px,
+    var(--line) 27px,
+    var(--line) 28px
+  );
 }
 
 /* ---------------------------------------------------------------
