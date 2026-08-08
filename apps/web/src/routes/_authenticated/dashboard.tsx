@@ -1,17 +1,29 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, DoorOpen, Users, IndianRupee, ArrowRight } from "lucide-react";
+import {
+  Building2,
+  DoorOpen,
+  Users,
+  IndianRupee,
+  ArrowRight,
+  Receipt,
+  UserPlus,
+  AlertTriangle,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/empty-state";
 import { effectiveRent, formatMoney, occupancyOf } from "@/lib/pg";
 import {
   balanceOf,
   currentMonth,
   displayStatus,
   monthLabel,
+  STATUS_LABEL,
+  STATUS_STYLE,
   type DisplayStatus,
 } from "@/lib/billing";
 import { BRAND } from "@/lib/site";
@@ -85,7 +97,19 @@ function Stat({
 }
 
 function Dashboard() {
-  const { data, isLoading } = useOverview();
+  const { data, isLoading, isError, refetch } = useOverview();
+
+  if (isError) {
+    return (
+      <EmptyState
+        icon={AlertTriangle}
+        title="Couldn't load your dashboard"
+        description="Something went wrong fetching your properties and bills. Check your connection and try again."
+        actionLabel="Try again"
+        onAction={() => refetch()}
+      />
+    );
+  }
 
   if (isLoading || !data) {
     return (
@@ -127,9 +151,23 @@ function Dashboard() {
 
   return (
     <div className="page-stack">
-      <div>
-        <h1 className="page-title">Property Performance Dashboard</h1>
-        <p className="page-subtitle">Overview of your properties, occupancy and expected rent.</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="page-title">Property Performance Dashboard</h1>
+          <p className="page-subtitle">Overview of your properties, occupancy and expected rent.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link to="/payments">
+              <Receipt className="mr-1.5 h-3.5 w-3.5" /> Record payment
+            </Link>
+          </Button>
+          <Button asChild size="sm">
+            <Link to="/tenants">
+              <UserPlus className="mr-1.5 h-3.5 w-3.5" /> Add tenant
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -183,8 +221,8 @@ function Dashboard() {
                   key={room.id}
                   className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm"
                 >
-                  <span className="font-medium">Room {room.room_number}</span>
-                  <span className="flex items-center gap-3">
+                  <span className="truncate font-medium">Room {room.room_number}</span>
+                  <span className="flex shrink-0 items-center gap-3">
                     <span className="text-muted-foreground">
                       {occ}/{room.capacity}
                     </span>
@@ -204,6 +242,14 @@ function Dashboard() {
                 </div>
               );
             })}
+            {data.rooms.length > 8 && (
+              <p className="pt-1 text-center text-xs text-muted-foreground">
+                +{data.rooms.length - 8} more room{data.rooms.length - 8 === 1 ? "" : "s"} -{" "}
+                <Link to="/rooms" className="underline underline-offset-4">
+                  view all
+                </Link>
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -246,28 +292,25 @@ function Dashboard() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <div className="rounded-md border border-border p-3">
-                    <p className="stat-label">Paid</p>
-                    <p className="subsection-title text-foreground">{counts.paid}</p>
-                  </div>
-                  <div className="rounded-md border border-border p-3">
-                    <p className="stat-label">Pending</p>
-                    <p className="subsection-title text-foreground">{counts.pending}</p>
-                  </div>
-                  <div className="rounded-md border border-border p-3">
-                    <p className="stat-label">Partial</p>
-                    <p className="subsection-title text-foreground">{counts["partially-paid"]}</p>
-                  </div>
-                  <div className="rounded-md border border-border p-3">
-                    <p className="stat-label">Overdue</p>
-                    <p className="subsection-title text-foreground">{counts.overdue}</p>
-                  </div>
+                  {(["paid", "pending", "partially-paid", "overdue"] as const).map((status) => (
+                    <div
+                      key={status}
+                      className={`rounded-md border border-border p-3 ${STATUS_STYLE[status]}`}
+                    >
+                      <p className="stat-label">{STATUS_LABEL[status]}</p>
+                      <p className="subsection-title">{counts[status]}</p>
+                    </div>
+                  ))}
                 </div>
 
-                <p className="text-sm text-muted-foreground">
-                  Outstanding this month:{" "}
-                  <span className="font-medium text-foreground">{formatMoney(outstanding)}</span>
-                </p>
+                {outstanding > 0 && (
+                  <div className="flex items-center justify-between rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5">
+                    <span className="text-sm font-medium text-destructive">
+                      Outstanding this month
+                    </span>
+                    <span className="stat-value text-destructive">{formatMoney(outstanding)}</span>
+                  </div>
+                )}
               </>
             )}
           </CardContent>

@@ -1,0 +1,79 @@
+import { Link } from "@tanstack/react-router";
+
+import { BRAND, appUrl } from "@/lib/site";
+
+const linkClass = "mb-3 block text-[14.5px] text-ink/70 hover:text-ink";
+
+/** Shared marketing footer: ledger-column layout, reused across every public page. */
+export function MarketingFooter({ maxWidth = "1180px" }: { maxWidth?: string }) {
+  return (
+    <footer className="mx-auto px-6 pt-16 pb-10" style={{ maxWidth }}>
+      <div className="flex flex-wrap justify-between gap-8 border-t-2 border-ink pt-8">
+        <div className="max-w-[300px]">
+          <span className="flex items-center gap-2 font-marketing-display text-lg font-bold text-ink">
+            <span className="grid h-6 w-6 place-items-center border border-ink text-[10px] font-marketing-mono font-bold">
+              ₹
+            </span>
+            {BRAND}
+          </span>
+          <p className="mt-3 text-[14.5px] text-ink/60">
+            Billing and tenant management for PG and hostel owners across India.
+          </p>
+        </div>
+        <div className="flex gap-16">
+          <div>
+            <h3 className="mb-4 font-marketing-mono text-[12px] font-bold tracking-wide text-ink/50 uppercase">
+              Product
+            </h3>
+            <a href="/#features" className={linkClass}>
+              Features
+            </a>
+            <a href="/#how" className={linkClass}>
+              How it works
+            </a>
+            <a href="/#pricing" className={linkClass}>
+              Pricing
+            </a>
+            <Link to="/blog/pg-rent-agreement-template" className={linkClass}>
+              PG rent agreement template
+            </Link>
+          </div>
+          <div>
+            <h3 className="mb-4 font-marketing-mono text-[12px] font-bold tracking-wide text-ink/50 uppercase">
+              Company
+            </h3>
+            <a href={appUrl("/auth")} className={linkClass}>
+              Sign in
+            </a>
+            <a href={appUrl("/dashboard")} className={linkClass}>
+              Dashboard
+            </a>
+            <Link to="/contact-us" className={linkClass}>
+              Contact us
+            </Link>
+          </div>
+          <div>
+            <h3 className="mb-4 font-marketing-mono text-[12px] font-bold tracking-wide text-ink/50 uppercase">
+              Legal
+            </h3>
+            <Link to="/terms" className={linkClass}>
+              Terms and Conditions
+            </Link>
+            <Link to="/privacy" className={linkClass}>
+              Privacy Policy
+            </Link>
+            <Link to="/shipping-policy" className={linkClass}>
+              Shipping Policy
+            </Link>
+            <Link to="/cancellation-and-refunds" className={linkClass}>
+              Cancellation and Refunds
+            </Link>
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-wrap justify-between gap-3 pt-6 font-marketing-mono text-[12px] text-ink/65">
+        <span>2026 {BRAND}. Registered in Noida, Uttar Pradesh, India.</span>
+      </div>
+    </footer>
+  );
+}

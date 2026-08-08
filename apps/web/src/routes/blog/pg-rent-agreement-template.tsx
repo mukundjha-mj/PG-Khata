@@ -1,9 +1,10 @@
 import { useEffect } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-import { pricingPlans } from "@/lib/pricing-plans";
 import { pgRentAgreementTemplate } from "@/lib/pg-rent-agreement-template";
 import { BRAND, appUrl, siteUrl } from "@/lib/site";
+import { MarketingNav } from "@/components/marketing-nav";
+import { MarketingFooter } from "@/components/marketing-footer";
 
 const PAGE_URL = siteUrl("/blog/pg-rent-agreement-template");
 const TITLE = "PG Rent Agreement Format: Free Template for Owners";
@@ -179,23 +180,9 @@ const mistakes = [
   },
 ];
 
-function Check() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.4"
-      className="h-4 w-4 shrink-0 text-clay"
-      aria-hidden="true"
-    >
-      <path d="m5 13 4 4 10-10" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 function useReveal() {
   useEffect(() => {
+    document.querySelector(".marketing")?.classList.add("js-reveal-ready");
     const els = Array.from(document.querySelectorAll<HTMLElement>(".reveal"));
     const io = new IntersectionObserver(
       (entries) => {
@@ -229,42 +216,27 @@ function RentAgreementGuide() {
   useReveal();
 
   return (
-    <div className="marketing min-h-screen overflow-x-hidden bg-cream font-body text-ink">
-      <div className="grain" aria-hidden="true" />
-
-      <nav className="border-b border-line bg-cream/85 py-4 backdrop-blur-lg">
-        <div className="mx-auto flex max-w-[1180px] items-center justify-between px-6">
-          <Link to="/" className="flex items-center gap-2 font-display text-2xl font-bold">
-            <span className="inline-block h-3 w-3 rotate-45 rounded-[3px] bg-clay" />
-            {BRAND}
-          </Link>
-          <a
-            href={appUrl("/auth")}
-            className="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-cream transition-all hover:-translate-y-px hover:bg-clay"
-          >
-            Start free trial
-          </a>
-        </div>
-      </nav>
+    <div className="marketing min-h-screen overflow-x-hidden bg-cream font-marketing-body text-ink">
+      <MarketingNav />
 
       <main>
         <article>
-          <header className="px-6 pt-16 pb-10">
+          <header className="px-6 pt-32 pb-10">
             <div className="mx-auto max-w-[760px]">
-              <nav aria-label="Breadcrumb" className="text-[13px] text-ink/55">
+              <nav aria-label="Breadcrumb" className="font-marketing-mono text-[12px] text-ink/55">
                 <Link to="/" className="hover:text-clay">
                   Home
                 </Link>
                 <span className="px-2">/</span>
                 <span>Guides</span>
               </nav>
-              <p className="mt-6 text-[13px] font-bold tracking-[0.08em] text-clay uppercase">
-                Legal compliance for PG and hostel owners
-              </p>
-              <h1 className="mt-4 font-display text-[clamp(32px,4.4vw,54px)] leading-[1.08] font-semibold">
+              <span className="mt-6 block font-marketing-mono text-[13px] font-semibold tracking-[0.06em] text-clay">
+                Ref. Legal compliance
+              </span>
+              <h1 className="mt-3 font-marketing-display text-[clamp(30px,4.2vw,50px)] leading-[1.1] font-bold text-ink">
                 How to draft a PG rent agreement in India
               </h1>
-              <p className="mt-5 text-[18px] leading-relaxed text-ink/65">
+              <p className="mt-5 text-[17px] leading-relaxed text-ink/65">
                 Every clause a paying guest agreement needs, why it matters when a tenant disputes a
                 deposit or an electricity bill, and a free format you can fill in today.
               </p>
@@ -272,13 +244,13 @@ function RentAgreementGuide() {
                 <button
                   type="button"
                   onClick={downloadTemplate}
-                  className="inline-flex min-h-11 items-center gap-2.5 rounded-full bg-clay px-6 py-3.5 text-[15px] font-semibold text-paper shadow-[0_14px_30px_-10px_rgba(193,91,62,0.55)] transition-transform hover:-translate-y-0.5"
+                  className="inline-flex min-h-11 items-center gap-2.5 border-2 border-ink bg-clay px-6 py-3.5 text-[15px] font-semibold text-paper shadow-[var(--marketing-shadow)]"
                 >
                   Download the free template
                 </button>
                 <a
                   href="#template"
-                  className="inline-flex min-h-11 items-center rounded-full border-[1.5px] border-ink px-6 py-3.5 text-[15px] font-semibold transition-colors hover:bg-ink hover:text-cream"
+                  className="inline-flex min-h-11 items-center border-2 border-ink px-6 py-3.5 text-[15px] font-semibold transition-colors hover:bg-ink hover:text-cream"
                 >
                   Read the full format
                 </a>
@@ -287,18 +259,18 @@ function RentAgreementGuide() {
           </header>
 
           <section className="px-6 pb-14">
-            <div className="reveal mx-auto max-w-[760px] rounded-3xl border border-line bg-paper p-8">
-              <h2 className="font-display text-[26px] font-semibold">
+            <div className="reveal field-box mx-auto max-w-[760px] p-8" data-label="Key point">
+              <h2 className="font-marketing-display text-[24px] font-bold text-ink">
                 A PG agreement is a licence, not a lease
               </h2>
-              <p className="mt-4 text-[16.5px] leading-relaxed text-ink/70">
+              <p className="mt-4 text-[16px] leading-relaxed text-ink/70">
                 A rental lease hands over possession of a property. A paying guest stay does not:
                 the guest occupies one bed in a room you continue to control, with services like
                 meals, housekeeping and electricity bundled around it. That difference is why a PG
                 agreement is written as a leave and licence, usually for eleven months, and why
                 copying a flat rental format from the internet leaves you exposed.
               </p>
-              <p className="mt-4 text-[16.5px] leading-relaxed text-ink/70">
+              <p className="mt-4 text-[16px] leading-relaxed text-ink/70">
                 Stamp duty, registration thresholds and police verification rules differ by state.
                 The structure below holds everywhere in India; the amounts, stamp value and
                 jurisdiction line are what you adjust locally.
@@ -308,18 +280,24 @@ function RentAgreementGuide() {
 
           <section className="px-6 pb-16">
             <div className="reveal mx-auto max-w-[1180px]">
-              <h2 className="font-display text-[clamp(28px,3.2vw,42px)] font-semibold">
+              <h2 className="font-marketing-display text-[clamp(26px,3vw,40px)] font-bold text-ink">
                 The twelve clauses your agreement needs
               </h2>
-              <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+              <div className="mt-10 border-t-2 border-ink">
                 {clauses.map((c) => (
                   <div
                     key={c.num}
-                    className="rounded-3xl border border-line bg-paper p-7 transition-transform hover:-translate-y-1"
+                    className="grid gap-4 border-b border-line py-6 sm:grid-cols-[90px_1fr]"
                   >
-                    <span className="font-display text-[15px] font-bold text-clay">{c.num}</span>
-                    <h3 className="mt-2 font-display text-[20px] font-semibold">{c.title}</h3>
-                    <p className="mt-2.5 text-[15px] leading-relaxed text-ink/65">{c.body}</p>
+                    <span className="field-box px-3 py-2 text-center font-marketing-mono text-[13px] font-bold text-ink">
+                      {c.num}
+                    </span>
+                    <div>
+                      <h3 className="font-marketing-display text-[17px] font-bold text-ink">
+                        {c.title}
+                      </h3>
+                      <p className="mt-1.5 text-[14.5px] leading-relaxed text-ink/65">{c.body}</p>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -327,15 +305,17 @@ function RentAgreementGuide() {
           </section>
 
           <section className="px-6 pb-16">
-            <div className="reveal mx-auto max-w-[1180px] rounded-[32px] bg-sage-light px-8 py-14 sm:px-14">
-              <h2 className="font-display text-[clamp(26px,3vw,38px)] font-semibold">
+            <div className="reveal mx-auto max-w-[1180px] border-2 border-ink bg-sage-light px-8 py-12 sm:px-14">
+              <h2 className="font-marketing-display text-[clamp(24px,2.8vw,34px)] font-bold text-ink">
                 Four mistakes that cost owners money
               </h2>
-              <div className="mt-9 grid gap-6 sm:grid-cols-2">
+              <div className="mt-8 grid gap-6 sm:grid-cols-2">
                 {mistakes.map((m) => (
                   <div key={m.title}>
-                    <h3 className="font-display text-[19px] font-semibold">{m.title}</h3>
-                    <p className="mt-2 text-[15px] leading-relaxed text-ink/65">{m.body}</p>
+                    <h3 className="font-marketing-display text-[17px] font-bold text-ink">
+                      {m.title}
+                    </h3>
+                    <p className="mt-2 text-[14.5px] leading-relaxed text-ink/65">{m.body}</p>
                   </div>
                 ))}
               </div>
@@ -344,31 +324,31 @@ function RentAgreementGuide() {
 
           <section id="template" className="px-6 pb-16">
             <div className="reveal mx-auto max-w-[900px]">
-              <h2 className="font-display text-[clamp(28px,3.2vw,42px)] font-semibold">
+              <h2 className="font-marketing-display text-[clamp(26px,3vw,40px)] font-bold text-ink">
                 Free PG rent agreement format
               </h2>
-              <p className="mt-4 max-w-[620px] text-[16.5px] leading-relaxed text-ink/65">
+              <p className="mt-4 max-w-[620px] text-[16px] leading-relaxed text-ink/65">
                 Fill in the blanks, print it on stamp paper of the value your state requires, and
                 sign it with two witnesses. Keep a scanned copy against the tenant record.
               </p>
-              <div className="mt-8 overflow-hidden rounded-3xl border border-line bg-paper">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-6 py-4">
-                  <span className="text-[13px] font-bold tracking-wide uppercase opacity-60">
+              <div className="perforated mt-8 overflow-hidden border-2 border-ink bg-paper">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-ink px-6 py-4">
+                  <span className="font-marketing-mono text-[12px] font-bold tracking-wide text-ink/60 uppercase">
                     pg-rent-agreement-template.txt
                   </span>
                   <button
                     type="button"
                     onClick={downloadTemplate}
-                    className="inline-flex min-h-11 items-center rounded-full border-[1.5px] border-ink px-5 text-[14px] font-semibold transition-colors hover:bg-ink hover:text-cream"
+                    className="inline-flex min-h-10 items-center border-2 border-ink px-5 text-[13.5px] font-semibold transition-colors hover:bg-ink hover:text-cream"
                   >
                     Download
                   </button>
                 </div>
-                <pre className="max-h-[520px] overflow-auto px-6 py-6 text-[13px] leading-relaxed whitespace-pre-wrap text-ink/75">
+                <pre className="max-h-[520px] overflow-auto px-6 py-6 font-marketing-mono text-[12.5px] leading-relaxed whitespace-pre-wrap text-ink/75">
                   {pgRentAgreementTemplate}
                 </pre>
               </div>
-              <p className="mt-4 text-[13.5px] text-ink/55">
+              <p className="mt-4 text-[13px] text-ink/55">
                 This template is a general starting point, not legal advice. Have the final draft
                 checked by a lawyer in your state.
               </p>
@@ -377,10 +357,10 @@ function RentAgreementGuide() {
 
           <section className="px-6 pb-20">
             <div className="reveal mx-auto max-w-[760px]">
-              <h2 className="font-display text-[clamp(26px,3vw,38px)] font-semibold">
+              <h2 className="font-marketing-display text-[clamp(24px,2.8vw,34px)] font-bold text-ink">
                 Common questions
               </h2>
-              <dl className="mt-8 space-y-6">
+              <dl className="mt-8 border-t-2 border-ink">
                 {[
                   [
                     "Does a PG agreement need to be registered?",
@@ -399,99 +379,45 @@ function RentAgreementGuide() {
                     "Thirty days from either side is standard and gives you time to fill the bed. Anything shorter tends to leave rooms empty mid month.",
                   ],
                 ].map(([q, a]) => (
-                  <div key={q} className="rounded-3xl border border-line bg-paper p-7">
-                    <dt className="font-display text-[19px] font-semibold">{q}</dt>
-                    <dd className="mt-2 text-[15.5px] leading-relaxed text-ink/65">{a}</dd>
+                  <div key={q} className="border-b border-line py-6">
+                    <dt className="font-marketing-display text-[17px] font-bold text-ink">{q}</dt>
+                    <dd className="mt-2 text-[14.5px] leading-relaxed text-ink/65">{a}</dd>
                   </div>
                 ))}
               </dl>
             </div>
           </section>
 
-          <section className="px-6 pb-16">
+          <section className="px-6 pb-20">
             <div className="reveal mx-auto max-w-[760px]">
-              <h2 className="font-display text-[clamp(26px,3vw,38px)] font-semibold">
+              <h2 className="font-marketing-display text-[clamp(24px,2.8vw,34px)] font-bold text-ink">
                 After the agreement is signed
               </h2>
-              <p className="mt-4 text-[16.5px] leading-relaxed text-ink/70">
+              <p className="mt-4 text-[16px] leading-relaxed text-ink/70">
                 The agreement fixes the numbers: monthly fee, due date, deposit, electricity rate
                 and opening meter reading. {BRAND} then runs them every month. Store the tenant
                 record with the ID proof, set the room and rent, and on the 1st every active tenant
                 gets a bill with rent, electricity on meter readings and any other charges, with a
                 UPI QR inside it. Paid bills mark themselves and overdue ones get reminders.
               </p>
+              <a
+                href={appUrl("/auth")}
+                className="mt-6 inline-flex items-center gap-2.5 border-2 border-ink bg-clay px-7 py-4 text-[15px] font-semibold text-paper shadow-[var(--marketing-shadow)]"
+              >
+                Start your free month
+              </a>
+              <p className="mt-3 text-[13px] text-ink/55">
+                See full pricing on the <Link to="/" hash="pricing" className="underline">
+                  home page
+                </Link>
+                .
+              </p>
             </div>
           </section>
         </article>
-
-        <section id="pricing" className="px-6 pb-24">
-          <div className="reveal mx-auto max-w-[1180px]">
-            <p className="text-[13px] font-bold tracking-[0.08em] text-clay uppercase">Pricing</p>
-            <h2 className="mt-4 max-w-[640px] font-display text-[clamp(32px,3.6vw,48px)] font-semibold">
-              Priced for what you actually run.
-            </h2>
-            <p className="mt-4 max-w-[520px] text-[17px] leading-relaxed text-ink/60">
-              No setup fees. No per tenant charges hidden in the fine print. Cancel any time.
-            </p>
-            <div className="mt-14 grid items-stretch gap-6 lg:grid-cols-3">
-              {pricingPlans.map((p) => (
-                <div
-                  key={p.name}
-                  className={`relative flex flex-col rounded-3xl border p-9 transition-transform hover:-translate-y-1 ${
-                    p.popular
-                      ? "border-ink bg-ink text-cream lg:scale-[1.04]"
-                      : "border-line bg-paper"
-                  }`}
-                >
-                  {p.popular ? (
-                    <span className="absolute -top-3.5 left-8 rounded-full bg-clay px-3.5 py-1.5 text-[11.5px] font-bold tracking-wide text-paper uppercase">
-                      Most chosen
-                    </span>
-                  ) : null}
-                  <h3 className="text-[16px] font-semibold tracking-wide uppercase opacity-70">
-                    {p.name}
-                  </h3>
-                  <p className="mt-4 font-display text-[46px] font-semibold">
-                    {p.price}
-                    <span className="font-body text-[15px] font-normal opacity-60">/month</span>
-                  </p>
-                  <p className="mt-1 mb-6 text-[13.5px] opacity-60">{p.sub}</p>
-                  <ul className="mb-8 grow space-y-0.5">
-                    {p.items.map((it) => (
-                      <li
-                        key={it}
-                        className="flex items-center gap-2.5 py-2 text-[14.5px] opacity-90"
-                      >
-                        <Check />
-                        {it}
-                      </li>
-                    ))}
-                  </ul>
-                  <a
-                    href={appUrl("/auth")}
-                    className={`rounded-full border-[1.5px] py-3.5 text-center text-[14.5px] font-semibold ${
-                      p.popular
-                        ? "border-clay bg-clay text-paper"
-                        : "border-ink transition-colors hover:bg-ink hover:text-cream"
-                    }`}
-                  >
-                    Start free trial
-                  </a>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
       </main>
 
-      <footer className="mx-auto max-w-[1180px] px-6 pb-10">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-6 text-[13px] text-ink/50">
-          <span>2026 {BRAND}. Made for PG owners, not tech teams.</span>
-          <Link to="/" className="hover:text-clay">
-            Back to home
-          </Link>
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 }
