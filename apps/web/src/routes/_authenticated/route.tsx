@@ -4,6 +4,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PlanStatusBanner } from "@/components/plan-status-banner";
 import { useBranding } from "@/lib/branding";
+import { PropertyScopeProvider } from "@/lib/property-scope";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -29,26 +30,28 @@ export const Route = createFileRoute("/_authenticated")({
 function AuthenticatedLayout() {
   const { brandName } = useBranding();
   return (
-    <SidebarProvider>
-      <div className="flex min-h-dvh w-full overflow-x-hidden bg-background">
-        <AppSidebar />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-10 flex h-14 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur-xl">
-            <SidebarTrigger className="-ml-1 h-10 w-10 md:h-8 md:w-8" />
-            <div className="hidden h-4 w-px bg-border sm:block" />
-            <span className="truncate text-[13px] font-medium tracking-tight text-foreground">
-              {brandName}
-            </span>
-            <ThemeToggle className="ml-auto h-10 w-10 md:h-8 md:w-8" />
-          </header>
-          <PlanStatusBanner />
-          <main className="min-w-0 flex-1 overflow-x-hidden px-3 py-5 sm:px-4 sm:py-6 md:px-8 md:py-8">
-            <div className="mx-auto w-full max-w-[1400px]">
-              <Outlet />
-            </div>
-          </main>
+    <PropertyScopeProvider>
+      <SidebarProvider>
+        <div className="flex min-h-dvh w-full overflow-x-hidden bg-background">
+          <AppSidebar />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <header className="sticky top-0 z-10 flex h-14 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur-xl">
+              <SidebarTrigger className="-ml-1 h-10 w-10 md:h-8 md:w-8" />
+              <div className="hidden h-4 w-px bg-border sm:block" />
+              <span className="truncate text-[13px] font-medium tracking-tight text-foreground">
+                {brandName}
+              </span>
+              <ThemeToggle className="ml-auto h-10 w-10 md:h-8 md:w-8" />
+            </header>
+            <PlanStatusBanner />
+            <main className="min-w-0 flex-1 overflow-x-hidden px-3 py-5 sm:px-4 sm:py-6 md:px-8 md:py-8">
+              <div className="mx-auto w-full max-w-[1400px]">
+                <Outlet />
+              </div>
+            </main>
+          </div>
         </div>
-      </div>
-    </SidebarProvider>
+      </SidebarProvider>
+    </PropertyScopeProvider>
   );
 }

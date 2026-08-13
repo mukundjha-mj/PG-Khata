@@ -198,6 +198,15 @@ export async function runMonthlyBilling(
     } else {
       result.created = data?.length ?? 0;
       result.skipped += rows.length - result.created;
+
+      // Unapproved bills are drafts awaiting admin review - notifying the
+      // tenant about a bill that might still change would be premature.
+      if (approved) {
+        const { notifyTenantAboutBill } = await import("@/lib/bill-notify.server");
+        for (const created of data ?? []) {
+          await notifyTenantAboutBill(supabase, created.id, { updated: false });
+        }
+      }
     }
   }
 

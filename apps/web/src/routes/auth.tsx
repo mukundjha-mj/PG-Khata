@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { isValidEmailFormat } from "@/lib/contact-validation";
 import { authRedirect, BRAND } from "@/lib/site";
 
 // The generated route tree imports every route module eagerly, so a static
@@ -117,6 +118,10 @@ function AuthPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!isValidEmailFormat(email)) {
+      toast.error("Enter a valid email address.");
+      return;
+    }
     setBusy(true);
     try {
       const supabase = await getSupabase();

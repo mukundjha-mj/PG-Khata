@@ -2,13 +2,25 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Zap, ReceiptText, Trash2, CheckCircle2, Download, FileDown, Search } from "lucide-react";
+import {
+  Zap,
+  ReceiptText,
+  Trash2,
+  CheckCircle2,
+  Download,
+  FileDown,
+  Search,
+  Send,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { usePropertyScope } from "@/lib/property-scope";
 import { effectiveRent, formatDate, formatMoney } from "@/lib/pg";
 import { downloadBillPdf, downloadMonthPdf, type Bill, type BillContext } from "@/lib/bill-pdf";
+import { computeElectricitySplit, type ElectricitySplit } from "@/lib/electricity-split";
 import { balanceOf, recordPayment } from "@/lib/billing";
-import { generateMonthlyBills } from "@/lib/billing-run.functions";
+import { generateMonthlyBills, saveBillDrafts } from "@/lib/billing-run.functions";
+import { notifyBillsFn, type NotifyBillResult } from "@/lib/bill-notify.functions";
 import { RerunTenantBillDialog } from "@/components/rerun-tenant-bill-dialog";
 import { DataPagination, usePagination } from "@/components/data-pagination";
 
@@ -117,11 +129,15 @@ const STATUS_STYLE: Record<string, string> = {
 
 function BillsPage() {
   const queryClient = useQueryClient();
+  const { selectedPropertyId } = usePropertyScope();
   const [month, setMonth] = useState(currentMonth());
   const [drafts, setDrafts] = useState<DraftBill[] | null>(null);
   const [billSearch, setBillSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedBillIds, setSelectedBillIds] = useState<Set<string>>(new Set());
   const runBilling = useServerFn(generateMonthlyBills);
+  const saveDraftsFn = useServerFn(saveBillDrafts);
+  const notifyBillsServerFn = useServerFn(notifyBillsFn);
 
   const { data, isLoading } = useQuery({
     queryKey: ["billing-base"],
@@ -146,13 +162,11 @@ function BillsPage() {
   });
 
   const { data: bills, isLoading: billsLoading } = useQuery({
-    queryKey: ["bills", month],
+    queryKey: ["bills", month, selectedPropertyId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bills")
-        .select("*")
-        .eq("bill_month", month)
-        .order("created_at");
+      let query = supabase.from("bills").select("*").eq("bill_month", month).order("created_at");
+      if (selectedPropertyId) query = query.eq("property_id", selectedPropertyId);
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -183,10 +197,14 @@ function BillsPage() {
     return map;
   }, [readings]);
 
-  const activeTenants = useMemo(
-    () => (data?.tenants ?? []).filter((t) => t.status === "active"),
-    [data],
-  );
+  const activeTenants = useMemo(() => {
+    const roomById = new Map((data?.rooms ?? []).map((r) => [r.id, r]));
+    return (data?.tenants ?? []).filter(
+      (t) =>
+        t.status === "active" &&
+        (!selectedPropertyId || roomById.get(t.room_id)?.property_id === selectedPropertyId),
+    );
+  }, [data, selectedPropertyId]);
   const tenantById = useMemo(() => new Map((data?.tenants ?? []).map((t) => [t.id, t])), [data]);
   const tenantName = useMemo(
     () => new Map((data?.tenants ?? []).map((t) => [t.id, t.full_name])),
@@ -207,6 +225,25 @@ function BillsPage() {
   const rate = Number(data?.settings?.electricity_rate_per_unit ?? 0);
   const dueOffset = Number(data?.settings?.due_date_offset_days ?? 10);
 
+  // Every bill for this month is already loaded, so the room's total units
+  // and occupancy can be reconstructed here without another query - the same
+  // math the WhatsApp/email path derives server-side from sibling bills.
+  const electricitySplitByRoom = useMemo(() => {
+    const unitsByRoom = new Map<string, number[]>();
+    for (const b of bills ?? []) {
+      const roomId = tenantById.get(b.tenant_id)?.room_id;
+      if (!roomId) continue;
+      const list = unitsByRoom.get(roomId) ?? [];
+      list.push(Number(b.electricity_units_consumed ?? 0));
+      unitsByRoom.set(roomId, list);
+    }
+    const result = new Map<string, ElectricitySplit>();
+    for (const [roomId, units] of unitsByRoom) {
+      result.set(roomId, computeElectricitySplit(units));
+    }
+    return result;
+  }, [bills, tenantById]);
+
   function pdfContext(bill: Bill): BillContext {
     const tenant = tenantById.get(bill.tenant_id) ?? null;
     return {
@@ -214,6 +251,7 @@ function BillsPage() {
       room: tenant ? (roomById.get(tenant.room_id) ?? null) : null,
       property: propertyById.get(bill.property_id) ?? null,
       monthLabel: monthLabel(bill.bill_month),
+      electricitySplit: tenant ? (electricitySplitByRoom.get(tenant.room_id) ?? null) : null,
     };
   }
 
@@ -292,9 +330,8 @@ function BillsPage() {
           status: "pending" as const,
         }));
       if (rows.length === 0) throw new Error("Nothing selected to bill.");
-      const { error } = await supabase.from("bills").insert(rows);
-      if (error) throw error;
-      return rows.length;
+      const result = await saveDraftsFn({ data: { rows } });
+      return result.created;
     },
     onSuccess: (count) => {
       toast.success(`${count} bill${count === 1 ? "" : "s"} issued for ${monthLabel(month)}.`);
@@ -335,9 +372,39 @@ function BillsPage() {
       const { error } = await supabase.from("bills").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
       toast.success("Bill deleted.");
+      setSelectedBillIds((prev) => {
+        if (!prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
       queryClient.invalidateQueries({ queryKey: ["bills", month] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const notifyBills = useMutation({
+    mutationFn: (ids: string[]) => notifyBillsServerFn({ data: { billIds: ids } }),
+    onSuccess: (res: { results: NotifyBillResult[] }) => {
+      const emailOk = res.results.filter((r) => r.email.sent).length;
+      const waOk = res.results.filter((r) => r.whatsapp.sent).length;
+      const failed = res.results.filter((r) => !r.email.sent && !r.whatsapp.sent);
+      if (failed.length === 0) {
+        toast.success(
+          `Notified ${res.results.length} tenant${res.results.length === 1 ? "" : "s"} - ${emailOk} email(s), ${waOk} WhatsApp.`,
+        );
+      } else {
+        const names = failed
+          .slice(0, 3)
+          .map((f) => `${f.tenantName} (${f.email.reason ?? f.whatsapp.reason})`)
+          .join(", ");
+        toast.warning(
+          `${res.results.length - failed.length} of ${res.results.length} notified. ${failed.length} failed: ${names}${failed.length > 3 ? "…" : ""}`,
+        );
+      }
+      setSelectedBillIds(new Set());
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -627,12 +694,27 @@ function BillsPage() {
 
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-          <CardTitle>
-            Issued bills - {monthLabel(month)}{" "}
-            <span className="ml-1 text-sm font-normal text-muted-foreground">
-              {(bills ?? []).length} bills · {formatMoney(issuedTotal)}
-            </span>
-          </CardTitle>
+          <div className="flex flex-wrap items-center gap-3">
+            <CardTitle>
+              Issued bills - {monthLabel(month)}{" "}
+              <span className="ml-1 text-sm font-normal text-muted-foreground">
+                {(bills ?? []).length} bills · {formatMoney(issuedTotal)}
+              </span>
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={selectedBillIds.size === 0 || notifyBills.isPending}
+              onClick={() => notifyBills.mutate(Array.from(selectedBillIds))}
+            >
+              <Send className="mr-2 h-4 w-4" />
+              {notifyBills.isPending
+                ? "Sending…"
+                : selectedBillIds.size === 0
+                  ? "Send bill"
+                  : `Send bill (${selectedBillIds.size})`}
+            </Button>
+          </div>
           <FilterBar
             sticky={false}
             label="Search & filter bills"
@@ -726,7 +808,7 @@ function BillsPage() {
                 <DensityToggle density={density} onChange={setDensity} />
               </div>
               <ResponsiveTable
-                labels={["Tenant", "Rent", "Electricity", "Total", "Due", "Status", ""]}
+                labels={["", "Tenant", "Rent", "Electricity", "Total", "Due", "Status", ""]}
                 density={density}
                 compactColumns={3}
                 virtualize
@@ -734,6 +816,27 @@ function BillsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-10">
+                        <input
+                          type="checkbox"
+                          aria-label="Select all visible bills"
+                          className="h-4 w-4 accent-primary"
+                          checked={
+                            issuedPage.pageRows.length > 0 &&
+                            issuedPage.pageRows.every((b) => selectedBillIds.has(b.id))
+                          }
+                          onChange={(e) => {
+                            setSelectedBillIds((prev) => {
+                              const next = new Set(prev);
+                              for (const b of issuedPage.pageRows) {
+                                if (e.target.checked) next.add(b.id);
+                                else next.delete(b.id);
+                              }
+                              return next;
+                            });
+                          }}
+                        />
+                      </TableHead>
                       <TableHead>Tenant</TableHead>
                       <TableHead>Rent</TableHead>
                       <TableHead>Electricity</TableHead>
@@ -746,6 +849,22 @@ function BillsPage() {
                   <TableBody>
                     {issuedPage.pageRows.map((b) => (
                       <TableRow key={b.id}>
+                        <TableCell>
+                          <input
+                            type="checkbox"
+                            aria-label={`Select ${tenantName.get(b.tenant_id) ?? "bill"}`}
+                            className="h-4 w-4 accent-primary"
+                            checked={selectedBillIds.has(b.id)}
+                            onChange={(e) => {
+                              setSelectedBillIds((prev) => {
+                                const next = new Set(prev);
+                                if (e.target.checked) next.add(b.id);
+                                else next.delete(b.id);
+                                return next;
+                              });
+                            }}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">
                           {tenantName.get(b.tenant_id) ?? "Tenant"}
                           {b.approved === false && (
@@ -790,6 +909,15 @@ function BillsPage() {
                               </Button>
                             )}
 
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Resend bill notification"
+                              disabled={notifyBills.isPending}
+                              onClick={() => notifyBills.mutate([b.id])}
+                            >
+                              <Send className="h-4 w-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"

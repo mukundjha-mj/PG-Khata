@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { notePlatformLogin, getPlatformLockout } from "@/lib/platform-auth.functions";
+import { isValidEmailFormat } from "@/lib/contact-validation";
 
 /** Sign-in form for the platform console, with failed-attempt throttling. */
 export function PlatformSignIn() {
@@ -23,6 +24,7 @@ export function PlatformSignIn() {
 
   const submit = useMutation({
     mutationFn: async () => {
+      if (!isValidEmailFormat(email)) throw new Error("Enter a valid email address.");
       if (mode === "signup") {
         const { data, error } = await supabase.auth.signUp({
           email,

@@ -4,10 +4,20 @@ export type Property = Tables<"properties">;
 export type Room = Tables<"rooms">;
 export type Tenant = Tables<"tenants">;
 export type Settings = Tables<"settings">;
+export type Complaint = Tables<"complaints">;
+export type SignupLink = Tables<"property_signup_links">;
+export type ComplaintLink = Tables<"property_complaint_links">;
 
 export const ROOM_TYPES = ["single", "double", "triple", "dormitory"] as const;
 export const TENANT_STATUSES = ["active", "vacated", "notice-period"] as const;
 export const ADDRESS_PROOF_TYPES = ["Aadhaar", "Passport", "Driving License", "Voter ID"] as const;
+export const COMPLAINT_STATUSES = ["open", "in-progress", "resolved"] as const;
+
+export const COMPLAINT_STATUS_LABEL: Record<(typeof COMPLAINT_STATUSES)[number], string> = {
+  open: "Open",
+  "in-progress": "In progress",
+  resolved: "Resolved",
+};
 
 const inr = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -18,6 +28,14 @@ const inr = new Intl.NumberFormat("en-IN", {
 export function formatMoney(value: number | string | null | undefined): string {
   const n = typeof value === "string" ? Number(value) : (value ?? 0);
   return inr.format(Number.isFinite(n) ? n : 0);
+}
+
+const inrBare = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 });
+
+/** Comma-grouped amount with no currency symbol, for text that already carries its own ₹. */
+export function formatMoneyBare(value: number | string | null | undefined): string {
+  const n = typeof value === "string" ? Number(value) : (value ?? 0);
+  return inrBare.format(Number.isFinite(n) ? n : 0);
 }
 
 export function formatDate(value: string | null | undefined): string {

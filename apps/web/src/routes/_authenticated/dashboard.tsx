@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Building2,
   DoorOpen,
@@ -9,14 +10,22 @@ import {
   Receipt,
   UserPlus,
   AlertTriangle,
+  Plus,
 } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { getScheduledReminders, cancelReminderFn } from "@/lib/reminders.functions";
+import { PersonalReminderDialog } from "@/components/personal-reminder-dialog";
+import { PropertyScopeSwitcher } from "@/components/property-scope-switcher";
+import { usePropertyScope } from "@/lib/property-scope";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
-import { effectiveRent, formatMoney, occupancyOf } from "@/lib/pg";
+import { MessageSquareWarning } from "lucide-react";
+import { effectiveRent, formatDate, formatMoney, occupancyOf } from "@/lib/pg";
 import {
   balanceOf,
   currentMonth,
@@ -43,28 +52,56 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
 });
 
-function useOverview() {
+function useOverview(propertyId: string | null) {
   const month = currentMonth();
   return useQuery({
-    queryKey: ["overview", month],
+    queryKey: ["overview", month, propertyId],
     queryFn: async () => {
+      let propertiesQuery = supabase.from("properties").select("*").order("name");
+      let roomsQuery = supabase.from("rooms").select("*");
+      let billsQuery = supabase.from("bills").select("*").eq("bill_month", month);
+      if (propertyId) {
+        propertiesQuery = propertiesQuery.eq("id", propertyId);
+        roomsQuery = roomsQuery.eq("property_id", propertyId);
+        billsQuery = billsQuery.eq("property_id", propertyId);
+      }
       const [properties, rooms, tenants, bills] = await Promise.all([
-        supabase.from("properties").select("*").order("name"),
-        supabase.from("rooms").select("*"),
+        propertiesQuery,
+        roomsQuery,
         supabase.from("tenants").select("*"),
-        supabase.from("bills").select("*").eq("bill_month", month),
+        billsQuery,
       ]);
       if (properties.error) throw properties.error;
       if (rooms.error) throw rooms.error;
       if (tenants.error) throw tenants.error;
       if (bills.error) throw bills.error;
+      const roomIds = new Set(rooms.data.map((r) => r.id));
+      const scopedTenants = propertyId
+        ? tenants.data.filter((t) => roomIds.has(t.room_id))
+        : tenants.data;
       return {
         properties: properties.data,
         rooms: rooms.data,
-        tenants: tenants.data,
+        tenants: scopedTenants,
         bills: bills.data,
         month,
       };
+    },
+  });
+}
+
+function useOpenComplaintsCount(propertyId: string | null) {
+  return useQuery({
+    queryKey: ["complaints-open-count", propertyId],
+    queryFn: async () => {
+      let query = supabase
+        .from("complaints")
+        .select("id", { count: "exact", head: true })
+        .neq("status", "resolved");
+      if (propertyId) query = query.eq("property_id", propertyId);
+      const { count, error } = await query;
+      if (error) throw error;
+      return count ?? 0;
     },
   });
 }
@@ -97,7 +134,26 @@ function Stat({
 }
 
 function Dashboard() {
-  const { data, isLoading, isError, refetch } = useOverview();
+  const { selectedPropertyId } = usePropertyScope();
+  const { data, isLoading, isError, refetch } = useOverview(selectedPropertyId);
+  const { data: openComplaints } = useOpenComplaintsCount(selectedPropertyId);
+  const queryClient = useQueryClient();
+  const getScheduledRemindersFn = useServerFn(getScheduledReminders);
+  const cancelReminderServerFn = useServerFn(cancelReminderFn);
+  const [personalReminderOpen, setPersonalReminderOpen] = useState(false);
+  const { data: scheduledReminders } = useQuery({
+    queryKey: ["scheduled-reminders"],
+    queryFn: () => getScheduledRemindersFn(),
+  });
+  const dismissReminder = useMutation({
+    mutationFn: (id: string) => cancelReminderServerFn({ data: { id } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["scheduled-reminders"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const today = new Date().toISOString().slice(0, 10);
+  const remindersDue = (scheduledReminders ?? []).filter((r) => r.remindOn <= today);
 
   if (isError) {
     return (
@@ -170,6 +226,8 @@ function Dashboard() {
         </div>
       </div>
 
+      <PropertyScopeSwitcher />
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
           label="Active tenants"
@@ -196,6 +254,93 @@ function Dashboard() {
           icon={IndianRupee}
         />
       </div>
+
+      <Card className={remindersDue.length > 0 ? "border-warning/40 bg-warning/5" : ""}>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+          <div>
+            <CardTitle>
+              {remindersDue.length > 0
+                ? `${remindersDue.length} reminder${remindersDue.length === 1 ? "" : "s"} due`
+                : "Reminders due"}
+            </CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Tenant reminders go out with tonight&apos;s run - personal notes just wait here until
+              you dismiss them.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => setPersonalReminderOpen(true)}>
+              <Plus className="mr-1 h-3.5 w-3.5" /> Set reminder
+            </Button>
+            <Button asChild size="sm" variant="ghost">
+              <Link to="/payments">
+                Payments <ArrowRight className="ml-1 h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {remindersDue.length === 0 && (
+            <p className="text-sm text-muted-foreground">Nothing due right now.</p>
+          )}
+          {remindersDue.slice(0, 5).map((r) => (
+            <div
+              key={r.id}
+              className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm"
+            >
+              <span className="truncate">
+                <span className="font-medium">{r.tenantName}</span>
+                {r.note && <span className="text-muted-foreground"> - {r.note}</span>}
+              </span>
+              <span className="flex shrink-0 items-center gap-3">
+                <span className="text-muted-foreground">{formatDate(r.remindOn)}</span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={dismissReminder.isPending}
+                  onClick={() => dismissReminder.mutate(r.id)}
+                >
+                  Dismiss
+                </Button>
+              </span>
+            </div>
+          ))}
+          {remindersDue.length > 5 && (
+            <p className="pt-1 text-center text-xs text-muted-foreground">
+              +{remindersDue.length - 5} more
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <PersonalReminderDialog
+        open={personalReminderOpen}
+        tenants={activeTenants.map((t) => ({ id: t.id, fullName: t.full_name }))}
+        onOpenChange={setPersonalReminderOpen}
+      />
+
+      <Card
+        className={openComplaints && openComplaints > 0 ? "border-warning/40 bg-warning/5" : ""}
+      >
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquareWarning className="h-4 w-4 text-muted-foreground" />
+            {openComplaints
+              ? `${openComplaints} open complaint${openComplaints === 1 ? "" : "s"}`
+              : "Complaints"}
+          </CardTitle>
+          <Button asChild size="sm" variant="ghost">
+            <Link to="/complaints">
+              View <ArrowRight className="ml-1 h-3.5 w-3.5" />
+            </Link>
+          </Button>
+        </CardHeader>
+        {(!openComplaints || openComplaints === 0) && (
+          <CardContent>
+            <p className="text-sm text-muted-foreground">Nothing open right now.</p>
+          </CardContent>
+        )}
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

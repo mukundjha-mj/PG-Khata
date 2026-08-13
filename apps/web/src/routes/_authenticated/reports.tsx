@@ -5,6 +5,7 @@ import { FileDown, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatMoney } from "@/lib/pg";
 import { useDirectory } from "@/lib/use-directory";
+import { usePropertyScope } from "@/lib/property-scope";
 import {
   balanceOf,
   currentMonth,
@@ -66,12 +67,15 @@ function GatedReportsPage() {
 
 function ReportsPage() {
   const directory = useDirectory();
+  const { selectedPropertyId } = usePropertyScope();
   const [month, setMonth] = useState(currentMonth());
 
   const { data: bills, isLoading } = useQuery({
-    queryKey: ["bills-all"],
+    queryKey: ["bills-all", selectedPropertyId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("bills").select("*").order("bill_month");
+      let query = supabase.from("bills").select("*").order("bill_month");
+      if (selectedPropertyId) query = query.eq("property_id", selectedPropertyId);
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },

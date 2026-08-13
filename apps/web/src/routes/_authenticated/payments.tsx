@@ -1,13 +1,21 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { IndianRupee, Search, ArrowRight, FileDown, BellRing } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { IndianRupee, Search, ArrowRight, FileDown, BellRing, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { sendPaymentReminders } from "@/lib/reminders.functions";
+import {
+  sendPaymentReminders,
+  sendManualPaymentReminders,
+  getScheduledReminders,
+  cancelReminderFn,
+} from "@/lib/reminders.functions";
+import type { ManualReminderResult } from "@/lib/reminders.server";
+import { ReminderDialog, type ReminderDialogState } from "@/components/reminder-dialog";
 import { formatDate, formatMoney } from "@/lib/pg";
 import { useDirectory } from "@/lib/use-directory";
+import { usePropertyScope } from "@/lib/property-scope";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import {
   balanceOf,
@@ -67,11 +75,18 @@ type Filter = "outstanding" | "overdue" | "all";
 
 function PaymentsPage() {
   const directory = useDirectory();
+  const { selectedPropertyId } = usePropertyScope();
   const [filter, setFilter] = useState<Filter>("outstanding");
   const [search, setSearch] = useState("");
   const [target, setTarget] = useState<PaymentTarget | null>(null);
   const [reminding, setReminding] = useState(false);
+  const [selectedReminderIds, setSelectedReminderIds] = useState<Set<string>>(new Set());
+  const [reminderState, setReminderState] = useState<ReminderDialogState | null>(null);
   const sendReminders = useServerFn(sendPaymentReminders);
+  const sendManualRemindersFn = useServerFn(sendManualPaymentReminders);
+  const getScheduledRemindersFn = useServerFn(getScheduledReminders);
+  const cancelReminderServerFn = useServerFn(cancelReminderFn);
+  const queryClient = useQueryClient();
 
   async function runReminders() {
     setReminding(true);
@@ -93,13 +108,36 @@ function PaymentsPage() {
     }
   }
 
+  const sendSelectedReminders = useMutation({
+    mutationFn: (ids: string[]) => sendManualRemindersFn({ data: { billIds: ids } }),
+    onSuccess: (res: ManualReminderResult) => {
+      const failed = res.details.filter((d) => !d.email && !d.whatsapp);
+      if (res.matched === 0) {
+        toast.info("Nothing to remind - selected bill(s) have no balance due.");
+      } else if (failed.length === 0) {
+        toast.success(
+          `Reminder sent for ${res.matched} bill(s) - ${res.emailSent} email(s), ${res.whatsappSent} WhatsApp.`,
+        );
+      } else {
+        const names = failed
+          .slice(0, 3)
+          .map((f) => `${f.tenant} (${f.reason ?? "failed"})`)
+          .join(", ");
+        toast.warning(
+          `${res.matched - failed.length} of ${res.matched} reminded. ${failed.length} failed: ${names}${failed.length > 3 ? "…" : ""}`,
+        );
+      }
+      setSelectedReminderIds(new Set());
+    },
+    onError: (e: Error) => toast.error(e instanceof Error ? e.message : "Reminder send failed"),
+  });
+
   const { data: bills, isLoading } = useQuery({
-    queryKey: ["bills-all"],
+    queryKey: ["bills-all", selectedPropertyId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bills")
-        .select("*")
-        .order("due_date", { ascending: true });
+      let query = supabase.from("bills").select("*").order("due_date", { ascending: true });
+      if (selectedPropertyId) query = query.eq("property_id", selectedPropertyId);
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -116,6 +154,26 @@ function PaymentsPage() {
       if (error) throw error;
       return data;
     },
+  });
+
+  const { data: scheduledReminders } = useQuery({
+    queryKey: ["scheduled-reminders"],
+    queryFn: () => getScheduledRemindersFn(),
+  });
+  // Personal (tenant-less) reminders surface on the Dashboard instead.
+  const tenantScheduledReminders = (scheduledReminders ?? []).filter(
+    (r) =>
+      r.tenantId !== null &&
+      (!selectedPropertyId || directory.roomOf(r.tenantId)?.property_id === selectedPropertyId),
+  );
+
+  const cancelReminder = useMutation({
+    mutationFn: (id: string) => cancelReminderServerFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Scheduled reminder cancelled.");
+      queryClient.invalidateQueries({ queryKey: ["scheduled-reminders"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const nameOf = (bill: Bill) => directory.tenantById.get(bill.tenant_id)?.full_name ?? "Tenant";
@@ -174,15 +232,38 @@ function PaymentsPage() {
             Record what tenants pay - partial payments update the bill balance automatically.
           </p>
         </div>
-        <Button
-          className="w-full sm:w-auto"
-          variant="outline"
-          onClick={() => runReminders()}
-          disabled={reminding}
-        >
-          <BellRing className="mr-2 h-4 w-4" />
-          {reminding ? "Sending reminders…" : "Send reminders now"}
-        </Button>
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+          <Button
+            className="w-full sm:w-auto"
+            variant="outline"
+            onClick={() =>
+              setReminderState({
+                candidates: (directory.data?.tenants ?? [])
+                  .filter((t) => t.status === "active")
+                  .map((t) => ({
+                    tenantId: t.id,
+                    tenantName: t.full_name,
+                    hasEmail: Boolean(t.email),
+                    hasPhone: Boolean(t.phone),
+                  })),
+                preselectedIds: [],
+                billId: null,
+              })
+            }
+          >
+            <Users className="mr-2 h-4 w-4" />
+            Remind tenants
+          </Button>
+          <Button
+            className="w-full sm:w-auto"
+            variant="outline"
+            onClick={() => runReminders()}
+            disabled={reminding}
+          >
+            <BellRing className="mr-2 h-4 w-4" />
+            {reminding ? "Sending reminders…" : "Send reminders now"}
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -214,12 +295,28 @@ function PaymentsPage() {
 
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-          <CardTitle>
-            Bills{" "}
-            <span className="ml-1 text-sm font-normal text-muted-foreground">
-              {rows.length} shown
-            </span>
-          </CardTitle>
+          <div className="flex flex-wrap items-center gap-3">
+            <CardTitle>
+              Bills{" "}
+              <span className="ml-1 text-sm font-normal text-muted-foreground">
+                {rows.length} shown
+              </span>
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto"
+              disabled={selectedReminderIds.size === 0 || sendSelectedReminders.isPending}
+              onClick={() => sendSelectedReminders.mutate(Array.from(selectedReminderIds))}
+            >
+              <BellRing className="mr-2 h-4 w-4" />
+              {sendSelectedReminders.isPending
+                ? "Sending…"
+                : selectedReminderIds.size === 0
+                  ? "Send reminder"
+                  : `Send reminder (${selectedReminderIds.size})`}
+            </Button>
+          </div>
           <FilterBar
             sticky={false}
             label="Search & filter bills"
@@ -301,7 +398,7 @@ function PaymentsPage() {
                 <DensityToggle density={density} onChange={setDensity} />
               </div>
               <ResponsiveTable
-                labels={["Tenant", "Month", "Total", "Paid", "Balance", "Due", "Status", ""]}
+                labels={["", "Tenant", "Month", "Total", "Paid", "Balance", "Due", "Status", ""]}
                 density={density}
                 compactColumns={3}
                 virtualize
@@ -309,6 +406,30 @@ function PaymentsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-10">
+                        <input
+                          type="checkbox"
+                          aria-label="Select all visible bills for reminder"
+                          className="h-4 w-4 accent-primary"
+                          checked={
+                            billsPage.pageRows.length > 0 &&
+                            billsPage.pageRows.every(
+                              (b) => balanceOf(b) <= 0 || selectedReminderIds.has(b.id),
+                            )
+                          }
+                          onChange={(e) => {
+                            setSelectedReminderIds((prev) => {
+                              const next = new Set(prev);
+                              for (const b of billsPage.pageRows) {
+                                if (balanceOf(b) <= 0) continue;
+                                if (e.target.checked) next.add(b.id);
+                                else next.delete(b.id);
+                              }
+                              return next;
+                            });
+                          }}
+                        />
+                      </TableHead>
                       <TableHead>Tenant</TableHead>
                       <TableHead>Month</TableHead>
                       <TableHead>Total</TableHead>
@@ -324,6 +445,23 @@ function PaymentsPage() {
                       const st = displayStatus(b);
                       return (
                         <TableRow key={b.id}>
+                          <TableCell>
+                            <input
+                              type="checkbox"
+                              aria-label={`Select ${nameOf(b)} for reminder`}
+                              className="h-4 w-4 accent-primary"
+                              disabled={balanceOf(b) <= 0}
+                              checked={selectedReminderIds.has(b.id)}
+                              onChange={(e) => {
+                                setSelectedReminderIds((prev) => {
+                                  const next = new Set(prev);
+                                  if (e.target.checked) next.add(b.id);
+                                  else next.delete(b.id);
+                                  return next;
+                                });
+                              }}
+                            />
+                          </TableCell>
                           <TableCell className="font-medium">
                             <Link
                               to="/tenant/$tenantId"
@@ -357,6 +495,30 @@ function PaymentsPage() {
                                 >
                                   <IndianRupee className="mr-1 h-4 w-4" />
                                   Record
+                                </Button>
+                              )}
+                              {balanceOf(b) > 0 && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    const tenant = directory.tenantById.get(b.tenant_id);
+                                    setReminderState({
+                                      candidates: [
+                                        {
+                                          tenantId: b.tenant_id,
+                                          tenantName: nameOf(b),
+                                          hasEmail: Boolean(tenant?.email),
+                                          hasPhone: Boolean(tenant?.phone),
+                                        },
+                                      ],
+                                      preselectedIds: [b.tenant_id],
+                                      billId: b.id,
+                                    });
+                                  }}
+                                >
+                                  <BellRing className="mr-1 h-4 w-4" />
+                                  Remind
                                 </Button>
                               )}
                               <Button asChild size="sm" variant="ghost">
@@ -448,7 +610,64 @@ function PaymentsPage() {
         </CardContent>
       </Card>
 
+      {tenantScheduledReminders.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              Scheduled reminders{" "}
+              <span className="ml-1 text-sm font-normal text-muted-foreground">
+                {tenantScheduledReminders.length} pending
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveTable labels={["Tenant", "Date", "Channels", ""]} virtualize>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tenant</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Channels</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tenantScheduledReminders.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="font-medium">{r.tenantName}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatDate(r.remindOn)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {[r.channelEmail && "Email", r.channelWhatsapp && "WhatsApp"]
+                          .filter(Boolean)
+                          .join(" + ")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={cancelReminder.isPending}
+                          onClick={() => cancelReminder.mutate(r.id)}
+                        >
+                          Cancel
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ResponsiveTable>
+          </CardContent>
+        </Card>
+      )}
+
       <RecordPaymentDialog target={target} onOpenChange={(o) => !o && setTarget(null)} />
+      <ReminderDialog
+        state={reminderState}
+        whatsappAvailable={Boolean(directory.data?.settings?.whatsapp_enabled)}
+        onOpenChange={(o) => !o && setReminderState(null)}
+      />
     </div>
   );
 }

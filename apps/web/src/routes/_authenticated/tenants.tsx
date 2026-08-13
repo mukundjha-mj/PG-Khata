@@ -5,7 +5,14 @@ import { Plus, Pencil, Trash2, Search, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/lib/use-current-user";
+import { usePropertyScope } from "@/lib/property-scope";
 import { FileDrop } from "@/components/file-drop";
+import { PhoneField } from "@/components/phone-field";
+import {
+  extractPhoneDigitsForEditing,
+  isValidEmailFormat,
+  isValidIndianMobileDigits,
+} from "@/lib/contact-validation";
 import {
   ADDRESS_PROOF_TYPES,
   TENANT_STATUSES,
@@ -127,6 +134,7 @@ const STATUS_STYLES: Record<string, string> = {
 function TenantsPage() {
   const queryClient = useQueryClient();
   const { user } = useCurrentUser();
+  const { selectedPropertyId } = usePropertyScope();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [open, setOpen] = useState(false);
@@ -172,21 +180,37 @@ function TenantsPage() {
 
   const visible = (tenants ?? []).filter((t) => {
     const matchesStatus = statusFilter === "all" || t.status === statusFilter;
+    const matchesProperty =
+      !selectedPropertyId || roomById.get(t.room_id)?.property_id === selectedPropertyId;
     const q = debouncedSearch.trim().toLowerCase();
     const matchesSearch =
       !q || t.full_name.toLowerCase().includes(q) || t.phone.toLowerCase().includes(q);
-    return matchesStatus && matchesSearch;
+    return matchesStatus && matchesProperty && matchesSearch;
   });
 
   const save = useMutation({
     mutationFn: async () => {
       if (!draft.full_name.trim()) throw new Error("Tenant name is required");
-      if (!draft.phone.trim()) throw new Error("Phone number is required");
+      if (!isValidIndianMobileDigits(draft.phone)) {
+        throw new Error("Enter a valid 10-digit WhatsApp number.");
+      }
+      if (draft.alternate_phone && !isValidIndianMobileDigits(draft.alternate_phone)) {
+        throw new Error("Alternate phone must be a valid 10-digit number.");
+      }
+      if (
+        draft.emergency_contact_phone &&
+        !isValidIndianMobileDigits(draft.emergency_contact_phone)
+      ) {
+        throw new Error("Emergency phone must be a valid 10-digit number.");
+      }
+      if (draft.email.trim() && !isValidEmailFormat(draft.email)) {
+        throw new Error("Enter a valid email address.");
+      }
       if (!draft.room_id) throw new Error("Assign a room");
       const payload = {
         full_name: draft.full_name.trim(),
-        phone: draft.phone.trim(),
-        alternate_phone: draft.alternate_phone.trim() || null,
+        phone: `+91${draft.phone}`,
+        alternate_phone: draft.alternate_phone ? `+91${draft.alternate_phone}` : null,
         email: draft.email.trim() || null,
         room_id: draft.room_id,
         joining_date: draft.joining_date,
@@ -201,15 +225,24 @@ function TenantsPage() {
         address_proof_file_url: draft.address_proof_file_url,
         photo_url: draft.photo_url,
         emergency_contact_name: draft.emergency_contact_name.trim() || null,
-        emergency_contact_phone: draft.emergency_contact_phone.trim() || null,
+        emergency_contact_phone: draft.emergency_contact_phone
+          ? `+91${draft.emergency_contact_phone}`
+          : null,
         vacated_date: draft.vacated_date || null,
         notes: draft.notes.trim() || null,
       };
       if (editing) {
         const { error } = await supabase.from("tenants").update(payload).eq("id", editing.id);
+        // Phone is globally unique across every owner on the platform, not
+        // just this account - surface that as a plain sentence rather than
+        // the raw Postgres constraint error.
+        if (error?.code === "23505")
+          throw new Error("A tenant with this phone number already exists.");
         if (error) throw error;
       } else {
         const { error } = await supabase.from("tenants").insert(payload);
+        if (error?.code === "23505")
+          throw new Error("A tenant with this phone number already exists.");
         if (error) throw error;
       }
     },
@@ -269,8 +302,12 @@ function TenantsPage() {
     setEditing(t);
     setDraft({
       full_name: t.full_name,
-      phone: t.phone,
-      alternate_phone: t.alternate_phone ?? "",
+      // Existing rows may predate this field's strict shape (e.g. saved as
+      // "+91 98765 43210" before phone gained validation) - best-effort
+      // extract the last 10 digits so the field pre-fills instead of
+      // showing a mismatched or truncated value.
+      phone: extractPhoneDigitsForEditing(t.phone),
+      alternate_phone: extractPhoneDigitsForEditing(t.alternate_phone),
       email: t.email ?? "",
       room_id: t.room_id,
       joining_date: t.joining_date,
@@ -283,7 +320,7 @@ function TenantsPage() {
       address_proof_file_url: t.address_proof_file_url,
       photo_url: t.photo_url,
       emergency_contact_name: t.emergency_contact_name ?? "",
-      emergency_contact_phone: t.emergency_contact_phone ?? "",
+      emergency_contact_phone: extractPhoneDigitsForEditing(t.emergency_contact_phone),
       vacated_date: t.vacated_date ?? "",
       notes: t.notes ?? "",
     });
@@ -492,23 +529,19 @@ function TenantsPage() {
                   onChange={(e) => setDraft({ ...draft, full_name: e.target.value })}
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="t-phone">Phone</Label>
-                <Input
-                  id="t-phone"
-                  value={draft.phone}
-                  onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
-                  placeholder="+91 90000 00000"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="t-alt">Alternate phone</Label>
-                <Input
-                  id="t-alt"
-                  value={draft.alternate_phone}
-                  onChange={(e) => setDraft({ ...draft, alternate_phone: e.target.value })}
-                />
-              </div>
+              <PhoneField
+                id="t-phone"
+                label="Phone"
+                value={draft.phone}
+                onChange={(v) => setDraft({ ...draft, phone: v })}
+                hint="This should be the tenant's WhatsApp number."
+              />
+              <PhoneField
+                id="t-alt"
+                label="Alternate phone"
+                value={draft.alternate_phone}
+                onChange={(v) => setDraft({ ...draft, alternate_phone: v })}
+              />
               <div className="space-y-1.5">
                 <Label htmlFor="t-email">Email</Label>
                 <Input
@@ -618,14 +651,12 @@ function TenantsPage() {
                   onChange={(e) => setDraft({ ...draft, emergency_contact_name: e.target.value })}
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="t-ec-phone">Emergency phone</Label>
-                <Input
-                  id="t-ec-phone"
-                  value={draft.emergency_contact_phone}
-                  onChange={(e) => setDraft({ ...draft, emergency_contact_phone: e.target.value })}
-                />
-              </div>
+              <PhoneField
+                id="t-ec-phone"
+                label="Emergency phone"
+                value={draft.emergency_contact_phone}
+                onChange={(v) => setDraft({ ...draft, emergency_contact_phone: v })}
+              />
               <div className="space-y-1.5">
                 <Label>Address proof type</Label>
                 <Select
