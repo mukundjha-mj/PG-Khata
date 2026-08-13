@@ -119,6 +119,63 @@ export type Database = {
           },
         ];
       };
+      complaints: {
+        Row: {
+          admin_id: string;
+          created_at: string;
+          email: string | null;
+          id: string;
+          note: string;
+          phone: string;
+          property_id: string;
+          room_number: string;
+          status: Database["public"]["Enums"]["complaint_status"];
+          tenant_name: string;
+          updated_at: string;
+        };
+        Insert: {
+          admin_id: string;
+          created_at?: string;
+          email?: string | null;
+          id?: string;
+          note: string;
+          phone: string;
+          property_id: string;
+          room_number: string;
+          status?: Database["public"]["Enums"]["complaint_status"];
+          tenant_name: string;
+          updated_at?: string;
+        };
+        Update: {
+          admin_id?: string;
+          created_at?: string;
+          email?: string | null;
+          id?: string;
+          note?: string;
+          phone?: string;
+          property_id?: string;
+          room_number?: string;
+          status?: Database["public"]["Enums"]["complaint_status"];
+          tenant_name?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "complaints_admin_id_fkey";
+            columns: ["admin_id"];
+            isOneToOne: false;
+            referencedRelation: "admins";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "complaints_property_id_fkey";
+            columns: ["property_id"];
+            isOneToOne: false;
+            referencedRelation: "properties";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       electricity_readings: {
         Row: {
           calculated_amount: number | null;
@@ -475,6 +532,96 @@ export type Database = {
           },
         ];
       };
+      property_complaint_links: {
+        Row: {
+          admin_id: string;
+          created_at: string;
+          id: string;
+          is_active: boolean;
+          property_id: string;
+          token: string;
+          updated_at: string;
+        };
+        Insert: {
+          admin_id?: string;
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          property_id: string;
+          token: string;
+          updated_at?: string;
+        };
+        Update: {
+          admin_id?: string;
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          property_id?: string;
+          token?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "property_complaint_links_admin_id_fkey";
+            columns: ["admin_id"];
+            isOneToOne: false;
+            referencedRelation: "admins";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "property_complaint_links_property_id_fkey";
+            columns: ["property_id"];
+            isOneToOne: true;
+            referencedRelation: "properties";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      property_signup_links: {
+        Row: {
+          admin_id: string;
+          created_at: string;
+          id: string;
+          is_active: boolean;
+          property_id: string;
+          token: string;
+          updated_at: string;
+        };
+        Insert: {
+          admin_id?: string;
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          property_id: string;
+          token: string;
+          updated_at?: string;
+        };
+        Update: {
+          admin_id?: string;
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          property_id?: string;
+          token?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "property_signup_links_admin_id_fkey";
+            columns: ["admin_id"];
+            isOneToOne: false;
+            referencedRelation: "admins";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "property_signup_links_property_id_fkey";
+            columns: ["property_id"];
+            isOneToOne: true;
+            referencedRelation: "properties";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       rooms: {
         Row: {
           capacity: number;
@@ -515,6 +662,63 @@ export type Database = {
             columns: ["property_id"];
             isOneToOne: false;
             referencedRelation: "properties";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      scheduled_reminders: {
+        Row: {
+          admin_id: string;
+          bill_id: string | null;
+          channel_email: boolean;
+          channel_whatsapp: boolean;
+          created_at: string;
+          id: string;
+          note: string | null;
+          remind_on: string;
+          sent_at: string | null;
+          status: string;
+          tenant_id: string | null;
+        };
+        Insert: {
+          admin_id?: string;
+          bill_id?: string | null;
+          channel_email?: boolean;
+          channel_whatsapp?: boolean;
+          created_at?: string;
+          id?: string;
+          note?: string | null;
+          remind_on: string;
+          sent_at?: string | null;
+          status?: string;
+          tenant_id?: string | null;
+        };
+        Update: {
+          admin_id?: string;
+          bill_id?: string | null;
+          channel_email?: boolean;
+          channel_whatsapp?: boolean;
+          created_at?: string;
+          id?: string;
+          note?: string | null;
+          remind_on?: string;
+          sent_at?: string | null;
+          status?: string;
+          tenant_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_reminders_bill_id_fkey";
+            columns: ["bill_id"];
+            isOneToOne: false;
+            referencedRelation: "bills";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "scheduled_reminders_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
             referencedColumns: ["id"];
           },
         ];
@@ -811,6 +1015,7 @@ export type Database = {
       address_proof_type: "Aadhaar" | "Passport" | "Driving License" | "Voter ID";
       app_role: "super_admin" | "admin";
       bill_status: "pending" | "paid" | "partially-paid" | "overdue";
+      complaint_status: "open" | "in-progress" | "resolved";
       message_type:
         | "bill-generated"
         | "payment-reminder"
@@ -950,6 +1155,7 @@ export const Constants = {
       address_proof_type: ["Aadhaar", "Passport", "Driving License", "Voter ID"],
       app_role: ["super_admin", "admin"],
       bill_status: ["pending", "paid", "partially-paid", "overdue"],
+      complaint_status: ["open", "in-progress", "resolved"],
       message_type: [
         "bill-generated",
         "payment-reminder",

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate, formatMoney } from "@/lib/pg";
 import { useDirectory } from "@/lib/use-directory";
+import { usePropertyScope } from "@/lib/property-scope";
 import type { Reading } from "@/lib/billing";
 
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,7 @@ export const Route = createFileRoute("/_authenticated/readings")({
 
 function ReadingsPage() {
   const directory = useDirectory();
+  const { selectedPropertyId } = usePropertyScope();
   const queryClient = useQueryClient();
   const [roomId, setRoomId] = useState<string>("");
   const [reading, setReading] = useState("");
@@ -72,14 +74,21 @@ function ReadingsPage() {
     },
   });
 
+  const scopedReadings = useMemo(() => {
+    if (!selectedPropertyId) return readings ?? [];
+    return (readings ?? []).filter(
+      (r) => directory.roomById.get(r.room_id)?.property_id === selectedPropertyId,
+    );
+  }, [readings, selectedPropertyId, directory.roomById]);
+
   const latestByRoom = useMemo(() => {
     const map = new Map<string, Reading>();
-    for (const r of readings ?? []) {
+    for (const r of scopedReadings) {
       const prev = map.get(r.room_id);
       if (!prev || r.reading_date > prev.reading_date) map.set(r.room_id, r);
     }
     return map;
-  }, [readings]);
+  }, [scopedReadings]);
 
   const previous = roomId ? latestByRoom.get(roomId) : undefined;
   const units = previous ? Number(reading || 0) - Number(previous.meter_reading) : null;
@@ -127,7 +136,9 @@ function ReadingsPage() {
 
   const loading = isLoading || directory.isLoading;
 
-  const rooms = directory.data?.rooms ?? [];
+  const rooms = (directory.data?.rooms ?? []).filter(
+    (r) => !selectedPropertyId || r.property_id === selectedPropertyId,
+  );
   const roomLabel = (id: string) => {
     const room = directory.roomById.get(id);
     if (!room) return "Room";
@@ -261,7 +272,7 @@ function ReadingsPage() {
         <CardContent>
           {loading ? (
             <TableSkeleton rows={4} columns={5} />
-          ) : (readings ?? []).length === 0 ? (
+          ) : scopedReadings.length === 0 ? (
             <EmptyState
               title="No readings logged yet"
               description="Record a meter reading above to start tracking electricity usage."
@@ -280,7 +291,7 @@ function ReadingsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(readings ?? []).map((r) => (
+                  {scopedReadings.map((r) => (
                     <TableRow key={r.id}>
                       <TableCell>{formatDate(r.reading_date)}</TableCell>
                       <TableCell className="font-medium">{roomLabel(r.room_id)}</TableCell>

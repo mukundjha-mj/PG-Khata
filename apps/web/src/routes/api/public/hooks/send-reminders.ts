@@ -32,7 +32,8 @@ export const Route = createFileRoute("/api/public/hooks/send-reminders")({
         }
 
         try {
-          const { runPaymentReminders } = await import("@/lib/reminders.server");
+          const { runPaymentReminders, processDueScheduledReminders } =
+            await import("@/lib/reminders.server");
           const result = await runPaymentReminders({
             ...(today ? { today } : {}),
             dryRun,
@@ -44,7 +45,21 @@ export const Route = createFileRoute("/api/public/hooks/send-reminders")({
             emailSent: result.emailSent,
             errors: result.errors.length,
           });
-          return Response.json(result);
+
+          // Owner-scheduled one-off reminders (distinct from the due-date
+          // engine above) share this same nightly hook rather than a second
+          // cron job.
+          let scheduled;
+          if (!dryRun) {
+            scheduled = await processDueScheduledReminders(today);
+            console.info("[send-reminders] scheduled", {
+              matched: scheduled.matched,
+              emailSent: scheduled.emailSent,
+              errors: scheduled.errors.length,
+            });
+          }
+
+          return Response.json({ ...result, scheduled });
         } catch (error) {
           console.error("[send-reminders] failed", error);
           return Response.json(

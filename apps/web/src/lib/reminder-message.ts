@@ -104,31 +104,38 @@ export function buildReminderEmailHtml(d: ReminderData): string {
 export const REMINDER_TEMPLATE_NAME = "rent_payment_reminder";
 
 /**
- * Maps a reminder onto the approved WhatsApp template's body parameters.
+ * Maps a reminder onto the approved WhatsApp template's named body variables.
  *
  * Meta rejects free-form text for business-initiated messages, so the wording
- * lives in the approved template and only these substitutions vary. The order
- * must match {{1}}..{{5}} exactly — a reordering here silently sends the room
- * number where the amount belongs, because Meta validates the count, not the
- * meaning.
+ * lives in the approved template and only these substitutions vary. Keys must
+ * match the template exactly - see the submitted body text below.
  *
  * Template body as submitted:
- *   Hi {{1}}, your rent for {{2}} at {{3}} is {{4}}. Due: {{5}}.
+ *   *Payment Reminder*
+ *
+ *   Hi {{tenant_name}},
+ *
+ *   your rent for {{month}} at {{property_room}} is {{amount}}.
+ *
+ *   Due: {{due_date}}.
+ *
+ *   Please make sure to pay on or before the due date to avoid any
+ *   inconvenience.
  */
 export function buildReminderTemplate(d: ReminderData): {
   name: string;
   languageCode: string;
-  bodyParameters: string[];
+  namedParameters: Record<string, string>;
 } {
   return {
     name: REMINDER_TEMPLATE_NAME,
     languageCode: "en",
-    bodyParameters: [
-      d.tenantName,
-      d.monthLabel,
-      `${d.propertyName} Room ${d.roomNumber}`,
-      formatMoney(d.balance),
-      d.dueDate ? formatDate(d.dueDate) : "as soon as possible",
-    ],
+    namedParameters: {
+      tenant_name: d.tenantName,
+      month: d.monthLabel,
+      property_room: `${d.propertyName} Room ${d.roomNumber}`,
+      amount: formatMoney(d.balance),
+      due_date: d.dueDate ? formatDate(d.dueDate) : "as soon as possible",
+    },
   };
 }

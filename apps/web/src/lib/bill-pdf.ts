@@ -3,6 +3,7 @@ import autoTable from "jspdf-autotable";
 import type { Tables } from "@/integrations/supabase/types";
 import { formatDate } from "@/lib/pg";
 import { BRAND } from "@/lib/site";
+import type { ElectricitySplit } from "@/lib/electricity-split";
 
 // jsPDF's built-in Helvetica has no rupee glyph, so PDFs use "Rs." instead.
 function formatMoney(value: number | string | null | undefined): string {
@@ -17,6 +18,7 @@ export type BillContext = {
   room?: { room_number: string } | null;
   property?: { name: string; address: string | null; city: string | null } | null;
   monthLabel: string;
+  electricitySplit?: ElectricitySplit | null;
 };
 
 type Charge = { label?: string; amount?: number };
@@ -74,12 +76,23 @@ function renderBill(doc: jsPDF, bill: Bill, ctx: BillContext) {
   left.forEach((line, i) => doc.text(line, m, 116 + i * 14));
   meta.forEach((line, i) => doc.text(line, right, 116 + i * 14, { align: "right" }));
 
-  const rows: [string, string][] = [["Rent", formatMoney(bill.rent_amount)]];
+  type Row = (string | { content: string; colSpan?: number; styles?: Record<string, unknown> })[];
+  const rows: Row[] = [["Rent", formatMoney(bill.rent_amount)]];
   const units = bill.electricity_units_consumed;
   rows.push([
     units ? `Electricity (${units} units)` : "Electricity",
     formatMoney(bill.electricity_amount),
   ]);
+  const split = ctx.electricitySplit;
+  if (split && split.occupancy > 1) {
+    rows.push([
+      {
+        content: `   Room total: ${split.totalUnits} units ÷ ${split.occupancy} tenants`,
+        colSpan: 2,
+        styles: { fontSize: 8, textColor: MUTED, fontStyle: "italic" },
+      },
+    ]);
+  }
   for (const c of charges(bill)) {
     rows.push([c.label || "Other charges", formatMoney(c.amount ?? 0)]);
   }

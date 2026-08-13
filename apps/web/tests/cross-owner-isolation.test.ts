@@ -142,6 +142,11 @@ function makeQuery(table: string) {
       written.push({ table, rows: Array.isArray(rows) ? rows : [rows] });
       return Promise.resolve({ data: null, error: null });
     },
+    // notifyTenantAboutBill reads its lookups one row at a time.
+    maybeSingle: () => {
+      const rows = (DB[table] ?? []).filter((r) => matches(r, filters));
+      return Promise.resolve({ data: rows[0] ?? null, error: null });
+    },
     // Awaiting the builder resolves the read.
     then: (resolve: (v: { data: Row[]; error: null }) => unknown) =>
       resolve({ data: (DB[table] ?? []).filter((r) => matches(r, filters)), error: null }),

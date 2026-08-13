@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { formatDate, formatMoney } from "@/lib/pg";
+import type { ElectricitySplit } from "@/lib/electricity-split";
 
 const RESEND_API_URL = "https://api.resend.com";
 
@@ -14,6 +15,7 @@ export type BillEmailData = {
   rentAmount: number;
   electricityAmount: number;
   electricityUnits: number;
+  electricitySplit?: ElectricitySplit | null;
   dueDate: string | null;
   updated: boolean;
 };
@@ -31,6 +33,13 @@ export function buildBillEmailHtml(data: BillEmailData): string {
       <td style="padding:8px 0;color:#4b5563;font-size:14px;">${label}</td>
       <td style="padding:8px 0;text-align:right;font-size:14px;${strong ? "font-weight:600;color:#111827;" : "color:#111827;"}">${value}</td>
     </tr>`;
+  const noteRow = (text: string) => `
+    <tr>
+      <td colspan="2" style="padding:0 0 8px;color:#9ca3af;font-size:12px;">${text}</td>
+    </tr>`;
+
+  const split = data.electricitySplit;
+  const showSplit = split && split.occupancy > 1;
 
   return `<!doctype html>
 <html><body style="margin:0;padding:24px;background:#f5f6f8;font-family:Arial,Helvetica,sans-serif;">
@@ -52,6 +61,7 @@ export function buildBillEmailHtml(data: BillEmailData): string {
     <table style="width:100%;border-collapse:collapse;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;margin-bottom:16px;">
       ${row("Rent", formatMoney(data.rentAmount))}
       ${row(`Electricity (${data.electricityUnits} units)`, formatMoney(data.electricityAmount))}
+      ${showSplit ? noteRow(`Room total: ${split!.totalUnits} units ÷ ${split!.occupancy} tenants`) : ""}
       ${row("Total", formatMoney(data.totalAmount), true)}
       ${data.paidAmount > 0 ? row("Already paid", formatMoney(data.paidAmount)) : ""}
       ${row("Balance due", formatMoney(balance), true)}

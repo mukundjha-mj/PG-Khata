@@ -56,21 +56,22 @@ beforeEach(() => {
 });
 
 describe("buildReminderTemplate", () => {
-  it("orders body parameters to match the approved template", () => {
-    // Template: "Hi {{1}}, your rent for {{2}} at {{3}} is {{4}}. Due: {{5}}."
+  it("maps named parameters to match the approved template", () => {
+    // Template: "Hi {{tenant_name}}, your rent for {{month}} at
+    // {{property_room}} is {{amount}}. Due: {{due_date}}."
     const t = buildReminderTemplate(reminder);
-    expect(t.bodyParameters[0]).toBe("Asha");
-    expect(t.bodyParameters[1]).toBe("March 2026");
-    expect(t.bodyParameters[2]).toBe("Sunrise PG Room 12");
-    expect(t.bodyParameters[3]).toContain("8,450");
-    expect(t.bodyParameters[4]).toContain("2026");
-    expect(t.bodyParameters).toHaveLength(5);
+    expect(t.namedParameters.tenant_name).toBe("Asha");
+    expect(t.namedParameters.month).toBe("March 2026");
+    expect(t.namedParameters.property_room).toBe("Sunrise PG Room 12");
+    expect(t.namedParameters.amount).toContain("8,450");
+    expect(t.namedParameters.due_date).toContain("2026");
+    expect(Object.keys(t.namedParameters)).toHaveLength(5);
   });
 
   it("substitutes wording when a bill has no due date", () => {
     const t = buildReminderTemplate({ ...reminder, dueDate: null });
     // An empty parameter is rejected by Meta, so the slot always carries text.
-    expect(t.bodyParameters[4]).toBe("as soon as possible");
+    expect(t.namedParameters.due_date).toBe("as soon as possible");
   });
 });
 

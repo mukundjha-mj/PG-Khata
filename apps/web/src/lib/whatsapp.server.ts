@@ -20,8 +20,16 @@ export type WhatsAppTemplate = {
   /** Template name as approved in the Meta Business account. */
   name: string;
   languageCode: string;
-  /** Ordered body substitutions, matching {{1}}, {{2}} ... in the template. */
-  bodyParameters: string[];
+  /**
+   * Ordered body substitutions, matching {{1}}, {{2}} ... in the template.
+   * Mutually exclusive with `namedParameters` - a template is approved with
+   * one style of variable or the other, never both.
+   */
+  bodyParameters?: string[];
+  /** Named substitutions, matching {{tenant_name}}, {{bill_month}} ... */
+  namedParameters?: Record<string, string>;
+  /** Absolute HTTPS URL for the template's IMAGE header component, if any. */
+  headerImageUrl?: string;
 };
 
 function credentials() {
@@ -71,6 +79,30 @@ export async function sendTenantWhatsApp(
   let providerId: string | null = null;
 
   try {
+    const { headerImageUrl, namedParameters, bodyParameters } = args.template;
+    const components: Record<string, unknown>[] = [];
+    if (headerImageUrl) {
+      components.push({
+        type: "header",
+        parameters: [{ type: "image", image: { link: headerImageUrl } }],
+      });
+    }
+    if (namedParameters) {
+      components.push({
+        type: "body",
+        parameters: Object.entries(namedParameters).map(([name, text]) => ({
+          type: "text",
+          parameter_name: name,
+          text,
+        })),
+      });
+    } else if (bodyParameters) {
+      components.push({
+        type: "body",
+        parameters: bodyParameters.map((text) => ({ type: "text", text })),
+      });
+    }
+
     const res = await fetch(
       `https://graph.facebook.com/${GRAPH_VERSION}/${creds.phoneNumberId}/messages`,
       {
@@ -86,12 +118,7 @@ export async function sendTenantWhatsApp(
           template: {
             name: args.template.name,
             language: { code: args.template.languageCode },
-            components: [
-              {
-                type: "body",
-                parameters: args.template.bodyParameters.map((text) => ({ type: "text", text })),
-              },
-            ],
+            components,
           },
         }),
       },

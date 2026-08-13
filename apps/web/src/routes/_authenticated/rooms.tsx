@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { usePropertyScope } from "@/lib/property-scope";
 import { ROOM_TYPES, formatMoney, occupancyOf, type Room } from "@/lib/pg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,7 +76,8 @@ type Draft = {
 
 function RoomsPage() {
   const queryClient = useQueryClient();
-  const [propertyFilter, setPropertyFilter] = useState<string>("all");
+  const { selectedPropertyId } = usePropertyScope();
+  const propertyFilter = selectedPropertyId ?? "all";
   const { density, setDensity } = useDensity("rooms");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Room | null>(null);
@@ -203,19 +205,6 @@ function RoomsPage() {
           <p className="page-subtitle">Inventory, capacity and rent for each room.</p>
         </div>
         <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto">
-          <Select value={propertyFilter} onValueChange={setPropertyFilter}>
-            <SelectTrigger className="w-full sm:w-48" aria-label="Filter rooms by property">
-              <SelectValue placeholder="All properties" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All properties</SelectItem>
-              {(properties ?? []).map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <Button className="w-full sm:w-auto" onClick={openNew} disabled={!properties?.length}>
             <Plus className="mr-1.5 h-4 w-4" /> Add room
           </Button>

@@ -19,9 +19,11 @@ export type UpiPaymentRequest = {
 
 /**
  * Deliberately permissive on the handle — NPCI leaves its charset to each PSP —
- * but strict on shape. Mirrors settings_upi_vpa_format in the database.
+ * but strict on shape. Mirrors settings_upi_vpa_format in the database; the
+ * handle is capped at 255 (not 256) because Postgres's regex engine rejects
+ * repetition counts above RE_DUP_MAX (255).
  */
-const VPA_PATTERN = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z][a-zA-Z0-9.-]{1,63}$/;
+const VPA_PATTERN = /^[a-zA-Z0-9.\-_]{2,255}@[a-zA-Z][a-zA-Z0-9.-]{1,63}$/;
 
 export function isValidVpa(vpa: string): boolean {
   return VPA_PATTERN.test(vpa.trim());

@@ -17,8 +17,11 @@ dist
 dist-ssr
 .output
 .vinxi
-.tanstack/**
+.tanstack/
 .nitro
+
+# Impeccable design-lint cache
+.impeccable/
 # Nitro's vercel preset writes the deployable build here, and the Vercel CLI
 # drops project linkage in the same folder.
 .vercel

@@ -1,10 +1,22 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Property } from "@/lib/pg";
+import { ShareLinkCard } from "@/components/share-link-card";
+import {
+  getSignupLink,
+  regenerateSignupLinkFn,
+  setSignupLinkActiveFn,
+} from "@/lib/signup-links.functions";
+import {
+  getComplaintLink,
+  regenerateComplaintLinkFn,
+  setComplaintLinkActiveFn,
+} from "@/lib/complaint-links.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -168,6 +180,7 @@ function PropertiesPage() {
                     <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
                   </Button>
                 </div>
+                <PropertyShareLinks propertyId={p.id} />
               </CardContent>
             </Card>
           ))}
@@ -262,6 +275,86 @@ function PropertiesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+/** Signup + complaint share links for one property, shown inline on its card. */
+function PropertyShareLinks({ propertyId }: { propertyId: string }) {
+  const queryClient = useQueryClient();
+  const getSignupLinkFn = useServerFn(getSignupLink);
+  const regenerateSignupFn = useServerFn(regenerateSignupLinkFn);
+  const setSignupActiveFn = useServerFn(setSignupLinkActiveFn);
+  const getComplaintLinkFn = useServerFn(getComplaintLink);
+  const regenerateComplaintFn = useServerFn(regenerateComplaintLinkFn);
+  const setComplaintActiveFn = useServerFn(setComplaintLinkActiveFn);
+
+  const signupQuery = useQuery({
+    queryKey: ["signup-link", propertyId],
+    queryFn: () => getSignupLinkFn({ data: { propertyId } }),
+  });
+  const complaintQuery = useQuery({
+    queryKey: ["complaint-link", propertyId],
+    queryFn: () => getComplaintLinkFn({ data: { propertyId } }),
+  });
+
+  const regenerateSignup = useMutation({
+    mutationFn: () => regenerateSignupFn({ data: { propertyId } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["signup-link", propertyId] });
+      toast.success("Signup link regenerated");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const toggleSignupActive = useMutation({
+    mutationFn: (isActive: boolean) => setSignupActiveFn({ data: { propertyId, isActive } }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["signup-link", propertyId] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const regenerateComplaint = useMutation({
+    mutationFn: () => regenerateComplaintFn({ data: { propertyId } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["complaint-link", propertyId] });
+      toast.success("Complaint link regenerated");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const toggleComplaintActive = useMutation({
+    mutationFn: (isActive: boolean) => setComplaintActiveFn({ data: { propertyId, isActive } }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["complaint-link", propertyId] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // appUrl() falls back to an empty string when VITE_APP_URL is unset (fine for
+  // same-origin dev links), so build from the page's own origin instead - this
+  // link is always opened from the app the owner is actually signed into.
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+
+  return (
+    <div className="space-y-2 pt-1">
+      <ShareLinkCard
+        label="Tenant signup link"
+        description="Tenants fill this in themselves and are added as active tenants right away - no login needed."
+        url={signupQuery.data ? `${origin}/signup/${signupQuery.data.token}` : null}
+        isActive={signupQuery.data?.is_active ?? true}
+        loading={signupQuery.isLoading}
+        onRegenerate={() => regenerateSignup.mutate()}
+        onToggleActive={(v) => toggleSignupActive.mutate(v)}
+        regenerating={regenerateSignup.isPending}
+        togglingActive={toggleSignupActive.isPending}
+      />
+      <ShareLinkCard
+        label="Complaint link"
+        description="Tenants use this to report an issue - it shows up on your Complaints page and dashboard."
+        url={complaintQuery.data ? `${origin}/complaint/${complaintQuery.data.token}` : null}
+        isActive={complaintQuery.data?.is_active ?? true}
+        loading={complaintQuery.isLoading}
+        onRegenerate={() => regenerateComplaint.mutate()}
+        onToggleActive={(v) => toggleComplaintActive.mutate(v)}
+        regenerating={regenerateComplaint.isPending}
+        togglingActive={toggleComplaintActive.isPending}
+      />
     </div>
   );
 }

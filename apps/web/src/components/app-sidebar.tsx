@@ -23,6 +23,7 @@ const items: { title: string; url: string; icon: AnimatedIconName }[] = [
   { title: "Properties", url: "/properties", icon: "line-md:grid-3-twotone" },
   { title: "Rooms", url: "/rooms", icon: "line-md:list-3-twotone" },
   { title: "Tenants", url: "/tenants", icon: "line-md:account" },
+  { title: "Complaints", url: "/complaints", icon: "line-md:alert-circle-twotone" },
   { title: "Billing", url: "/bills", icon: "line-md:document-twotone" },
   { title: "Payments", url: "/payments", icon: "line-md:clipboard-check" },
   { title: "Readings", url: "/readings", icon: "line-md:gauge-twotone-loop" },
