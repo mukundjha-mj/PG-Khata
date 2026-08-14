@@ -40,6 +40,10 @@ dist-ssr
 .wrangler/
 .dev.vars
 
+# One-off admin scripts: real tools against production data, not part of the
+# shipped app, and not meant to sit in a public repository.
+scripts/delete-account-data.mjs
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

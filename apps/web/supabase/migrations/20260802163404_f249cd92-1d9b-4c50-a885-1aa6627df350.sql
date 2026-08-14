@@ -89,11 +89,13 @@ CREATE POLICY "login_attempts_read_super_admin" ON public.super_admin_login_atte
   FOR SELECT TO authenticated
   USING (public.is_super_admin(auth.uid()));
 
--- 4. Seed the platform account and strip its PG owner workspace
+-- 4. Seed the platform account and strip its PG owner workspace.
+-- Redacted after the fact - already ran against production, so this
+-- placeholder only matters for a fresh replay, where it matches no user.
 INSERT INTO public.super_admins (id, email, name)
 SELECT u.id, u.email, COALESCE(u.raw_user_meta_data->>'name', 'Platform admin')
 FROM auth.users u
-WHERE lower(u.email) = 'mukundjha204+admin@gmail.com'
+WHERE lower(u.email) = 'platform-admin@example.com'
 ON CONFLICT (id) DO NOTHING;
 
 DELETE FROM public.settings s
@@ -111,7 +113,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF lower(COALESCE(NEW.email,'')) = 'mukundjha204+admin@gmail.com' THEN
+  IF lower(COALESCE(NEW.email,'')) = 'platform-admin@example.com' THEN
     INSERT INTO public.super_admins (id, email, name)
     VALUES (NEW.id, COALESCE(NEW.email,''), COALESCE(NEW.raw_user_meta_data->>'name','Platform admin'))
     ON CONFLICT (id) DO NOTHING;

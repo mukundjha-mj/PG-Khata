@@ -1,14 +1,17 @@
--- Move super admin access to the dedicated platform account
+-- Move super admin access to the dedicated platform account.
+-- The real addresses were redacted after the fact - this already ran against
+-- production, so the placeholder below only matters for a fresh replay,
+-- where it harmlessly matches no user.
 DELETE FROM public.user_roles ur
 USING auth.users u
 WHERE ur.user_id = u.id
   AND ur.role = 'super_admin'
-  AND lower(u.email) = 'mukundjha204@gmail.com';
+  AND lower(u.email) = 'founder@example.com';
 
 INSERT INTO public.user_roles (user_id, role)
 SELECT u.id, 'super_admin'::app_role
 FROM auth.users u
-WHERE lower(u.email) = 'mukundjha204+admin@gmail.com'
+WHERE lower(u.email) = 'platform-admin@example.com'
 ON CONFLICT DO NOTHING;
 
 -- Auto-grant super admin to the dedicated platform account on signup
@@ -24,7 +27,7 @@ BEGIN
   ON CONFLICT (id) DO NOTHING;
   INSERT INTO public.settings (admin_id) VALUES (NEW.id) ON CONFLICT (admin_id) DO NOTHING;
   INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, 'admin') ON CONFLICT DO NOTHING;
-  IF lower(COALESCE(NEW.email,'')) = 'mukundjha204+admin@gmail.com' THEN
+  IF lower(COALESCE(NEW.email,'')) = 'platform-admin@example.com' THEN
     INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, 'super_admin') ON CONFLICT DO NOTHING;
   END IF;
   RETURN NEW;

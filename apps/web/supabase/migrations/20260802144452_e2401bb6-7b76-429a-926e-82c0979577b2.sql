@@ -35,8 +35,10 @@ $$;
 REVOKE ALL ON FUNCTION public.has_role(uuid, public.app_role) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.has_role(uuid, public.app_role) TO authenticated, service_role;
 
+-- Redacted after the fact - already ran against production, so this
+-- placeholder only matters for a fresh replay, where it matches no user.
 INSERT INTO public.user_roles (user_id, role)
-SELECT id, 'super_admin'::public.app_role FROM auth.users WHERE lower(email) = 'mukundjha204@gmail.com'
+SELECT id, 'super_admin'::public.app_role FROM auth.users WHERE lower(email) = 'founder@example.com'
 ON CONFLICT (user_id, role) DO NOTHING;
 
 INSERT INTO public.user_roles (user_id, role)
