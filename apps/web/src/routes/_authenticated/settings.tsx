@@ -15,7 +15,6 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { PhoneField } from "@/components/phone-field";
-import { BrandingSettingsCard } from "@/components/branding-settings-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BRAND } from "@/lib/site";
 
@@ -258,7 +257,7 @@ function SettingsPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="s-due">Due date (days after bill)</Label>
+                    <Label htmlFor="s-due">Due date - days after the bill month ends</Label>
                     <Input
                       id="s-due"
                       type="number"
@@ -268,6 +267,9 @@ function SettingsPage() {
                         setDraft({ ...draft, due_date_offset_days: Number(e.target.value) })
                       }
                     />
+                    <p className="text-xs text-muted-foreground">
+                      E.g. 10 means an August bill is due 10 September - 10 days after August ends.
+                    </p>
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="s-remind">Remind this many days before due</Label>
@@ -305,10 +307,6 @@ function SettingsPage() {
               </CardContent>
             </Card>
           )}
-        </div>
-
-        <div className="mb-6 break-inside-avoid">
-          <BrandingSettingsCard />
         </div>
 
         {isLoading || !draft ? null : (

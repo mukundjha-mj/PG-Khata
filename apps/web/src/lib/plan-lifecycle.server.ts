@@ -55,8 +55,10 @@ export async function runPlanLifecycle(options?: {
   const toMark: string[] = [];
 
   for (const row of rows) {
-    // Already past due, or cancelled by hand in the console: leave it alone.
-    if (row.plan_status === "past_due") continue;
+    // Already past due, or never paid at all (unpaid has no grace buffer to
+    // exhaust and is handled entirely by the auth redirect, not this sweep):
+    // leave it alone.
+    if (row.plan_status === "past_due" || row.plan_status === "unpaid") continue;
     try {
       const period = describePlanPeriod({
         periodEnd: row.current_period_end,

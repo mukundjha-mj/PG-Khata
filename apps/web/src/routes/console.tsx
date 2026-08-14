@@ -16,6 +16,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { OwnerDirectory } from "@/components/owner-directory";
+import { CouponManager } from "@/components/coupon-manager";
 import { ConsoleCard, ConsoleLayout, type ConsoleTab } from "@/components/console-layout";
 import { PlatformSignIn, TotpChallenge, TotpEnroll } from "@/components/platform-auth-gates";
 import { supabase } from "@/integrations/supabase/client";
@@ -148,6 +149,12 @@ function ConsolePage() {
       {tab === "owners" ? (
         <div className="rounded-xl border border-console-border bg-console-panel p-2 sm:p-4">
           <OwnerDirectory accounts={filtered} isLoading={accounts.isLoading} />
+        </div>
+      ) : null}
+
+      {tab === "coupons" ? (
+        <div className="rounded-xl border border-console-border bg-console-panel p-2 sm:p-4">
+          <CouponManager />
         </div>
       ) : null}
 

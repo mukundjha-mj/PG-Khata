@@ -32,7 +32,9 @@ export type PlanPhase =
   /** Past current_period_end but inside the buffer. Still fully usable. */
   | "grace"
   /** Buffer exhausted. Still not blocked, but the account is overdue. */
-  | "lapsed";
+  | "lapsed"
+  /** Never paid and never redeemed a trial coupon. No grace buffer at all. */
+  | "unpaid";
 
 export type PlanPeriod = {
   phase: PlanPhase;
@@ -115,13 +117,18 @@ export function describePlanPeriod(input: {
   const due = startOfDay(input.periodEnd);
   const today = startOfDay(input.now ?? new Date());
   const isTrial = input.planStatus === "trial";
+  const isUnpaid = input.planStatus === "unpaid";
 
   const daysUntilDue = wholeDaysBetween(today, due);
   const bufferEnd = addDays(due, GRACE_DAYS);
-  const bufferDaysLeft = bufferLeft(today, bufferEnd);
+  // An account that has never paid and never redeemed a trial coupon gets no
+  // grace buffer at all: it is overdue from the moment it exists, which is
+  // what keeps it locked out of the app (see _authenticated/route.tsx).
+  const bufferDaysLeft = isUnpaid ? 0 : bufferLeft(today, bufferEnd);
 
-  const phase: PlanPhase =
-    daysUntilDue > DUE_SOON_DAYS
+  const phase: PlanPhase = isUnpaid
+    ? "unpaid"
+    : daysUntilDue > DUE_SOON_DAYS
       ? "active"
       : daysUntilDue >= 0
         ? "due_soon"
@@ -133,6 +140,10 @@ export function describePlanPeriod(input: {
   const payWord = isTrial ? "Choose a plan" : "Renew";
 
   const copy: Record<PlanPhase, { title: string; detail: string }> = {
+    unpaid: {
+      title: "Choose a plan to get started",
+      detail: "New accounts need an active paid plan, or a coupon code, before they can be used.",
+    },
     active: {
       title: isTrial
         ? `Free trial runs to ${formatDate(due)}`
@@ -165,7 +176,7 @@ export function describePlanPeriod(input: {
     bufferDaysLeft,
     isTrial,
     needsPayment: phase !== "active",
-    isOverdue: phase === "lapsed",
+    isOverdue: phase === "lapsed" || phase === "unpaid",
     ...copy[phase],
   };
 }

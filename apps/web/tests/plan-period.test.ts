@@ -165,6 +165,24 @@ describe("nextPeriod", () => {
   });
 });
 
+describe("unpaid accounts (no free trial, never redeemed a coupon)", () => {
+  it("is overdue and needs payment immediately, with no grace buffer", () => {
+    const p = on("2026-08-10", "unpaid");
+    expect(p.phase).toBe("unpaid");
+    expect(p.needsPayment).toBe(true);
+    expect(p.isOverdue).toBe(true);
+    expect(p.bufferDaysLeft).toBe(0);
+  });
+
+  it("stays unpaid even long before the stored period end", () => {
+    expect(on("2026-07-01", "unpaid").phase).toBe("unpaid");
+  });
+
+  it("is not confused with a trial", () => {
+    expect(on("2026-08-10", "unpaid").isTrial).toBe(false);
+  });
+});
+
 describe("date handling", () => {
   it("reads a Postgres date column without drifting a day in +05:30", () => {
     // "2026-08-10" parses as UTC midnight while now() is local; a naive

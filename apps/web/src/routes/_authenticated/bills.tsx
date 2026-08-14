@@ -20,7 +20,7 @@ import { downloadBillPdf, downloadMonthPdf, type Bill, type BillContext } from "
 import { computeElectricitySplit, type ElectricitySplit } from "@/lib/electricity-split";
 import { balanceOf, recordPayment } from "@/lib/billing";
 import { generateMonthlyBills, saveBillDrafts } from "@/lib/billing-run.functions";
-import { notifyBillsFn, type NotifyBillResult } from "@/lib/bill-notify.functions";
+import { SendBillDialog, type SendBillDialogState } from "@/components/send-bill-dialog";
 import { RerunTenantBillDialog } from "@/components/rerun-tenant-bill-dialog";
 import { DataPagination, usePagination } from "@/components/data-pagination";
 
@@ -33,6 +33,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveTable, TableSkeleton } from "@/components/responsive-table";
 import { DensityToggle } from "@/components/density-toggle";
 import { EmptyState } from "@/components/empty-state";
+import { PremiumAction } from "@/components/plan-gate";
 import { useDensity } from "@/lib/use-density";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import {
@@ -135,9 +136,9 @@ function BillsPage() {
   const [billSearch, setBillSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedBillIds, setSelectedBillIds] = useState<Set<string>>(new Set());
+  const [sendBillState, setSendBillState] = useState<SendBillDialogState>(null);
   const runBilling = useServerFn(generateMonthlyBills);
   const saveDraftsFn = useServerFn(saveBillDrafts);
-  const notifyBillsServerFn = useServerFn(notifyBillsFn);
 
   const { data, isLoading } = useQuery({
     queryKey: ["billing-base"],
@@ -392,30 +393,6 @@ function BillsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const notifyBills = useMutation({
-    mutationFn: (ids: string[]) => notifyBillsServerFn({ data: { billIds: ids } }),
-    onSuccess: (res: { results: NotifyBillResult[] }) => {
-      const emailOk = res.results.filter((r) => r.email.sent).length;
-      const waOk = res.results.filter((r) => r.whatsapp.sent).length;
-      const failed = res.results.filter((r) => !r.email.sent && !r.whatsapp.sent);
-      if (failed.length === 0) {
-        toast.success(
-          `Notified ${res.results.length} tenant${res.results.length === 1 ? "" : "s"} - ${emailOk} email(s), ${waOk} WhatsApp.`,
-        );
-      } else {
-        const names = failed
-          .slice(0, 3)
-          .map((f) => `${f.tenantName} (${f.email.reason ?? f.whatsapp.reason})`)
-          .join(", ");
-        toast.warning(
-          `${res.results.length - failed.length} of ${res.results.length} notified. ${failed.length} failed: ${names}${failed.length > 3 ? "…" : ""}`,
-        );
-      }
-      setSelectedBillIds(new Set());
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
   const pendingApproval = useMemo(() => (bills ?? []).filter((b) => b.approved === false), [bills]);
 
   const approveBills = useMutation({
@@ -466,10 +443,11 @@ function BillsPage() {
   const { density, setDensity } = useDensity("bills");
   const draftsPage = usePagination(drafts ?? [], 10);
 
+  // Status has its own dropdown (and, on mobile, its own quick-chip row), so
+  // it doesn't also get a removable chip here - that would be two controls
+  // doing the same job. Changing it back is done by picking a different
+  // option, not by clearing a chip.
   const billChips = [
-    ...(statusFilter !== "all"
-      ? [{ label: `Status: ${statusFilter}`, onClear: () => setStatusFilter("all") }]
-      : []),
     ...(billSearch.trim()
       ? [{ label: `Search: ${billSearch.trim()}`, onClear: () => setBillSearch("") }]
       : []),
@@ -712,15 +690,26 @@ function BillsPage() {
             <Button
               variant="outline"
               size="sm"
-              disabled={selectedBillIds.size === 0 || notifyBills.isPending}
-              onClick={() => notifyBills.mutate(Array.from(selectedBillIds))}
+              disabled={selectedBillIds.size === 0}
+              onClick={() => {
+                const candidates = Array.from(selectedBillIds).flatMap((id) => {
+                  const bill = (bills ?? []).find((b) => b.id === id);
+                  if (!bill) return [];
+                  const tenant = tenantById.get(bill.tenant_id);
+                  return [
+                    {
+                      billId: id,
+                      tenantName: tenantName.get(bill.tenant_id) ?? "Tenant",
+                      hasEmail: !!tenant?.email,
+                      hasPhone: !!tenant?.phone,
+                    },
+                  ];
+                });
+                setSendBillState({ candidates });
+              }}
             >
               <Send className="mr-2 h-4 w-4" />
-              {notifyBills.isPending
-                ? "Sending…"
-                : selectedBillIds.size === 0
-                  ? "Send bill"
-                  : `Send bill (${selectedBillIds.size})`}
+              {selectedBillIds.size === 0 ? "Send bill" : `Send bill (${selectedBillIds.size})`}
             </Button>
           </div>
           <FilterBar
@@ -780,19 +769,21 @@ function BillsPage() {
               </SelectContent>
             </Select>
 
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full sm:w-auto"
-              disabled={(bills ?? []).length === 0}
-              onClick={() => {
-                downloadMonthPdf(bills ?? [], pdfContext, month);
-                toast.success(`Exported ${(bills ?? []).length} bills as PDF.`);
-              }}
-            >
-              <FileDown className="mr-2 h-4 w-4" />
-              Export all as PDF
-            </Button>
+            <PremiumAction min="scale" label="Export all as PDF">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full sm:w-auto"
+                disabled={(bills ?? []).length === 0}
+                onClick={() => {
+                  downloadMonthPdf(bills ?? [], pdfContext, month);
+                  toast.success(`Exported ${(bills ?? []).length} bills as PDF.`);
+                }}
+              >
+                <FileDown className="mr-2 h-4 w-4" />
+                Export all as PDF
+              </Button>
+            </PremiumAction>
           </FilterBar>
         </CardHeader>
         <CardContent>
@@ -921,19 +912,32 @@ function BillsPage() {
                               variant="ghost"
                               size="icon"
                               aria-label="Resend bill notification"
-                              disabled={notifyBills.isPending}
-                              onClick={() => notifyBills.mutate([b.id])}
+                              onClick={() => {
+                                const tenant = tenantById.get(b.tenant_id);
+                                setSendBillState({
+                                  candidates: [
+                                    {
+                                      billId: b.id,
+                                      tenantName: tenantName.get(b.tenant_id) ?? "Tenant",
+                                      hasEmail: !!tenant?.email,
+                                      hasPhone: !!tenant?.phone,
+                                    },
+                                  ],
+                                });
+                              }}
                             >
                               <Send className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              aria-label="Download PDF"
-                              onClick={() => downloadBillPdf(b, pdfContext(b))}
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
+                            <PremiumAction min="scale" label="Download PDF">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label="Download PDF"
+                                onClick={() => downloadBillPdf(b, pdfContext(b))}
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </PremiumAction>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -962,6 +966,13 @@ function BillsPage() {
           />
         </CardContent>
       </Card>
+
+      <SendBillDialog
+        state={sendBillState}
+        whatsappAvailable={Boolean(data?.settings?.whatsapp_enabled)}
+        onOpenChange={(open) => !open && setSendBillState(null)}
+        onSent={() => setSelectedBillIds(new Set())}
+      />
     </div>
   );
 }

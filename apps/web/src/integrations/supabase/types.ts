@@ -176,6 +176,89 @@ export type Database = {
           },
         ];
       };
+      coupon_redemptions: {
+        Row: {
+          admin_id: string;
+          coupon_id: string;
+          id: string;
+          redeemed_at: string;
+        };
+        Insert: {
+          admin_id: string;
+          coupon_id: string;
+          id?: string;
+          redeemed_at?: string;
+        };
+        Update: {
+          admin_id?: string;
+          coupon_id?: string;
+          id?: string;
+          redeemed_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "coupon_redemptions_admin_id_fkey";
+            columns: ["admin_id"];
+            isOneToOne: true;
+            referencedRelation: "admins";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "coupon_redemptions_coupon_id_fkey";
+            columns: ["coupon_id"];
+            isOneToOne: false;
+            referencedRelation: "coupons";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      coupons: {
+        Row: {
+          active: boolean;
+          code: string;
+          created_at: string;
+          created_by: string;
+          expires_at: string | null;
+          id: string;
+          max_redemptions: number | null;
+          plan_scope: string;
+          redeemed_count: number;
+          trial_days: number;
+        };
+        Insert: {
+          active?: boolean;
+          code: string;
+          created_at?: string;
+          created_by: string;
+          expires_at?: string | null;
+          id?: string;
+          max_redemptions?: number | null;
+          plan_scope?: string;
+          redeemed_count?: number;
+          trial_days?: number;
+        };
+        Update: {
+          active?: boolean;
+          code?: string;
+          created_at?: string;
+          created_by?: string;
+          expires_at?: string | null;
+          id?: string;
+          max_redemptions?: number | null;
+          plan_scope?: string;
+          redeemed_count?: number;
+          trial_days?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "coupons_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "admins";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       electricity_readings: {
         Row: {
           calculated_amount: number | null;
@@ -746,9 +829,7 @@ export type Database = {
         Row: {
           admin_id: string;
           billing_cycle: string;
-          brand_logo_url: string | null;
           brand_name: string;
-          brand_primary_color: string;
           currency: string;
           current_period_end: string;
           current_period_start: string;
@@ -772,9 +853,7 @@ export type Database = {
         Insert: {
           admin_id?: string;
           billing_cycle?: string;
-          brand_logo_url?: string | null;
           brand_name?: string;
-          brand_primary_color?: string;
           currency?: string;
           current_period_end?: string;
           current_period_start?: string;
@@ -798,9 +877,7 @@ export type Database = {
         Update: {
           admin_id?: string;
           billing_cycle?: string;
-          brand_logo_url?: string | null;
           brand_name?: string;
-          brand_primary_color?: string;
           currency?: string;
           current_period_end?: string;
           current_period_start?: string;
@@ -1032,6 +1109,7 @@ export type Database = {
         Returns: boolean;
       };
       is_super_admin: { Args: { _user_id: string }; Returns: boolean };
+      redeem_coupon: { Args: { _code: string }; Returns: Json };
     };
     Enums: {
       address_proof_type: "Aadhaar" | "Passport" | "Driving License" | "Voter ID";

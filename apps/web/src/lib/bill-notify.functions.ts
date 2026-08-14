@@ -15,7 +15,9 @@ export type NotifyBillResult = { billId: string; tenantName: string } & BillNoti
  */
 export const notifyBillsFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { billIds: string[] }) => input)
+  .inputValidator(
+    (input: { billIds: string[]; channels?: { email: boolean; whatsapp: boolean } }) => input,
+  )
   .handler(async ({ data, context }): Promise<{ results: NotifyBillResult[] }> => {
     if (data.billIds.length === 0) throw new Error("Nothing selected to notify.");
 
@@ -40,7 +42,10 @@ export const notifyBillsFn = createServerFn({ method: "POST" })
     const { notifyTenantAboutBill } = await import("@/lib/bill-notify.server");
     const results: NotifyBillResult[] = [];
     for (const bill of bills) {
-      const res = await notifyTenantAboutBill(context.supabase, bill.id, { updated: false });
+      const res = await notifyTenantAboutBill(context.supabase, bill.id, {
+        updated: false,
+        channels: data.channels,
+      });
       results.push({
         billId: bill.id,
         tenantName: nameById.get(bill.tenant_id) ?? "Tenant",

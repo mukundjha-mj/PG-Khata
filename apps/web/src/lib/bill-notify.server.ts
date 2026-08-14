@@ -75,8 +75,14 @@ function monthLabel(month: string) {
 export async function notifyTenantAboutBill(
   supabase: SupabaseClient<Database>,
   billId: string,
-  options: { updated: boolean },
+  options: {
+    updated: boolean;
+    /** Which channels to attempt. Omitted/undefined means both, for backward compatibility. */
+    channels?: { email: boolean; whatsapp: boolean } | undefined;
+  },
 ): Promise<BillNotifyResult> {
+  const emailWanted = options.channels?.email ?? true;
+  const whatsappWanted = options.channels?.whatsapp ?? true;
   const result: BillNotifyResult = {
     email: { sent: false, reason: "Not attempted" },
     whatsapp: { sent: false, reason: "Not attempted" },
@@ -150,7 +156,9 @@ export async function notifyTenantAboutBill(
   const messageType = "bill-generated" as const;
 
   // Email
-  if (!tenant.email) {
+  if (!emailWanted) {
+    result.email = { sent: false, reason: "Email not selected." };
+  } else if (!tenant.email) {
     result.email = { sent: false, reason: "Tenant has no email address on file." };
   } else {
     const data = {
@@ -179,7 +187,9 @@ export async function notifyTenantAboutBill(
 
   // WhatsApp
   const adminId = propertyRes.data?.admin_id;
-  if (!settingsRes.data?.whatsapp_enabled || !isWhatsAppConfigured()) {
+  if (!whatsappWanted) {
+    result.whatsapp = { sent: false, reason: "WhatsApp not selected." };
+  } else if (!settingsRes.data?.whatsapp_enabled || !isWhatsAppConfigured()) {
     result.whatsapp = { sent: false, reason: "WhatsApp is not enabled for this owner." };
   } else if (!tenant.phone) {
     result.whatsapp = { sent: false, reason: "Tenant has no phone number on file." };

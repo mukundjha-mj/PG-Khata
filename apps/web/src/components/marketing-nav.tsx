@@ -16,7 +16,7 @@ const DEFAULT_LINKS: NavLink[] = [
 
 /**
  * Shared marketing nav: register-mark logo, ledger-style rule beneath it,
- * a rectangular "Start your free month" control, and a Sheet-based mobile
+ * a rectangular "Get started" control, and a Sheet-based mobile
  * menu (kept from the prior accessibility fix — restyled, not re-logic'd).
  */
 export function MarketingNav({ links = DEFAULT_LINKS }: { links?: NavLink[] }) {
@@ -46,7 +46,7 @@ export function MarketingNav({ links = DEFAULT_LINKS }: { links?: NavLink[] }) {
               href={appUrl("/auth")}
               className="border border-ink bg-ink px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-clay hover:border-clay"
             >
-              Start your free month
+              Get started
             </a>
           </div>
           <button
@@ -80,7 +80,7 @@ export function MarketingNav({ links = DEFAULT_LINKS }: { links?: NavLink[] }) {
               href={appUrl("/auth")}
               className="border border-ink bg-clay px-5 py-3 text-center text-sm font-semibold text-paper"
             >
-              Start your free month
+              Get started
             </a>
             <a
               href={appUrl("/auth")}

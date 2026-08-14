@@ -11,6 +11,7 @@ import {
   Search,
   Settings,
   ShieldCheck,
+  Ticket,
   Users,
   X,
 } from "lucide-react";
@@ -19,6 +20,7 @@ import { cn } from "@/lib/utils";
 export type ConsoleTab =
   | "overview"
   | "owners"
+  | "coupons"
   | "revenue"
   | "usage"
   | "health"
@@ -29,6 +31,7 @@ export type ConsoleTab =
 const NAV: { id: ConsoleTab; label: string; icon: typeof LayoutGrid }[] = [
   { id: "overview", label: "Overview", icon: LayoutGrid },
   { id: "owners", label: "PG Owners", icon: Users },
+  { id: "coupons", label: "Coupons", icon: Ticket },
   { id: "revenue", label: "Revenue", icon: BarChart3 },
   { id: "usage", label: "Usage and Cost", icon: Gauge },
   { id: "health", label: "System Health", icon: Activity },

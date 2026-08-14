@@ -141,6 +141,65 @@ export async function overridePlan(db: Admin, adminId: string, plan: string) {
   return { ok: true as const };
 }
 
+export type CouponRow = {
+  id: string;
+  code: string;
+  trial_days: number;
+  plan_scope: string;
+  max_redemptions: number | null;
+  redeemed_count: number;
+  active: boolean;
+  expires_at: string | null;
+  created_at: string;
+};
+
+const COUPON_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I
+
+function generateCouponCode(length = 8): string {
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => COUPON_CODE_ALPHABET[b % COUPON_CODE_ALPHABET.length]).join("");
+}
+
+/** Creates a new Starter-scoped trial coupon with a random code. */
+export async function createCoupon(
+  db: Admin,
+  adminId: string,
+  input: { trialDays: number; maxRedemptions: number | null; expiresAt: string | null },
+): Promise<CouponRow> {
+  const code = generateCouponCode();
+  const { data, error } = await db
+    .from("coupons")
+    .insert({
+      code,
+      trial_days: input.trialDays,
+      max_redemptions: input.maxRedemptions,
+      expires_at: input.expiresAt,
+      created_by: adminId,
+    })
+    .select("*")
+    .single();
+  if (error) throw new Error("Unable to create coupon");
+  return data as CouponRow;
+}
+
+/** Every coupon, newest first. */
+export async function listCoupons(db: Admin): Promise<CouponRow[]> {
+  const { data, error } = await db
+    .from("coupons")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw new Error("Unable to load coupons");
+  return (data ?? []) as CouponRow[];
+}
+
+/** Turns a coupon off. Past redemptions are untouched. */
+export async function deactivateCoupon(db: Admin, couponId: string) {
+  const { error } = await db.from("coupons").update({ active: false }).eq("id", couponId);
+  if (error) throw new Error("Unable to deactivate coupon");
+  return { ok: true as const };
+}
+
 /** Grants or removes the super admin role for an account. */
 export async function setSuperAdmin(db: Admin, adminId: string, enabled: boolean) {
   if (enabled) {

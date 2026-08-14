@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, ArrowRight, History } from "lucide-react";
+import { Check, ArrowRight, History, Ticket } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -16,6 +18,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   pricingPlans,
   includedOnEveryPlan,
@@ -33,6 +43,7 @@ import {
   startPlanRenewal,
   confirmPlanPayment,
   cancelPendingPlanChange,
+  redeemCoupon,
 } from "@/lib/plan.functions";
 import { describePlanPeriod, formatDate, GRACE_DAYS } from "@/lib/plan-period";
 import { BRAND } from "@/lib/site";
@@ -102,12 +113,14 @@ const statusTone: Record<string, string> = {
   active: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
   trial: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
   past_due: "bg-destructive/10 text-destructive",
+  unpaid: "bg-destructive/10 text-destructive",
 };
 
 const statusLabel: Record<string, string> = {
   active: "Paid and active",
   trial: "Free trial",
   past_due: "Payment due",
+  unpaid: "Not activated",
 };
 
 function PlanPage() {
@@ -244,6 +257,18 @@ function PlanPage() {
     onSuccess: () => {
       refresh();
       toast.success("Scheduled change cancelled");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const redeem = useServerFn(redeemCoupon);
+  const [couponCode, setCouponCode] = useState("");
+  const redeemMutation = useMutation({
+    mutationFn: (code: string) => redeem({ data: { code } }),
+    onSuccess: (res) => {
+      refresh();
+      setCouponCode("");
+      toast.success(`Coupon redeemed. ${res.trial_days} day trial started.`);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -413,6 +438,42 @@ function PlanPage() {
           </CardContent>
         </Card>
       )}
+
+      {data?.plan_status === "unpaid" ? (
+        <Card className="border-primary/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Ticket className="h-4 w-4" />
+              Have a coupon code?
+            </CardTitle>
+            <CardDescription>
+              Redeem a trial code to unlock the Starter plan for a limited time. Otherwise, pick a
+              plan below to activate your account.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Label htmlFor="coupon-code" className="sr-only">
+                Coupon code
+              </Label>
+              <Input
+                id="coupon-code"
+                placeholder="Enter coupon code"
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                className="h-11 sm:max-w-xs"
+              />
+              <Button
+                className="h-11 shrink-0"
+                disabled={!couponCode.trim() || redeemMutation.isPending}
+                onClick={() => redeemMutation.mutate(couponCode.trim())}
+              >
+                {redeemMutation.isPending ? "Redeeming..." : "Redeem"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="flex flex-col items-center gap-2">
         <BillingCycleToggle value={billingCycle} onChange={setBillingCycle} />
@@ -608,17 +669,53 @@ function PlanPage() {
         <CardHeader>
           <CardTitle>Compare plans</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {planComparison.map((row) => (
-            <div key={row.feature} className="border-b pb-3 last:border-0 last:pb-0">
-              <p className="text-sm font-medium">{row.feature}</p>
-              <div className="mt-1 grid gap-1 text-sm text-muted-foreground sm:grid-cols-3">
-                <span>Starter: {row.starter}</span>
-                <span>Growing: {row.growing}</span>
-                <span>Scale: {row.scale}</span>
-              </div>
-            </div>
-          ))}
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table className="min-w-[640px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Feature</TableHead>
+                  {planTiers.map((tier) => (
+                    <TableHead
+                      key={tier.key}
+                      className={tier.key === current ? "bg-muted/40 text-foreground" : undefined}
+                    >
+                      {tier.name}
+                      {tier.key === current ? (
+                        <Badge variant="secondary" className="ml-2">
+                          Current
+                        </Badge>
+                      ) : null}
+                    </TableHead>
+                  ))}
+                  <TableHead>{enterprisePlan.name}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {planComparison.map((row) => {
+                  const sameAcrossTiers =
+                    row.starter === row.growing &&
+                    row.growing === row.scale &&
+                    row.scale === row.enterprise;
+                  return (
+                    <TableRow key={row.feature} className={sameAcrossTiers ? "opacity-60" : undefined}>
+                      <TableCell className="font-medium">{row.feature}</TableCell>
+                      <TableCell className={current === "starter" ? "bg-muted/40" : undefined}>
+                        {row.starter}
+                      </TableCell>
+                      <TableCell className={current === "growing" ? "bg-muted/40" : undefined}>
+                        {row.growing}
+                      </TableCell>
+                      <TableCell className={current === "scale" ? "bg-muted/40" : undefined}>
+                        {row.scale}
+                      </TableCell>
+                      <TableCell>{row.enterprise}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -305,6 +305,24 @@ export const cancelPendingPlanChange = createServerFn({ method: "POST" })
   });
 
 /**
+ * Redeems a trial coupon code for the caller's own account. The heavy lifting
+ * (validating the code, one redemption per account, writing plan/plan_status)
+ * happens inside the `redeem_coupon` SECURITY DEFINER function, so this is
+ * just an authenticated pass-through - the plan columns it writes are
+ * otherwise locked to the service role.
+ */
+export const redeemCoupon = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { code: string }) => ({ code: String(input.code ?? "").trim() }))
+  .handler(async ({ data, context }) => {
+    if (!data.code) throw new Error("Enter a coupon code");
+    const { supabase } = context;
+    const { data: result, error } = await supabase.rpc("redeem_coupon", { _code: data.code });
+    if (error) throw new Error(error.message);
+    return result as { ok: true; plan: string; trial_days: number };
+  });
+
+/**
  * This admin's WhatsApp send usage for the current quota window. Reads the
  * caller's own settings row for `plan`/`plan_updated_at`, so the window
  * always matches what checkWhatsAppQuota would gate on at send time.

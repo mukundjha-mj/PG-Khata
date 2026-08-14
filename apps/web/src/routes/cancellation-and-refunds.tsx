@@ -26,8 +26,8 @@ export const Route = createFileRoute("/cancellation-and-refunds")({
 
 const sections = [
   {
-    title: "1. Free trial",
-    body: "Every new account starts with a 14 day free trial with no card required. You can use the Service fully during the trial and decide not to continue at no cost.",
+    title: "1. Trial access",
+    body: "New accounts require an active paid plan before use. Trial access, where offered, is granted only through a coupon code and is not available to every signup.",
   },
   {
     title: "2. Cancelling your subscription",

@@ -11,9 +11,9 @@ export const pricingPlans: PricingPlan[] = [
   {
     name: "Starter",
     price: "Rs. 499",
-    sub: "Up to 15 rooms",
+    sub: "1 property, up to 15 rooms",
     items: [
-      "Unlimited tenants",
+      "Tenants up to your rooms' bed capacity",
       "Email billing",
       "UPI QR payments",
       "Daily backups",
@@ -24,12 +24,12 @@ export const pricingPlans: PricingPlan[] = [
   {
     name: "Growing",
     price: "Rs. 799",
-    sub: "16 to 40 rooms",
+    sub: "Up to 5 properties, up to 40 rooms",
     items: [
       "Everything in Starter",
+      "Unlimited tenants",
       "Automatic payment reminders",
-      "Multi property support",
-      "Priority delivery",
+      "CSV export",
       "500 WhatsApp messages/month",
     ],
     popular: true,
@@ -37,10 +37,10 @@ export const pricingPlans: PricingPlan[] = [
   {
     name: "Scale",
     price: "Rs. 1,499",
-    sub: "41 to 100 rooms",
+    sub: "Up to 15 properties, up to 200 rooms",
     items: [
       "Everything in Growing",
-      "Custom bill templates",
+      "CSV and PDF export",
       "Dedicated onboarding",
       "Priority support",
       "1,500 WhatsApp messages/month",
@@ -51,10 +51,7 @@ export const pricingPlans: PricingPlan[] = [
 
 /** Included on every plan, no matter the tier. */
 export const includedOnEveryPlan: string[] = [
-  "14 day free trial, no card required",
-  "Unlimited tenant records and history",
   "Monthly bill generation with manual approval",
-  "PDF bills and bulk month export",
   "UPI QR collection and payment ledger",
   "Dues, collection and occupancy reports",
   "Electricity meter readings and per unit charges",
@@ -75,13 +72,20 @@ export const planComparison: ComparisonRow[] = [
   {
     feature: "Rooms included",
     starter: "Up to 15",
-    growing: "16 to 40",
-    scale: "41 to 100",
+    growing: "Up to 40",
+    scale: "Up to 200",
     enterprise: "Unlimited",
   },
   {
     feature: "Properties",
     starter: "1",
+    growing: "Up to 5",
+    scale: "Up to 15",
+    enterprise: "Unlimited",
+  },
+  {
+    feature: "Tenants",
+    starter: "Up to your rooms' bed capacity",
     growing: "Unlimited",
     scale: "Unlimited",
     enterprise: "Unlimited",
@@ -102,25 +106,11 @@ export const planComparison: ComparisonRow[] = [
     enterprise: "Scheduled daily",
   },
   {
-    feature: "Custom bill template and logo",
-    starter: "Logo only",
-    growing: "Logo and colors",
-    scale: "Full template",
-    enterprise: "Full template",
-  },
-  {
-    feature: "Rent agreement templates",
-    starter: "Included",
-    growing: "Included",
-    scale: "Included",
-    enterprise: "Included",
-  },
-  {
-    feature: "Data export (CSV and PDF)",
-    starter: "Yes",
-    growing: "Yes",
-    scale: "Yes",
-    enterprise: "Yes",
+    feature: "Data export",
+    starter: "Not included",
+    growing: "CSV",
+    scale: "CSV and PDF",
+    enterprise: "CSV and PDF",
   },
   {
     feature: "Onboarding",
@@ -162,10 +152,10 @@ export type EnterprisePlan = {
 export const enterprisePlan: EnterprisePlan = {
   name: "Enterprise",
   price: "Contact us",
-  sub: "More than 100 rooms",
+  sub: "More than 200 rooms",
   items: [
     "Everything in Scale",
-    "Unlimited rooms and properties",
+    "Unlimited rooms, properties and tenants",
     "Custom WhatsApp message volume",
     "Dedicated account management",
   ],
@@ -184,14 +174,14 @@ export const pricingFaqs: PricingFaq[] = [
   },
   {
     q: "Can I cancel any time?",
-    a: "Yes. Cancel from Settings and you keep access until the end of the paid month. Your data stays exportable as PDF and CSV.",
+    a: "Yes. Cancel from Settings and you keep access until the end of the paid month. Data export (CSV on Growing, CSV and PDF on Scale) stays available while your plan is active.",
   },
   {
     q: "Do you charge for tenants or bills?",
-    a: "No. Tenants, bills, reminders and PDF exports are unlimited on every plan.",
+    a: "No. Bills and reminders are unlimited on every plan. Tenants are unlimited from the Growing plan onward; Starter is limited to your rooms' total bed capacity.",
   },
   {
-    q: "Do you need more than 100 rooms?",
+    q: "Do you need more than 200 rooms?",
     a: "Write to us and we will price a custom plan with the same features plus bulk import and account management.",
   },
 ];
@@ -242,7 +232,7 @@ export const planTiers: PlanTier[] = [
     name: "Growing",
     amount: 799,
     rank: 1,
-    maxProperties: null,
+    maxProperties: 5,
     maxRooms: 40,
     whatsappQuota: 500,
     mrpAmount: 1099,
@@ -253,8 +243,8 @@ export const planTiers: PlanTier[] = [
     name: "Scale",
     amount: 1499,
     rank: 2,
-    maxProperties: null,
-    maxRooms: 100,
+    maxProperties: 15,
+    maxRooms: 200,
     whatsappQuota: 1500,
     mrpAmount: 1999,
     annualAmount: 14990,

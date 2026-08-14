@@ -197,7 +197,7 @@ function LandingPage() {
                 href={appUrl("/auth")}
                 className="inline-flex items-center gap-2.5 border-2 border-ink bg-clay px-7 py-4 text-[15px] font-semibold text-paper shadow-[var(--marketing-shadow)] transition-transform hover:-translate-y-0.5"
               >
-                Start your free month
+                Get started
                 <Arrow />
               </a>
               <a
@@ -460,10 +460,10 @@ function LandingPage() {
                           href={appUrl("/auth")}
                           className="block border-2 border-ink bg-clay py-3 text-center text-[13.5px] font-semibold text-paper"
                         >
-                          Start your free month
+                          Get started
                         </a>
                         <p className="mt-2 text-center text-[11.5px] text-ink/55">
-                          No card required
+                          Billed from day one
                         </p>
                       </td>
                     ))}
@@ -515,13 +515,13 @@ function LandingPage() {
             Stop typing the same bill message thirty times a month.
           </h2>
           <p className="mt-5 mb-8 text-[16px] text-ink/60">
-            Set up your first property free, no card required.
+            Set up your first property in minutes.
           </p>
           <a
             href={appUrl("/auth")}
             className="inline-flex items-center gap-2.5 border-2 border-ink bg-clay px-7 py-4 text-[15px] font-semibold text-paper shadow-[var(--marketing-shadow)] transition-transform hover:-translate-y-0.5"
           >
-            Start your free month
+            Get started
             <Arrow />
           </a>
         </div>

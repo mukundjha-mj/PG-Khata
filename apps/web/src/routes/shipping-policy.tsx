@@ -31,7 +31,7 @@ const sections = [
   },
   {
     title: "2. How access is delivered",
-    body: "Access is delivered digitally and instantly. Once you sign up and verify your email, your account and 14 day free trial are active immediately at app.pgkhata.com. There is no waiting period and no delivery address is needed.",
+    body: "Access is delivered digitally and instantly. Once you sign up, verify your email and activate a paid plan (or redeem a trial coupon code), your account is active immediately at app.pgkhata.com. There is no waiting period and no delivery address is needed.",
   },
   {
     title: "3. Subscription activation",

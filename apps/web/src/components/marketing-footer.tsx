@@ -33,9 +33,6 @@ export function MarketingFooter({ maxWidth = "1180px" }: { maxWidth?: string }) 
             <a href="/#pricing" className={linkClass}>
               Pricing
             </a>
-            <Link to="/blog/pg-rent-agreement-template" className={linkClass}>
-              PG rent agreement template
-            </Link>
           </div>
           <div>
             <h3 className="mb-4 font-marketing-mono text-[12px] font-bold tracking-wide text-ink/50 uppercase">

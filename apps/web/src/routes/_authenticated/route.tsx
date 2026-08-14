@@ -8,7 +8,7 @@ import { PropertyScopeProvider } from "@/lib/property-scope";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
-  beforeLoad: async () => {
+  beforeLoad: async ({ location }) => {
     // The generated route tree imports every route module eagerly, so a static
     // import here would put the Supabase client in the shared entry chunk and
     // ship it to marketing visitors who never sign in.
@@ -22,6 +22,18 @@ export const Route = createFileRoute("/_authenticated")({
       .eq("id", data.user.id)
       .maybeSingle();
     if (platform) throw redirect({ to: "/console" });
+    // A signup with no active plan and no redeemed coupon never sees the
+    // dashboard: it lands on the plan page to pay or redeem a code first. The
+    // plan page itself is exempt, since this beforeLoad also runs for it - a
+    // plain redirect there would loop forever.
+    if (location.pathname !== "/plan") {
+      const { data: settings } = await supabase
+        .from("settings")
+        .select("plan_status")
+        .eq("admin_id", data.user.id)
+        .maybeSingle();
+      if (settings?.plan_status === "unpaid") throw redirect({ to: "/plan" });
+    }
     return { user: data.user };
   },
   component: AuthenticatedLayout,

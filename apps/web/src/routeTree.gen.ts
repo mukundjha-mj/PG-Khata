@@ -33,7 +33,6 @@ import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedRoomsRouteImport } from './routes/_authenticated/rooms'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedTenantsRouteImport } from './routes/_authenticated/tenants'
-import { Route as BlogPgRentAgreementTemplateRouteImport } from './routes/blog/pg-rent-agreement-template'
 import { Route as ComplaintTokenRouteImport } from './routes/complaint.$token'
 import { Route as SignupTokenRouteImport } from './routes/signup.$token'
 import { Route as AuthenticatedTenantTenantIdRouteImport } from './routes/_authenticated/tenant.$tenantId'
@@ -165,12 +164,6 @@ const AuthenticatedTenantsRoute = AuthenticatedTenantsRouteImport.update({
   path: '/tenants',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const BlogPgRentAgreementTemplateRoute =
-  BlogPgRentAgreementTemplateRouteImport.update({
-    id: '/blog/pg-rent-agreement-template',
-    path: '/blog/pg-rent-agreement-template',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ComplaintTokenRoute = ComplaintTokenRouteImport.update({
   id: '/complaint/$token',
   path: '/complaint/$token',
@@ -252,7 +245,6 @@ export interface FileRoutesByFullPath {
   '/rooms': typeof AuthenticatedRoomsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/tenants': typeof AuthenticatedTenantsRoute
-  '/blog/pg-rent-agreement-template': typeof BlogPgRentAgreementTemplateRoute
   '/complaint/$token': typeof ComplaintTokenRoute
   '/signup/$token': typeof SignupTokenRoute
   '/tenant/$tenantId': typeof AuthenticatedTenantTenantIdRoute
@@ -288,7 +280,6 @@ export interface FileRoutesByTo {
   '/rooms': typeof AuthenticatedRoomsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/tenants': typeof AuthenticatedTenantsRoute
-  '/blog/pg-rent-agreement-template': typeof BlogPgRentAgreementTemplateRoute
   '/complaint/$token': typeof ComplaintTokenRoute
   '/signup/$token': typeof SignupTokenRoute
   '/tenant/$tenantId': typeof AuthenticatedTenantTenantIdRoute
@@ -326,7 +317,6 @@ export interface FileRoutesById {
   '/_authenticated/rooms': typeof AuthenticatedRoomsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/tenants': typeof AuthenticatedTenantsRoute
-  '/blog/pg-rent-agreement-template': typeof BlogPgRentAgreementTemplateRoute
   '/complaint/$token': typeof ComplaintTokenRoute
   '/signup/$token': typeof SignupTokenRoute
   '/_authenticated/tenant/$tenantId': typeof AuthenticatedTenantTenantIdRoute
@@ -364,7 +354,6 @@ export interface FileRouteTypes {
     | '/rooms'
     | '/settings'
     | '/tenants'
-    | '/blog/pg-rent-agreement-template'
     | '/complaint/$token'
     | '/signup/$token'
     | '/tenant/$tenantId'
@@ -400,7 +389,6 @@ export interface FileRouteTypes {
     | '/rooms'
     | '/settings'
     | '/tenants'
-    | '/blog/pg-rent-agreement-template'
     | '/complaint/$token'
     | '/signup/$token'
     | '/tenant/$tenantId'
@@ -437,7 +425,6 @@ export interface FileRouteTypes {
     | '/_authenticated/rooms'
     | '/_authenticated/settings'
     | '/_authenticated/tenants'
-    | '/blog/pg-rent-agreement-template'
     | '/complaint/$token'
     | '/signup/$token'
     | '/_authenticated/tenant/$tenantId'
@@ -463,7 +450,6 @@ export interface RootRouteChildren {
   ShippingPolicyRoute: typeof ShippingPolicyRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
-  BlogPgRentAgreementTemplateRoute: typeof BlogPgRentAgreementTemplateRoute
   ComplaintTokenRoute: typeof ComplaintTokenRoute
   SignupTokenRoute: typeof SignupTokenRoute
   ApiPublicHooksComplaintSubmitRoute: typeof ApiPublicHooksComplaintSubmitRoute
@@ -645,13 +631,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTenantsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/blog/pg-rent-agreement-template': {
-      id: '/blog/pg-rent-agreement-template'
-      path: '/blog/pg-rent-agreement-template'
-      fullPath: '/blog/pg-rent-agreement-template'
-      preLoaderRoute: typeof BlogPgRentAgreementTemplateRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/complaint/$token': {
       id: '/complaint/$token'
       path: '/complaint/$token'
@@ -773,7 +752,6 @@ const rootRouteChildren: RootRouteChildren = {
   ShippingPolicyRoute: ShippingPolicyRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
-  BlogPgRentAgreementTemplateRoute: BlogPgRentAgreementTemplateRoute,
   ComplaintTokenRoute: ComplaintTokenRoute,
   SignupTokenRoute: SignupTokenRoute,
   ApiPublicHooksComplaintSubmitRoute: ApiPublicHooksComplaintSubmitRoute,

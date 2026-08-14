@@ -133,15 +133,10 @@ function ComplaintsPage() {
             onSelect: () => setStatusFilter(s),
           })),
         ]}
+        // Status has its own dropdown and quick-chip row above, so it
+        // doesn't also get a removable chip here - that would be two
+        // controls doing the same job.
         chips={[
-          ...(statusFilter !== "all"
-            ? [
-                {
-                  label: `Status: ${COMPLAINT_STATUS_LABEL[statusFilter as (typeof COMPLAINT_STATUSES)[number]]}`,
-                  onClear: () => setStatusFilter("all"),
-                },
-              ]
-            : []),
           ...(search.trim()
             ? [{ label: `Search: ${search.trim()}`, onClear: () => setSearch("") }]
             : []),

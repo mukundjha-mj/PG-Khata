@@ -31,6 +31,7 @@ import { DataPagination, usePagination } from "@/components/data-pagination";
 import { ResponsiveTable, TableSkeleton } from "@/components/responsive-table";
 import { DensityToggle } from "@/components/density-toggle";
 import { EmptyState } from "@/components/empty-state";
+import { PremiumAction } from "@/components/plan-gate";
 import { useDensity } from "@/lib/use-density";
 import { RecordPaymentDialog, type PaymentTarget } from "@/components/record-payment-dialog";
 
@@ -207,15 +208,11 @@ function PaymentsPage() {
 
   const loading = isLoading || directory.isLoading;
 
+  // Status has its own dropdown right above, so it doesn't also get a
+  // removable chip here - that would be two controls doing the same job.
+  // Changing the status filter back is done by picking a different option in
+  // the dropdown itself, not by clearing a chip.
   const chips = [
-    ...(filter !== "outstanding"
-      ? [
-          {
-            label: filter === "all" ? "All bills" : STATUS_LABEL[filter],
-            onClear: () => setFilter("outstanding" as Filter),
-          },
-        ]
-      : []),
     ...(search.trim() ? [{ label: `Search: ${search.trim()}`, onClear: () => setSearch("") }] : []),
   ];
 
@@ -348,29 +345,31 @@ function PaymentsPage() {
                 <SelectItem value="all">All bills</SelectItem>
               </SelectContent>
             </Select>
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full sm:w-auto"
-              disabled={rows.length === 0}
-              onClick={() =>
-                downloadCsv("dues.csv", [
-                  ["Tenant", "Month", "Total", "Paid", "Balance", "Due date", "Status"],
-                  ...rows.map((b) => [
-                    nameOf(b),
-                    b.bill_month,
-                    Number(b.total_amount),
-                    Number(b.paid_amount),
-                    balanceOf(b),
-                    b.due_date ?? "",
-                    STATUS_LABEL[displayStatus(b)],
-                  ]),
-                ])
-              }
-            >
-              <FileDown className="mr-2 h-4 w-4" />
-              CSV
-            </Button>
+            <PremiumAction min="growing" label="Export CSV">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full sm:w-auto"
+                disabled={rows.length === 0}
+                onClick={() =>
+                  downloadCsv("dues.csv", [
+                    ["Tenant", "Month", "Total", "Paid", "Balance", "Due date", "Status"],
+                    ...rows.map((b) => [
+                      nameOf(b),
+                      b.bill_month,
+                      Number(b.total_amount),
+                      Number(b.paid_amount),
+                      balanceOf(b),
+                      b.due_date ?? "",
+                      STATUS_LABEL[displayStatus(b)],
+                    ]),
+                  ])
+                }
+              >
+                <FileDown className="mr-2 h-4 w-4" />
+                CSV
+              </Button>
+            </PremiumAction>
           </FilterBar>
         </CardHeader>
         <CardContent>

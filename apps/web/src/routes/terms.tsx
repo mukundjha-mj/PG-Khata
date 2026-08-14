@@ -39,7 +39,7 @@ const sections = [
   },
   {
     title: "4. Subscription, trial and payment",
-    body: "New accounts get a 14 day free trial with no card required. After the trial, continued use requires an active paid plan, billed monthly in advance and priced by the number of rooms on your account, as shown on the pricing page at the time of purchase. Subscription payments are processed by Razorpay; we do not store your card or bank details.",
+    body: "New accounts require an active paid plan before use, billed monthly in advance and priced as shown on the pricing page at the time of purchase. Trial access, where offered, is granted only through a coupon code, not automatically at signup. Subscription payments are processed by Razorpay; we do not store your card or bank details.",
   },
   {
     title: "5. Changing or cancelling your plan",

@@ -18,12 +18,14 @@ const tone: Record<Exclude<PlanPhase, "active">, string> = {
   due_soon: "border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-100",
   grace: "border-amber-500/40 bg-amber-500/15 text-amber-900 dark:text-amber-100",
   lapsed: "border-destructive/40 bg-destructive/10 text-destructive",
+  unpaid: "border-destructive/40 bg-destructive/10 text-destructive",
 };
 
 const icon: Record<Exclude<PlanPhase, "active">, typeof Clock> = {
   due_soon: Clock,
   grace: Clock,
   lapsed: AlertTriangle,
+  unpaid: AlertTriangle,
 };
 
 export function PlanStatusBanner() {
