@@ -59,7 +59,13 @@ function ReadingsPage() {
   const [reading, setReading] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
 
-  const rate = Number(directory.data?.settings?.electricity_rate_per_unit ?? 0);
+  const defaultRate = Number(directory.data?.settings?.electricity_rate_per_unit ?? 0);
+  const rateForRoom = (roomIdToRate: string) => {
+    const room = directory.roomById.get(roomIdToRate);
+    const property = room ? directory.propertyById.get(room.property_id) : undefined;
+    return Number(property?.electricity_rate_per_unit ?? defaultRate);
+  };
+  const rate = roomId ? rateForRoom(roomId) : defaultRate;
 
   const { data: readings, isLoading } = useQuery({
     queryKey: ["readings"],
@@ -152,7 +158,7 @@ function ReadingsPage() {
         <h1 className="page-title">Electricity readings</h1>
         <p className="page-subtitle">
           Log the meter for each room. Units since the previous reading auto-fill the next bill run
-          at {formatMoney(rate)}/unit.
+          at {formatMoney(defaultRate)}/unit by default, or a property's own rate if it has one.
         </p>
       </div>
 

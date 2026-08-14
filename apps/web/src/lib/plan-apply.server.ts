@@ -1,5 +1,5 @@
-import { computeProration } from "@/lib/plan-proration";
-import { formatDate, nextPeriod } from "@/lib/plan-period";
+import { computeProration, type BillingCycle } from "@/lib/plan-proration";
+import { formatDate, nextPeriod, CYCLE_DAYS, ANNUAL_CYCLE_DAYS } from "@/lib/plan-period";
 import { planRank, tierByKey } from "@/lib/pricing-plans";
 
 /**
@@ -21,6 +21,8 @@ import { planRank, tierByKey } from "@/lib/pricing-plans";
 const isRenewalOrder = (currentPlan: string, targetPlan: string) =>
   planRank(targetPlan) <= planRank(currentPlan);
 
+const cycleDaysFor = (cycle: BillingCycle) => (cycle === "annual" ? ANNUAL_CYCLE_DAYS : CYCLE_DAYS);
+
 export type ApplyPaymentResult = {
   ok: true;
   plan: string;
@@ -40,7 +42,7 @@ export async function applyPaidPayment(input: {
 
   const { data: payment, error } = await supabaseAdmin
     .from("plan_payments")
-    .select("id, admin_id, target_plan, amount, status")
+    .select("id, admin_id, target_plan, amount, status, billing_cycle")
     .eq("provider_order_id", input.orderId)
     .maybeSingle();
   if (error) throw error;
@@ -48,6 +50,7 @@ export async function applyPaidPayment(input: {
 
   const adminId = payment.admin_id;
   const previousStatus = payment.status;
+  const paymentCycle: BillingCycle = payment.billing_cycle === "annual" ? "annual" : "monthly";
 
   // Claim the payment before touching the account. The filter on status is what
   // makes this safe: Postgres re-evaluates it after the competing UPDATE
@@ -70,7 +73,9 @@ export async function applyPaidPayment(input: {
   try {
     const { data: settings, error: sErr } = await supabaseAdmin
       .from("settings")
-      .select("plan, plan_status, current_period_start, current_period_end, pending_plan")
+      .select(
+        "plan, plan_status, current_period_start, current_period_end, pending_plan, billing_cycle",
+      )
       .eq("admin_id", adminId)
       .maybeSingle();
     if (sErr) throw sErr;
@@ -88,13 +93,19 @@ export async function applyPaidPayment(input: {
     };
 
     if (renewal) {
-      // A renewal buys the next cycle, so the period dates move. An upgrade
-      // keeps them: it was already prorated against this cycle.
-      const upcoming = nextPeriod({ periodEnd: settings.current_period_end });
+      // A renewal buys the next cycle at whatever cadence this payment was
+      // for, so both the period length and the account's stored cadence move
+      // together. An upgrade keeps them: it was already prorated against
+      // this cycle without changing cadence.
+      const upcoming = nextPeriod({
+        periodEnd: settings.current_period_end,
+        cycleDays: cycleDaysFor(paymentCycle),
+      });
       const { error: upErr } = await supabaseAdmin
         .from("settings")
         .update({
           ...base,
+          billing_cycle: paymentCycle,
           current_period_start: upcoming.start,
           current_period_end: upcoming.end,
         })
@@ -109,6 +120,7 @@ export async function applyPaidPayment(input: {
         to_plan: payment.target_plan,
         direction: "renewal",
         amount: payment.amount,
+        billing_cycle: paymentCycle,
         credit_applied: 0,
         days_remaining: 0,
         note: moved
@@ -122,16 +134,21 @@ export async function applyPaidPayment(input: {
         source: input.source,
         adminId,
         plan: payment.target_plan,
+        billingCycle: paymentCycle,
         periodEnd: upcoming.end,
       });
       return { ok: true, plan: payment.target_plan, periodEnd: upcoming.end, applied: true };
     }
 
+    // An upgrade never changes cadence mid-cycle - prorate against whatever
+    // the account is already paying for.
+    const currentCycle: BillingCycle = settings.billing_cycle === "annual" ? "annual" : "monthly";
     const proration = computeProration({
       from: settings.plan,
       to: payment.target_plan,
       periodStart: settings.current_period_start,
       periodEnd: settings.current_period_end,
+      billingCycle: currentCycle,
     });
 
     const { error: upErr } = await supabaseAdmin
@@ -146,6 +163,7 @@ export async function applyPaidPayment(input: {
       to_plan: payment.target_plan,
       direction: "upgrade",
       amount: payment.amount,
+      billing_cycle: currentCycle,
       credit_applied: proration.creditApplied,
       days_remaining: proration.daysRemaining,
       note: proration.summary,

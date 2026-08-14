@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  ANNUAL_CYCLE_DAYS,
   CYCLE_DAYS,
   DUE_SOON_DAYS,
   GRACE_DAYS,
@@ -127,6 +128,40 @@ describe("nextPeriod", () => {
   it("keeps renewing early from the existing end date", () => {
     // Paying a week early must not shorten the cycle the owner already paid for.
     expect(nextPeriod({ periodEnd: DUE, now: new Date("2026-08-03T12:00:00") }).start).toBe(DUE);
+  });
+
+  it("defaults to CYCLE_DAYS when cycleDays is omitted, so every existing call site keeps working unchanged", () => {
+    const withDefault = nextPeriod({ periodEnd: DUE, now: new Date("2026-08-15T12:00:00") });
+    const withExplicit = nextPeriod({
+      periodEnd: DUE,
+      now: new Date("2026-08-15T12:00:00"),
+      cycleDays: CYCLE_DAYS,
+    });
+    expect(withDefault).toEqual(withExplicit);
+  });
+
+  it("buys a 365 day cycle when cycleDays is annual, anchoring the same way as monthly", () => {
+    const p = nextPeriod({
+      periodEnd: DUE,
+      now: new Date("2026-08-15T12:00:00"),
+      cycleDays: ANNUAL_CYCLE_DAYS,
+    });
+    expect(p.anchored).toBe(true);
+    expect(p.start).toBe("2026-08-10");
+    const days = (new Date(p.end).getTime() - new Date(p.start).getTime()) / 86_400_000;
+    expect(days).toBe(ANNUAL_CYCLE_DAYS);
+  });
+
+  it("restarts an annual cycle from today once the buffer is gone, same as monthly", () => {
+    const p = nextPeriod({
+      periodEnd: DUE,
+      now: new Date("2026-09-01T12:00:00"),
+      cycleDays: ANNUAL_CYCLE_DAYS,
+    });
+    expect(p.anchored).toBe(false);
+    expect(p.start).toBe("2026-09-01");
+    const days = (new Date(p.end).getTime() - new Date(p.start).getTime()) / 86_400_000;
+    expect(days).toBe(ANNUAL_CYCLE_DAYS);
   });
 });
 

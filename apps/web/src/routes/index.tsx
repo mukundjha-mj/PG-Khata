@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
 import {
@@ -6,11 +6,16 @@ import {
   includedOnEveryPlan,
   planComparison,
   pricingFaqs,
+  tierByKey,
+  planTiers,
+  enterprisePlan,
 } from "@/lib/pricing-plans";
+import { rupees, type BillingCycle } from "@/lib/plan-proration";
 import { onAdminHost } from "@/lib/admin-host";
 import { BRAND, appUrl, siteUrl } from "@/lib/site";
 import { MarketingNav } from "@/components/marketing-nav";
 import { MarketingFooter } from "@/components/marketing-footer";
+import { BillingCycleToggle } from "@/components/billing-cycle-toggle";
 
 export const Route = createFileRoute("/")({
   beforeLoad: () => {
@@ -48,7 +53,7 @@ export const Route = createFileRoute("/")({
           description: "Billing and tenant management for PG and hostel owners across India.",
           offers: {
             "@type": "Offer",
-            price: "499",
+            price: String(tierByKey("starter").amount),
             priceCurrency: "INR",
           },
         }),
@@ -170,6 +175,7 @@ function RefTag({ children }: { children: React.ReactNode }) {
 
 function LandingPage() {
   useReveal();
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
 
   return (
     <div className="marketing min-h-screen overflow-x-hidden bg-cream font-marketing-body text-ink">
@@ -271,11 +277,16 @@ function LandingPage() {
           </h2>
           <div className="mt-12 grid gap-px overflow-hidden border border-cream/15 md:grid-cols-3">
             {painPoints.map((p) => (
-              <div key={p.entry} className="border-cream/15 bg-ink p-8 md:border-r last:md:border-r-0">
+              <div
+                key={p.entry}
+                className="border-cream/15 bg-ink p-8 md:border-r last:md:border-r-0"
+              >
                 <span className="font-marketing-mono text-[12px] font-bold tracking-[0.08em] text-clay">
                   ENTRY {p.entry}
                 </span>
-                <h3 className="mt-3 mb-2 font-marketing-display text-[19px] font-bold">{p.title}</h3>
+                <h3 className="mt-3 mb-2 font-marketing-display text-[19px] font-bold">
+                  {p.title}
+                </h3>
                 <p className="text-[14.5px] leading-relaxed text-cream/60">{p.body}</p>
               </div>
             ))}
@@ -353,7 +364,14 @@ function LandingPage() {
             No setup fees. No per tenant charges hidden in the fine print. Cancel any time.
           </p>
 
-          <div className="mt-10 overflow-hidden border-2 border-ink">
+          <div className="mt-8 flex flex-col items-start gap-2">
+            <BillingCycleToggle value={billingCycle} onChange={setBillingCycle} />
+            {billingCycle === "annual" ? (
+              <p className="text-[13px] text-ink/60">Pay yearly and get roughly 2 months free.</p>
+            ) : null}
+          </div>
+
+          <div className="mt-6 overflow-hidden border-2 border-ink">
             <div className="w-full overflow-x-auto">
               <table className="w-full min-w-[640px] border-collapse text-left">
                 <thead>
@@ -361,27 +379,56 @@ function LandingPage() {
                     <th className="px-6 py-4 font-marketing-mono text-[12px] font-bold tracking-[0.06em] text-ink/70 uppercase">
                       Tariff slab
                     </th>
-                    {plans.map((p) => (
-                      <th key={p.name} className="px-6 py-4 text-left">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-marketing-display text-[15px] font-bold text-ink uppercase">
-                            {p.name}
-                          </span>
-                          {p.popular && <span className="stamp">Recommended</span>}
-                        </div>
-                        <p className="mt-1 font-marketing-mono text-[22px] font-bold text-ink">
-                          {p.price}
-                          <span className="text-[12px] font-normal text-ink/50">/mo</span>
-                        </p>
-                        <p className="mt-0.5 text-[12px] text-ink/55">{p.sub}</p>
-                      </th>
-                    ))}
+                    {plans.map((p) => {
+                      const tier = planTiers.find((t) => t.name === p.name)!;
+                      const annualPrice = tier.annualAmount ?? tier.amount * 12;
+                      const showingAnnual = billingCycle === "annual";
+                      return (
+                        <th key={p.name} className="px-6 py-4 text-left">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-marketing-display text-[15px] font-bold text-ink uppercase">
+                              {p.name}
+                            </span>
+                            {p.popular && <span className="stamp">Recommended</span>}
+                          </div>
+                          {showingAnnual ? (
+                            <>
+                              <p className="mt-1 font-marketing-mono text-[22px] font-bold text-ink">
+                                {rupees(annualPrice)}
+                                <span className="text-[12px] font-normal text-ink/50">/yr</span>
+                              </p>
+                              <p className="text-[11.5px] text-ink/50">
+                                <span className="line-through">{rupees(tier.amount * 12)}</span>{" "}
+                                about {rupees(annualPrice / 12)}/mo
+                              </p>
+                            </>
+                          ) : (
+                            <p className="mt-1 font-marketing-mono text-[22px] font-bold text-ink">
+                              {p.price}
+                              <span className="text-[12px] font-normal text-ink/50">/mo</span>
+                            </p>
+                          )}
+                          <p className="mt-0.5 text-[12px] text-ink/55">{p.sub}</p>
+                        </th>
+                      );
+                    })}
+                    <th className="px-6 py-4 text-left">
+                      <span className="font-marketing-display text-[15px] font-bold text-ink uppercase">
+                        {enterprisePlan.name}
+                      </span>
+                      <p className="mt-1 font-marketing-mono text-[22px] font-bold text-ink">
+                        {enterprisePlan.price}
+                      </p>
+                      <p className="mt-0.5 text-[12px] text-ink/55">{enterprisePlan.sub}</p>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {planComparison.map((row) => {
                     const sameAcrossTiers =
-                      row.starter === row.growing && row.growing === row.scale;
+                      row.starter === row.growing &&
+                      row.growing === row.scale &&
+                      row.scale === row.enterprise;
                     return (
                       <tr
                         key={row.feature}
@@ -398,6 +445,9 @@ function LandingPage() {
                         </td>
                         <td className="px-6 py-4 font-marketing-mono text-[13.5px] text-ink/70">
                           {row.scale}
+                        </td>
+                        <td className="px-6 py-4 font-marketing-mono text-[13.5px] text-ink/70">
+                          {row.enterprise}
                         </td>
                       </tr>
                     );
@@ -417,6 +467,17 @@ function LandingPage() {
                         </p>
                       </td>
                     ))}
+                    <td className="px-6 py-5">
+                      <a
+                        href="/contact-us"
+                        className="block border-2 border-ink bg-paper py-3 text-center text-[13.5px] font-semibold text-ink"
+                      >
+                        Contact us
+                      </a>
+                      <p className="mt-2 text-center text-[11.5px] text-ink/55">
+                        We'll price it with you
+                      </p>
+                    </td>
                   </tr>
                 </tbody>
               </table>

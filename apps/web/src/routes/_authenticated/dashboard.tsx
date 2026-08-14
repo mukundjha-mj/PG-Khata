@@ -11,11 +11,13 @@ import {
   UserPlus,
   AlertTriangle,
   Plus,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { getScheduledReminders, cancelReminderFn } from "@/lib/reminders.functions";
+import { getMyWhatsAppQuotaStatus } from "@/lib/plan.functions";
 import { PersonalReminderDialog } from "@/components/personal-reminder-dialog";
 import { PropertyScopeSwitcher } from "@/components/property-scope-switcher";
 import { usePropertyScope } from "@/lib/property-scope";
@@ -23,6 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/empty-state";
 import { MessageSquareWarning } from "lucide-react";
 import { effectiveRent, formatDate, formatMoney, occupancyOf } from "@/lib/pg";
@@ -140,10 +143,17 @@ function Dashboard() {
   const queryClient = useQueryClient();
   const getScheduledRemindersFn = useServerFn(getScheduledReminders);
   const cancelReminderServerFn = useServerFn(cancelReminderFn);
+  const getQuotaStatus = useServerFn(getMyWhatsAppQuotaStatus);
   const [personalReminderOpen, setPersonalReminderOpen] = useState(false);
   const { data: scheduledReminders } = useQuery({
     queryKey: ["scheduled-reminders"],
     queryFn: () => getScheduledRemindersFn(),
+  });
+  // Shares the "whatsapp-quota-status" query key with Settings, so both read
+  // the same cached value instead of issuing a duplicate request.
+  const { data: quota } = useQuery({
+    queryKey: ["whatsapp-quota-status"],
+    queryFn: () => getQuotaStatus({}),
   });
   const dismissReminder = useMutation({
     mutationFn: (id: string) => cancelReminderServerFn({ data: { id } }),
@@ -318,6 +328,38 @@ function Dashboard() {
         tenants={activeTenants.map((t) => ({ id: t.id, fullName: t.full_name }))}
         onOpenChange={setPersonalReminderOpen}
       />
+
+      {quota && quota.limit !== null ? (
+        <Card className={quota.remaining === 0 ? "border-warning/40 bg-warning/5" : ""}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="flex items-center gap-2">
+              <MessageCircle className="h-4 w-4 text-muted-foreground" />
+              WhatsApp quota
+            </CardTitle>
+            <Button asChild size="sm" variant="ghost">
+              <Link to="/settings">
+                Settings <ArrowRight className="ml-1 h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-baseline justify-between text-sm">
+              <span className="text-muted-foreground">Sent this month</span>
+              <span className="font-medium tabular-nums">
+                {quota.used} / {quota.limit}
+              </span>
+            </div>
+            <Progress value={Math.min(100, (quota.used / quota.limit) * 100)} />
+            {quota.remaining === 0 ? (
+              <p className="text-xs text-destructive">
+                Quota reached - new WhatsApp sends are skipped until next month or an upgrade.
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">{quota.remaining} messages left.</p>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card
         className={openComplaints && openComplaints > 0 ? "border-warning/40 bg-warning/5" : ""}

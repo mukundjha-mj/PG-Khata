@@ -2,9 +2,16 @@ import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
-import { computeProration } from "@/lib/plan-proration";
-import { describePlanPeriod, formatDate, nextPeriod } from "@/lib/plan-period";
+import { computeProration, type BillingCycle } from "@/lib/plan-proration";
+import {
+  describePlanPeriod,
+  formatDate,
+  nextPeriod,
+  CYCLE_DAYS,
+  ANNUAL_CYCLE_DAYS,
+} from "@/lib/plan-period";
 import { planRank, tierByKey } from "@/lib/pricing-plans";
+import { getWhatsAppQuotaStatus, type QuotaStatus } from "@/lib/whatsapp-quota.server";
 
 type SettingsRow = {
   plan: string;
@@ -12,6 +19,7 @@ type SettingsRow = {
   current_period_start: string;
   current_period_end: string;
   pending_plan: string | null;
+  billing_cycle: BillingCycle;
 };
 
 const validPlan = (p: unknown) => {
@@ -20,13 +28,28 @@ const validPlan = (p: unknown) => {
   return key;
 };
 
+const validCycle = (c: unknown): BillingCycle | undefined => {
+  if (c === undefined || c === null) return undefined;
+  if (c === "monthly" || c === "annual") return c;
+  throw new Error("Unknown billing cycle");
+};
+
+/** Amount and cycle length for one tier at the given cadence. */
+function cyclePricing(tier: { amount: number; annualAmount?: number }, cycle: BillingCycle) {
+  return cycle === "annual"
+    ? { amount: tier.annualAmount ?? tier.amount, cycleDays: ANNUAL_CYCLE_DAYS }
+    : { amount: tier.amount, cycleDays: CYCLE_DAYS };
+}
+
 async function loadSettings(
   supabase: SupabaseClient<Database>,
   adminId: string,
 ): Promise<SettingsRow> {
   const { data, error } = await supabase
     .from("settings")
-    .select("plan, plan_status, current_period_start, current_period_end, pending_plan")
+    .select(
+      "plan, plan_status, current_period_start, current_period_end, pending_plan, billing_cycle",
+    )
     .eq("admin_id", adminId)
     .maybeSingle();
   if (error) throw error;
@@ -35,14 +58,18 @@ async function loadSettings(
 }
 
 /**
- * Starts a renewal for the next billing cycle. Charges the full month at list
+ * Starts a renewal for the next billing cycle. Charges the full cycle at list
  * price, so there is no proration: this buys a fresh cycle rather than changing
  * tier mid-cycle. A scheduled downgrade is honoured here, which is the point at
- * which it takes effect.
+ * which it takes effect. Defaults to whatever cadence the account is already
+ * on, so a plain "renew" never silently switches monthly to annual or back.
  */
 export const startPlanRenewal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((input: { billingCycle?: string } = {}) => ({
+    billingCycle: validCycle(input.billingCycle),
+  }))
+  .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const settings = await loadSettings(supabase, userId);
 
@@ -68,21 +95,29 @@ export const startPlanRenewal = createServerFn({ method: "POST" })
     const isScheduledDowngrade = !!scheduled && planRank(scheduled) < planRank(settings.plan);
     const targetPlan = validPlan(isScheduledDowngrade ? scheduled : settings.plan);
     const tier = tierByKey(targetPlan);
-    const upcoming = nextPeriod({ periodEnd: settings.current_period_end });
+    const billingCycle = data.billingCycle ?? settings.billing_cycle ?? "monthly";
+    const { amount, cycleDays } = cyclePricing(tier, billingCycle);
+    const upcoming = nextPeriod({ periodEnd: settings.current_period_end, cycleDays });
 
     const { createRazorpayOrder, razorpayCreds } = await import("@/lib/plan-checkout.server");
     const { keyId } = razorpayCreds();
     const order = await createRazorpayOrder({
-      amountInPaise: Math.round(tier.amount * 100),
+      amountInPaise: Math.round(amount * 100),
       receipt: `rnw_${userId.slice(0, 8)}_${Date.now()}`,
-      notes: { admin_id: userId, to_plan: targetPlan, kind: "renewal" },
+      notes: {
+        admin_id: userId,
+        to_plan: targetPlan,
+        kind: "renewal",
+        billing_cycle: billingCycle,
+      },
     });
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error: payErr } = await supabaseAdmin.from("plan_payments").insert({
       admin_id: userId,
       target_plan: targetPlan,
-      amount: tier.amount,
+      amount,
+      billing_cycle: billingCycle,
       provider_order_id: order.id,
       status: "created",
     });
@@ -95,6 +130,7 @@ export const startPlanRenewal = createServerFn({ method: "POST" })
       currency: order.currency,
       keyId,
       planName: tier.name,
+      billingCycle,
       /** What the cycle becomes once this payment lands. */
       nextPeriodEnd: upcoming.end,
     };
@@ -103,16 +139,23 @@ export const startPlanRenewal = createServerFn({ method: "POST" })
 /** Starts a plan change. Downgrades apply at renewal, upgrades return a Razorpay order. */
 export const startPlanChange = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { toPlan: string }) => ({ toPlan: validPlan(input.toPlan) }))
+  .inputValidator((input: { toPlan: string; billingCycle?: string }) => ({
+    toPlan: validPlan(input.toPlan),
+    billingCycle: validCycle(input.billingCycle),
+  }))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const settings = await loadSettings(supabase, userId);
+    // A tier change stays on whatever cadence the account is already paying -
+    // switching monthly/annual itself only happens at renewal (see plan doc).
+    const billingCycle = data.billingCycle ?? settings.billing_cycle ?? "monthly";
 
     const proration = computeProration({
       from: settings.plan,
       to: data.toPlan,
       periodStart: settings.current_period_start,
       periodEnd: settings.current_period_end,
+      billingCycle,
     });
 
     if (proration.direction === "same") throw new Error("You are already on this plan");
@@ -129,6 +172,7 @@ export const startPlanChange = createServerFn({ method: "POST" })
         to_plan: proration.to,
         direction: "downgrade",
         amount: 0,
+        billing_cycle: billingCycle,
         credit_applied: proration.creditApplied,
         days_remaining: proration.daysRemaining,
         note: proration.summary,
@@ -152,6 +196,7 @@ export const startPlanChange = createServerFn({ method: "POST" })
         to_plan: proration.to,
         direction: "upgrade",
         amount: 0,
+        billing_cycle: billingCycle,
         credit_applied: proration.creditApplied,
         days_remaining: proration.daysRemaining,
         note: "Upgrade applied with no charge, unused credit covered the difference.",
@@ -172,6 +217,7 @@ export const startPlanChange = createServerFn({ method: "POST" })
       admin_id: userId,
       target_plan: data.toPlan,
       amount: proration.amountDue,
+      billing_cycle: billingCycle,
       provider_order_id: order.id,
       status: "created",
     });
@@ -256,4 +302,25 @@ export const cancelPendingPlanChange = createServerFn({ method: "POST" })
       .eq("admin_id", userId);
     if (error) throw error;
     return { ok: true as const };
+  });
+
+/**
+ * This admin's WhatsApp send usage for the current quota window. Reads the
+ * caller's own settings row for `plan`/`plan_updated_at`, so the window
+ * always matches what checkWhatsAppQuota would gate on at send time.
+ */
+export const getMyWhatsAppQuotaStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<QuotaStatus> => {
+    const { supabase, userId } = context;
+    const { data, error } = await supabase
+      .from("settings")
+      .select("plan, plan_updated_at")
+      .eq("admin_id", userId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return { used: 0, limit: null, remaining: null };
+
+    const tier = tierByKey(data.plan ?? "starter");
+    return getWhatsAppQuotaStatus(supabase, userId, tier, data.plan_updated_at);
   });

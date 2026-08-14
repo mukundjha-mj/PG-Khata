@@ -25,6 +25,7 @@ import {
   STATUS_STYLE,
   monthLabel,
   type Bill,
+  type DisplayStatus,
 } from "@/lib/billing";
 import { DataPagination, usePagination } from "@/components/data-pagination";
 import { ResponsiveTable, TableSkeleton } from "@/components/responsive-table";
@@ -71,7 +72,7 @@ export const Route = createFileRoute("/_authenticated/payments")({
   component: PaymentsPage,
 });
 
-type Filter = "outstanding" | "overdue" | "all";
+type Filter = DisplayStatus | "all" | "outstanding";
 
 function PaymentsPage() {
   const directory = useDirectory();
@@ -185,7 +186,7 @@ function PaymentsPage() {
     return (bills ?? []).filter((b) => {
       const st = displayStatus(b);
       if (filter === "outstanding" && st === "paid") return false;
-      if (filter === "overdue" && st !== "overdue") return false;
+      if (filter !== "outstanding" && filter !== "all" && st !== filter) return false;
       if (!q) return true;
       return nameOf(b).toLowerCase().includes(q) || b.bill_month.includes(q);
     });
@@ -210,7 +211,7 @@ function PaymentsPage() {
     ...(filter !== "outstanding"
       ? [
           {
-            label: filter === "overdue" ? "Overdue only" : "All bills",
+            label: filter === "all" ? "All bills" : STATUS_LABEL[filter],
             onClear: () => setFilter("outstanding" as Filter),
           },
         ]
@@ -323,19 +324,6 @@ function PaymentsPage() {
             className="sm:w-auto"
             chips={chips}
             onReset={resetFilters}
-            quickChips={[
-              {
-                label: "Outstanding",
-                active: filter === "outstanding",
-                onSelect: () => setFilter("outstanding"),
-              },
-              {
-                label: "Overdue only",
-                active: filter === "overdue",
-                onSelect: () => setFilter("overdue"),
-              },
-              { label: "All bills", active: filter === "all", onSelect: () => setFilter("all") },
-            ]}
           >
             <div className="relative sm:w-48">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -353,7 +341,10 @@ function PaymentsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="outstanding">Outstanding</SelectItem>
-                <SelectItem value="overdue">Overdue only</SelectItem>
+                <SelectItem value="pending">{STATUS_LABEL.pending}</SelectItem>
+                <SelectItem value="partially-paid">{STATUS_LABEL["partially-paid"]}</SelectItem>
+                <SelectItem value="overdue">{STATUS_LABEL.overdue}</SelectItem>
+                <SelectItem value="paid">{STATUS_LABEL.paid}</SelectItem>
                 <SelectItem value="all">All bills</SelectItem>
               </SelectContent>
             </Select>

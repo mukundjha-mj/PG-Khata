@@ -14,6 +14,7 @@ export type PlanChangeRow = {
   to_plan: string;
   direction: string;
   amount: number;
+  billing_cycle?: string;
   credit_applied: number;
   days_remaining: number;
   note: string;
@@ -51,20 +52,26 @@ export const directionLabel = (direction: string) =>
 /** The billing breakdown shown both on screen and in the PDF. */
 export function receiptLines(row: PlanChangeRow): ReceiptLine[] {
   const to = tierByKey(row.to_plan);
+  const isAnnual = row.billing_cycle === "annual";
+  const cycleWord = isAnnual ? "one year" : "one month";
+  const cycleLength = isAnnual ? "365 days" : "30 days";
+  const listPriceWord = isAnnual ? "annual list price" : "monthly list price";
+  const toAmount = isAnnual ? (to.annualAmount ?? to.amount) : to.amount;
 
   // A renewal buys a whole cycle at list price, so the from/to and remaining-day
   // comparisons a proration receipt needs would all read as zero or identical.
   if (row.direction === "renewal") {
     return [
-      { label: `${to.name} plan, one month`, value: money(to.amount) },
-      { label: "Billing cycle", value: "30 days" },
+      { label: `${to.name} plan, ${cycleWord}`, value: money(toAmount) },
+      { label: "Billing cycle", value: cycleLength },
     ];
   }
 
   const from = tierByKey(row.from_plan);
+  const fromAmount = isAnnual ? (from.annualAmount ?? from.amount) : from.amount;
   const lines: ReceiptLine[] = [
-    { label: `${to.name} plan, monthly list price`, value: money(to.amount) },
-    { label: `Previous plan (${from.name}), monthly list price`, value: money(from.amount) },
+    { label: `${to.name} plan, ${listPriceWord}`, value: money(toAmount) },
+    { label: `Previous plan (${from.name}), ${listPriceWord}`, value: money(fromAmount) },
     { label: "Days remaining in billing period", value: String(row.days_remaining) },
   ];
   if (Number(row.credit_applied) > 0) {

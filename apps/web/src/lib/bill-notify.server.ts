@@ -8,6 +8,8 @@ import {
   type ElectricitySplit,
 } from "@/lib/electricity-split";
 import { isWhatsAppConfigured, sendTenantWhatsApp } from "@/lib/whatsapp.server";
+import { checkWhatsAppQuota } from "@/lib/whatsapp-quota.server";
+import { tierByKey } from "@/lib/pricing-plans";
 
 export type ChannelResult = { sent: boolean; reason?: string };
 export type BillNotifyResult = { email: ChannelResult; whatsapp: ChannelResult };
@@ -99,11 +101,7 @@ export async function notifyTenantAboutBill(
       .select("id, full_name, email, phone, room_id")
       .eq("id", bill.tenant_id)
       .maybeSingle(),
-    supabase
-      .from("properties")
-      .select("name, admin_id")
-      .eq("id", bill.property_id)
-      .maybeSingle(),
+    supabase.from("properties").select("name, admin_id").eq("id", bill.property_id).maybeSingle(),
   ]);
   const tenant = tenantRes.data;
   if (!tenant) {
@@ -119,7 +117,7 @@ export async function notifyTenantAboutBill(
     propertyRes.data?.admin_id
       ? supabase
           .from("settings")
-          .select("upi_vpa, whatsapp_enabled, whatsapp_country_code")
+          .select("upi_vpa, whatsapp_enabled, whatsapp_country_code, plan, plan_updated_at")
           .eq("admin_id", propertyRes.data.admin_id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
@@ -180,32 +178,46 @@ export async function notifyTenantAboutBill(
   }
 
   // WhatsApp
+  const adminId = propertyRes.data?.admin_id;
   if (!settingsRes.data?.whatsapp_enabled || !isWhatsAppConfigured()) {
     result.whatsapp = { sent: false, reason: "WhatsApp is not enabled for this owner." };
   } else if (!tenant.phone) {
     result.whatsapp = { sent: false, reason: "Tenant has no phone number on file." };
+  } else if (!adminId) {
+    result.whatsapp = { sent: false, reason: "Property owner not found." };
   } else {
-    result.whatsapp = await sendTenantWhatsApp(supabase, {
-      tenantId: tenant.id,
-      billId: bill.id,
-      phone: tenant.phone,
-      dialCode: settingsRes.data.whatsapp_country_code ?? "91",
-      template: buildBillWhatsAppTemplate({
-        tenantName: tenant.full_name,
-        monthLabel: label,
-        propertyName,
-        roomNumber,
-        rentAmount: Number(bill.rent_amount),
-        electricityAmount: Number(bill.electricity_amount),
-        electricityUnits: Number(bill.electricity_units_consumed ?? 0),
-        electricitySplit,
-        otherChargesTotal,
-        totalAmount: Number(bill.total_amount),
-        dueDate: bill.due_date,
-        upiVpa: settingsRes.data.upi_vpa,
-      }),
-      messageType,
-    });
+    const quota = await checkWhatsAppQuota(
+      supabase,
+      adminId,
+      tierByKey(settingsRes.data.plan ?? "starter"),
+      settingsRes.data.plan_updated_at,
+    );
+    if (!quota.allowed) {
+      result.whatsapp = { sent: false, reason: quota.reason };
+    } else {
+      result.whatsapp = await sendTenantWhatsApp(supabase, {
+        tenantId: tenant.id,
+        adminId,
+        billId: bill.id,
+        phone: tenant.phone,
+        dialCode: settingsRes.data.whatsapp_country_code ?? "91",
+        template: buildBillWhatsAppTemplate({
+          tenantName: tenant.full_name,
+          monthLabel: label,
+          propertyName,
+          roomNumber,
+          rentAmount: Number(bill.rent_amount),
+          electricityAmount: Number(bill.electricity_amount),
+          electricityUnits: Number(bill.electricity_units_consumed ?? 0),
+          electricitySplit,
+          otherChargesTotal,
+          totalAmount: Number(bill.total_amount),
+          dueDate: bill.due_date,
+          upiVpa: settingsRes.data.upi_vpa,
+        }),
+        messageType,
+      });
+    }
   }
 
   return result;

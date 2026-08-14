@@ -11,6 +11,7 @@ export type PlanSettings = {
   last_payment_amount: number;
   last_payment_at: string | null;
   plan_updated_at: string | null;
+  billing_cycle: "monthly" | "annual";
 };
 
 export function usePlanSettings() {
@@ -20,7 +21,7 @@ export function usePlanSettings() {
       const { data, error } = await supabase
         .from("settings")
         .select(
-          "plan, plan_status, pending_plan, current_period_start, current_period_end, last_payment_amount, last_payment_at, plan_updated_at",
+          "plan, plan_status, pending_plan, current_period_start, current_period_end, last_payment_amount, last_payment_at, plan_updated_at, billing_cycle",
         )
         .maybeSingle();
       if (error) throw error;

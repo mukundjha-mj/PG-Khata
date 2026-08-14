@@ -18,8 +18,11 @@ export const GRACE_DAYS = 7;
 /** How early to start nudging, before current_period_end. */
 export const DUE_SOON_DAYS = 5;
 
-/** Length of a billing cycle, in days. Matches the column default. */
+/** Length of a monthly billing cycle, in days. Matches the column default. */
 export const CYCLE_DAYS = 30;
+
+/** Length of an annual billing cycle, in days. */
+export const ANNUAL_CYCLE_DAYS = 365;
 
 export type PlanPhase =
   /** Paid and comfortably inside the period. */
@@ -175,7 +178,12 @@ export function describePlanPeriod(input: {
  * account is treated as a restart and gets a full cycle from today, so nobody
  * pays for days that have already passed.
  */
-export function nextPeriod(input: { periodEnd: string | Date; now?: Date }): {
+export function nextPeriod(input: {
+  periodEnd: string | Date;
+  now?: Date;
+  /** Length of the cycle being bought. Defaults to a monthly cycle. */
+  cycleDays?: number;
+}): {
   start: string;
   end: string;
   /** True when the old renewal day was kept. */
@@ -187,7 +195,7 @@ export function nextPeriod(input: { periodEnd: string | Date; now?: Date }): {
   const start = anchored ? due : today;
   return {
     start: toDateString(start),
-    end: toDateString(addDays(start, CYCLE_DAYS)),
+    end: toDateString(addDays(start, input.cycleDays ?? CYCLE_DAYS)),
     anchored,
   };
 }

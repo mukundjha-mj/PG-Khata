@@ -56,6 +56,7 @@ export async function sendTenantWhatsApp(
   supabase: SupabaseClient<Database>,
   args: {
     tenantId: string;
+    adminId: string;
     billId?: string | null;
     phone: string;
     dialCode?: string;
@@ -142,6 +143,7 @@ async function logAttempt(
   supabase: SupabaseClient<Database>,
   args: {
     tenantId: string;
+    adminId: string;
     billId?: string | null;
     messageType: Database["public"]["Enums"]["message_type"];
   },
@@ -149,6 +151,7 @@ async function logAttempt(
 ) {
   await supabase.from("notification_logs").insert({
     tenant_id: args.tenantId,
+    admin_id: args.adminId,
     bill_id: args.billId ?? null,
     channel: "whatsapp",
     message_type: args.messageType,

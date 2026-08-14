@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { usePropertyScope } from "@/lib/property-scope";
+import { usePlan } from "@/lib/use-plan";
+import { checkRoomLimit } from "@/lib/plan-limits";
 import { ROOM_TYPES, formatMoney, occupancyOf, type Room } from "@/lib/pg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,10 +80,12 @@ function RoomsPage() {
   const queryClient = useQueryClient();
   const { selectedPropertyId } = usePropertyScope();
   const propertyFilter = selectedPropertyId ?? "all";
+  const { tier } = usePlan();
   const { density, setDensity } = useDensity("rooms");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Room | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Room | null>(null);
+  const [limitReason, setLimitReason] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>({
     property_id: "",
     room_number: "",
@@ -172,6 +176,11 @@ function RoomsPage() {
   });
 
   function openNew() {
+    const check = checkRoomLimit(tier, data?.rooms.length ?? 0);
+    if (!check.allowed) {
+      setLimitReason(check.reason);
+      return;
+    }
     setEditing(null);
     setDraft({
       property_id: propertyFilter !== "all" ? propertyFilter : (properties?.[0]?.id ?? ""),
@@ -380,7 +389,7 @@ function RoomsPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="r-rent">Monthly rent (₹)</Label>
+                <Label htmlFor="r-rent">Monthly rent per tenant (₹)</Label>
                 <Input
                   id="r-rent"
                   type="number"
@@ -390,6 +399,14 @@ function RoomsPage() {
                 />
               </div>
             </div>
+            {draft.capacity > 0 && draft.monthly_rent > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Each tenant in this room is billed the full {formatMoney(draft.monthly_rent)} - rent
+                is not split across beds. For reference, that's ~
+                {formatMoney(draft.monthly_rent / draft.capacity)}/bed if divided evenly across{" "}
+                {draft.capacity} bed{draft.capacity === 1 ? "" : "s"}.
+              </p>
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="r-size">Room size (optional)</Label>
               <Input
@@ -423,6 +440,21 @@ function RoomsPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => deleteTarget && remove.mutate(deleteTarget.id)}>
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!limitReason} onOpenChange={(o) => !o && setLimitReason(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>You've reached your plan's room limit</AlertDialogTitle>
+            <AlertDialogDescription>{limitReason}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Not now</AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Link to="/plan">See plans and upgrade</Link>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

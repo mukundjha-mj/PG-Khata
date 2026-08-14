@@ -222,8 +222,12 @@ function BillsPage() {
 
   const billedTenantIds = useMemo(() => new Set((bills ?? []).map((b) => b.tenant_id)), [bills]);
 
-  const rate = Number(data?.settings?.electricity_rate_per_unit ?? 0);
+  const defaultRate = Number(data?.settings?.electricity_rate_per_unit ?? 0);
   const dueOffset = Number(data?.settings?.due_date_offset_days ?? 10);
+
+  /** A property's own rate if it has one, else the account's Settings default. */
+  const rateForProperty = (propertyId: string) =>
+    Number(propertyById.get(propertyId)?.electricity_rate_per_unit ?? defaultRate);
 
   // Every bill for this month is already loaded, so the room's total units
   // and occupancy can be reconstructed here without another query - the same
@@ -273,11 +277,13 @@ function BillsPage() {
         const roomUnits = unitsByRoom.get(t.room_id) ?? 0;
         const share = tenantsPerRoom.get(t.room_id) || 1;
         const units = Math.round((roomUnits / share) * 100) / 100;
+        const propertyId = room?.property_id ?? "";
+        const rate = rateForProperty(propertyId);
         return {
           tenant_id: t.id,
           tenant_name: t.full_name,
           room_number: room?.room_number ?? "-",
-          property_id: room?.property_id ?? "",
+          property_id: propertyId,
           rent_amount: effectiveRent(t, room),
           electricity_units: units,
           electricity_amount: Math.round(units * rate * 100) / 100,
@@ -295,6 +301,7 @@ function BillsPage() {
             if (d.tenant_id !== id) return d;
             const next = { ...d, ...patch };
             if (patch.electricity_units !== undefined) {
+              const rate = rateForProperty(d.property_id);
               next.electricity_amount = Math.round(patch.electricity_units * rate * 100) / 100;
             }
             return next;
@@ -685,8 +692,9 @@ function BillsPage() {
               label="draft bills"
             />
             <p className="mt-3 text-xs text-muted-foreground">
-              Electricity is priced at {formatMoney(rate)}/unit and due dates are set {dueOffset}{" "}
-              days after the cycle ends - both come from Settings.
+              Electricity is priced at {formatMoney(defaultRate)}/unit by default (a property with
+              its own rate uses that instead) and due dates are set {dueOffset} days after the
+              cycle ends.
             </p>
           </CardContent>
         </Card>

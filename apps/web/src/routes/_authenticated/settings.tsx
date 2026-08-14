@@ -1,16 +1,19 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { LogOut, QrCode } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { isValidVpa } from "@/lib/upi";
 import { extractPhoneDigitsForEditing, isValidIndianMobileDigits } from "@/lib/contact-validation";
+import { getMyWhatsAppQuotaStatus } from "@/lib/plan.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import { PhoneField } from "@/components/phone-field";
 import { BrandingSettingsCard } from "@/components/branding-settings-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +52,7 @@ type ProfileDraft = {
 function SettingsPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const getQuotaStatus = useServerFn(getMyWhatsAppQuotaStatus);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [profileDraft, setProfileDraft] = useState<ProfileDraft | null>(null);
 
@@ -71,6 +75,12 @@ function SettingsPage() {
       if (error) throw error;
       return data;
     },
+  });
+
+  const { data: quota } = useQuery({
+    queryKey: ["whatsapp-quota-status"],
+    queryFn: () => getQuotaStatus({}),
+    enabled: !!data?.whatsapp_enabled,
   });
 
   useEffect(() => {
@@ -400,6 +410,28 @@ function SettingsPage() {
                     onCheckedChange={(v) => setDraft({ ...draft, whatsapp_enabled: v })}
                   />
                 </div>
+
+                {draft.whatsapp_enabled && quota ? (
+                  <div className="space-y-1.5 rounded-md border border-border px-3 py-2.5">
+                    <div className="flex items-center justify-between text-sm">
+                      <p className="font-medium">Monthly WhatsApp quota</p>
+                      <p className="text-muted-foreground">
+                        {quota.limit === null
+                          ? `${quota.used} sent this month`
+                          : `${quota.used} of ${quota.limit} used`}
+                      </p>
+                    </div>
+                    {quota.limit !== null ? (
+                      <Progress value={Math.min(100, (quota.used / quota.limit) * 100)} />
+                    ) : null}
+                    <p className="text-xs text-muted-foreground">
+                      {quota.limit === null
+                        ? "Your plan has no monthly WhatsApp limit."
+                        : "Resets at the start of next month, or immediately if you change plans."}
+                    </p>
+                  </div>
+                ) : null}
+
                 <Button
                   className="w-full sm:w-auto"
                   onClick={() => save.mutate()}

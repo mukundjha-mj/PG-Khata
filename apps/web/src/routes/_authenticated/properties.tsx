@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Property } from "@/lib/pg";
+import { usePlan } from "@/lib/use-plan";
+import { checkPropertyLimit } from "@/lib/plan-limits";
 import { ShareLinkCard } from "@/components/share-link-card";
 import {
   getSignupLink,
@@ -69,16 +71,25 @@ type Draft = {
   address: string;
   city: string;
   electricity_mode: string;
+  electricity_rate_per_unit: string;
 };
 
-const emptyDraft: Draft = { name: "", address: "", city: "", electricity_mode: "flat" };
+const emptyDraft: Draft = {
+  name: "",
+  address: "",
+  city: "",
+  electricity_mode: "flat",
+  electricity_rate_per_unit: "",
+};
 
 function PropertiesPage() {
   const queryClient = useQueryClient();
+  const { tier } = usePlan();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Property | null>(null);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [deleteTarget, setDeleteTarget] = useState<Property | null>(null);
+  const [limitReason, setLimitReason] = useState<string | null>(null);
 
   const { data: properties, isLoading } = useQuery({
     queryKey: ["properties"],
@@ -92,11 +103,20 @@ function PropertiesPage() {
   const save = useMutation({
     mutationFn: async () => {
       if (!draft.name.trim()) throw new Error("Property name is required");
+      const payload = {
+        name: draft.name,
+        address: draft.address,
+        city: draft.city,
+        electricity_mode: draft.electricity_mode,
+        electricity_rate_per_unit: draft.electricity_rate_per_unit.trim()
+          ? Number(draft.electricity_rate_per_unit)
+          : null,
+      };
       if (editing) {
-        const { error } = await supabase.from("properties").update(draft).eq("id", editing.id);
+        const { error } = await supabase.from("properties").update(payload).eq("id", editing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("properties").insert(draft);
+        const { error } = await supabase.from("properties").insert(payload);
         if (error) throw error;
       }
     },
@@ -124,6 +144,11 @@ function PropertiesPage() {
   });
 
   function openNew() {
+    const check = checkPropertyLimit(tier, properties?.length ?? 0);
+    if (!check.allowed) {
+      setLimitReason(check.reason);
+      return;
+    }
     setEditing(null);
     setDraft(emptyDraft);
     setOpen(true);
@@ -136,6 +161,8 @@ function PropertiesPage() {
       address: p.address,
       city: p.city,
       electricity_mode: p.electricity_mode,
+      electricity_rate_per_unit:
+        p.electricity_rate_per_unit === null ? "" : String(Number(p.electricity_rate_per_unit)),
     });
     setOpen(true);
   }
@@ -247,6 +274,25 @@ function PropertiesPage() {
                 </Select>
               </div>
             </div>
+            {draft.electricity_mode === "meter" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="p-rate">Electricity rate (₹ per unit)</Label>
+                <Input
+                  id="p-rate"
+                  type="number"
+                  min={0}
+                  step="0.5"
+                  value={draft.electricity_rate_per_unit}
+                  onChange={(e) =>
+                    setDraft({ ...draft, electricity_rate_per_unit: e.target.value })
+                  }
+                  placeholder="Uses your default rate from Settings"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Leave blank to use your default rate from Settings.
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>
@@ -271,6 +317,21 @@ function PropertiesPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => deleteTarget && remove.mutate(deleteTarget.id)}>
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!limitReason} onOpenChange={(o) => !o && setLimitReason(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>You've reached your plan's property limit</AlertDialogTitle>
+            <AlertDialogDescription>{limitReason}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Not now</AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Link to="/plan">See plans and upgrade</Link>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

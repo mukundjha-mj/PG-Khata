@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { BRAND } from "@/lib/site";
+import { tierByKey } from "@/lib/pricing-plans";
 
 export type AccountRow = {
   id: string;
@@ -175,8 +176,6 @@ export type PlatformStats = {
   planRevenueCaptured: number;
 };
 
-const planPrice: Record<string, number> = { starter: 499, growing: 799, scale: 1499 };
-
 /** Platform-wide research numbers across every owner account. */
 export async function loadPlatformStats(db: Admin): Promise<PlatformStats> {
   const now = new Date();
@@ -186,7 +185,7 @@ export async function loadPlatformStats(db: Admin): Promise<PlatformStats> {
   const [admins, settings, properties, rooms, tenants, bills, payments, planPayments] =
     await Promise.all([
       db.from("admins").select("id, created_at"),
-      db.from("settings").select("admin_id, plan, plan_status"),
+      db.from("settings").select("admin_id, plan, plan_status, billing_cycle"),
       db.from("properties").select("id"),
       db.from("rooms").select("id"),
       db.from("tenants").select("id, status"),
@@ -218,7 +217,12 @@ export async function loadPlatformStats(db: Admin): Promise<PlatformStats> {
     if (key in planCounts) planCounts[key] += 1;
     if (s.plan_status === "active") {
       payingOwners += 1;
-      mrr += planPrice[s.plan] ?? 0;
+      const tier = tierByKey(s.plan ?? "starter");
+      // An annual subscriber pays once a year, not once a month - normalize
+      // to a monthly-equivalent figure so MRR stays comparable across both
+      // cadences instead of being skewed by however many owners prepay.
+      mrr +=
+        s.billing_cycle === "annual" ? (tier.annualAmount ?? tier.amount * 12) / 12 : tier.amount;
     } else if (s.plan_status === "trial") {
       trialOwners += 1;
     }

@@ -22,9 +22,12 @@ import {
   planComparison,
   planTiers,
   tierByKey,
+  enterprisePlan,
 } from "@/lib/pricing-plans";
-import { computeProration, rupees, type Proration } from "@/lib/plan-proration";
+import { computeProration, rupees, type Proration, type BillingCycle } from "@/lib/plan-proration";
 import { usePlanSettings } from "@/lib/use-plan";
+import { PriceTag } from "@/components/price-tag";
+import { BillingCycleToggle } from "@/components/billing-cycle-toggle";
 import {
   startPlanChange,
   startPlanRenewal,
@@ -111,6 +114,12 @@ function PlanPage() {
   const queryClient = useQueryClient();
   const { data, isLoading, isError, refetch } = usePlanSettings();
   const [target, setTarget] = useState<string | null>(null);
+  // Browsing toggle for the tier-card prices and what Renew buys next. A
+  // same-cycle tier change (Upgrade/Downgrade) always stays on the account's
+  // actual current cadence, never this toggle - cadence itself only changes
+  // at renewal, so there is no partial-year-against-partial-month proration
+  // to reconcile.
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
 
   const start = useServerFn(startPlanChange);
   const renewPlan = useServerFn(startPlanRenewal);
@@ -121,8 +130,15 @@ function PlanPage() {
     void loadRazorpay();
   }, []);
 
+  // Once the account's real cadence loads, default the toggle to match it -
+  // an annual subscriber should land on the Annually tab, not Monthly.
+  useEffect(() => {
+    if (data?.billing_cycle) setBillingCycle(data.billing_cycle);
+  }, [data?.billing_cycle]);
+
   const current = data?.plan ?? "starter";
   const currentTier = tierByKey(current);
+  const accountCycle: BillingCycle = data?.billing_cycle ?? "monthly";
 
   const preview: Proration | null = useMemo(() => {
     if (!target || !data) return null;
@@ -131,8 +147,9 @@ function PlanPage() {
       to: target,
       periodStart: data.current_period_start,
       periodEnd: data.current_period_end,
+      billingCycle: accountCycle,
     });
-  }, [target, data, current]);
+  }, [target, data, current, accountCycle]);
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["plan-settings"] });
@@ -207,11 +224,11 @@ function PlanPage() {
   });
 
   const renew = useMutation({
-    mutationFn: async () => {
-      const res = await renewPlan({});
+    mutationFn: async (cycle: BillingCycle) => {
+      const res = await renewPlan({ data: { billingCycle: cycle } });
       await openCheckout({
         ...res,
-        description: `${res.planName} plan, one month`,
+        description: `${res.planName} plan, ${cycle === "annual" ? "one year" : "one month"}`,
       });
       return res;
     },
@@ -327,8 +344,16 @@ function PlanPage() {
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-3">
             <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Monthly price</p>
-              <p className="subsection-title">{rupees(currentTier.amount)}</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                {accountCycle === "annual" ? "Annual price" : "Monthly price"}
+              </p>
+              <p className="subsection-title">
+                {rupees(
+                  accountCycle === "annual"
+                    ? (currentTier.annualAmount ?? currentTier.amount)
+                    : currentTier.amount,
+                )}
+              </p>
             </div>
             <div>
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Next renewal</p>
@@ -357,11 +382,15 @@ function PlanPage() {
                 <Button
                   className="h-11 shrink-0 md:h-9"
                   disabled={renew.isPending}
-                  onClick={() => renew.mutate()}
+                  onClick={() => renew.mutate(accountCycle)}
                 >
                   {renew.isPending
                     ? "Opening checkout..."
-                    : `Pay ${rupees(renewingTier.amount)} for a month`}
+                    : `Pay ${rupees(
+                        accountCycle === "annual"
+                          ? (renewingTier.annualAmount ?? renewingTier.amount)
+                          : renewingTier.amount,
+                      )} for ${accountCycle === "annual" ? "a year" : "a month"}`}
                 </Button>
               </div>
             ) : null}
@@ -385,11 +414,20 @@ function PlanPage() {
         </Card>
       )}
 
+      <div className="flex flex-col items-center gap-2">
+        <BillingCycleToggle value={billingCycle} onChange={setBillingCycle} />
+        {billingCycle === "annual" ? (
+          <p className="text-xs text-muted-foreground">Pay yearly and get roughly 2 months free.</p>
+        ) : null}
+      </div>
+
       <div className="grid gap-4 lg:grid-cols-3">
         {planTiers.map((tier) => {
           const p = pricingPlans.find((x) => x.name === tier.name)!;
           const isCurrent = tier.key === current;
           const isUpgrade = tier.rank > tierByKey(current).rank;
+          const showingAnnual = billingCycle === "annual";
+          const annualPrice = tier.annualAmount ?? tier.amount * 12;
           return (
             <Card key={tier.key} className={isCurrent ? "border-primary shadow-sm" : undefined}>
               <CardHeader>
@@ -398,10 +436,23 @@ function PlanPage() {
                   {isCurrent ? <Badge variant="secondary">Current</Badge> : null}
                 </CardTitle>
                 <CardDescription>{p.sub}</CardDescription>
-                <p className="stat-value pt-2">
-                  {rupees(tier.amount)}
-                  <span className="text-sm font-normal text-muted-foreground">/month</span>
-                </p>
+                <div className="space-y-1 pt-2">
+                  {showingAnnual ? (
+                    <>
+                      <PriceTag mrp={tier.amount * 12} salePrice={annualPrice} />
+                      <p className="text-xs text-muted-foreground">
+                        {rupees(annualPrice)}/year - about {rupees(annualPrice / 12)}/month
+                      </p>
+                    </>
+                  ) : tier.mrpAmount ? (
+                    <PriceTag mrp={tier.mrpAmount} salePrice={tier.amount} />
+                  ) : (
+                    <p className="stat-value">
+                      {rupees(tier.amount)}
+                      <span className="text-sm font-normal text-muted-foreground">/month</span>
+                    </p>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <ul className="space-y-2">
@@ -426,7 +477,7 @@ function PlanPage() {
                   {isCurrent
                     ? `Renews ${renewal}`
                     : isUpgrade
-                      ? "Pay only for the days left in this cycle."
+                      ? `Pay only for the days left in this ${accountCycle === "annual" ? "year" : "cycle"}.`
                       : "No charge today, starts at your next renewal."}
                 </p>
               </CardContent>
@@ -434,6 +485,30 @@ function PlanPage() {
           );
         })}
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{enterprisePlan.name}</CardTitle>
+          <CardDescription>{enterprisePlan.sub}</CardDescription>
+          <p className="stat-value pt-2">{enterprisePlan.price}</p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ul className="space-y-2">
+            {enterprisePlan.items.map((it) => (
+              <li key={it} className="flex items-start gap-2 text-sm">
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                {it}
+              </li>
+            ))}
+          </ul>
+          <Button asChild className="h-11 w-full" variant="secondary">
+            <Link to="/contact-us">Contact us</Link>
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            We'll price it with you based on how many rooms and properties you run.
+          </p>
+        </CardContent>
+      </Card>
 
       <Dialog open={!!target} onOpenChange={(o) => (o ? null : setTarget(null))}>
         <DialogContent className="max-w-md">
@@ -495,10 +570,11 @@ function PlanPage() {
             price applies. Nothing is charged today and no refund is issued.
           </p>
           <p>
-            <strong className="text-foreground">Renewals</strong> are charged a month at a time at
-            list price, with no proration. You get {GRACE_DAYS} buffer days after your renewal date
-            to pay, and the app keeps working normally through them. Paying inside the buffer keeps
-            your existing billing date, so it never drifts earlier month after month.
+            <strong className="text-foreground">Renewals</strong> are charged{" "}
+            {accountCycle === "annual" ? "a year" : "a month"} at a time at list price, with no
+            proration. You get {GRACE_DAYS} buffer days after your renewal date to pay, and the app
+            keeps working normally through them. Paying inside the buffer keeps your existing
+            billing date, so it never drifts earlier over time.
           </p>
           <p>
             <strong className="text-foreground">A missed payment never locks you out.</strong> Your

@@ -81,7 +81,9 @@ export async function runMonthlyBilling(
   result.admins = (admins.data ?? []).length;
   if (result.admins === 0) return result;
 
-  const propertyQuery = supabase.from("properties").select("id, admin_id");
+  const propertyQuery = supabase
+    .from("properties")
+    .select("id, admin_id, electricity_rate_per_unit");
   const properties = await (adminId ? propertyQuery.eq("admin_id", adminId) : propertyQuery);
   if (properties.error) throw new Error(properties.error.message);
   const propertyIds = (properties.data ?? []).map((p) => p.id);
@@ -160,7 +162,7 @@ export async function runMonthlyBilling(
     }
 
     const config = settingsByAdmin.get(property.admin_id);
-    const rate = Number(config?.electricity_rate_per_unit ?? 0);
+    const rate = Number(property.electricity_rate_per_unit ?? config?.electricity_rate_per_unit ?? 0);
     const offset = Number(config?.due_date_offset_days ?? 10);
 
     const roomUnits = unitsByRoom.get(room.id) ?? 0;

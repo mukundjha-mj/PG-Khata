@@ -219,6 +219,7 @@ export type Database = {
       };
       notification_logs: {
         Row: {
+          admin_id: string | null;
           bill_id: string | null;
           channel: Database["public"]["Enums"]["notification_channel"];
           error_message: string | null;
@@ -230,6 +231,7 @@ export type Database = {
           tenant_id: string;
         };
         Insert: {
+          admin_id?: string | null;
           bill_id?: string | null;
           channel?: Database["public"]["Enums"]["notification_channel"];
           error_message?: string | null;
@@ -241,6 +243,7 @@ export type Database = {
           tenant_id: string;
         };
         Update: {
+          admin_id?: string | null;
           bill_id?: string | null;
           channel?: Database["public"]["Enums"]["notification_channel"];
           error_message?: string | null;
@@ -252,6 +255,13 @@ export type Database = {
           tenant_id?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "notification_logs_admin_id_fkey";
+            columns: ["admin_id"];
+            isOneToOne: false;
+            referencedRelation: "admins";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "notification_logs_bill_id_fkey";
             columns: ["bill_id"];
@@ -395,6 +405,7 @@ export type Database = {
         Row: {
           admin_id: string;
           amount: number;
+          billing_cycle: string;
           created_at: string;
           credit_applied: number;
           days_remaining: number;
@@ -408,6 +419,7 @@ export type Database = {
         Insert: {
           admin_id?: string;
           amount?: number;
+          billing_cycle?: string;
           created_at?: string;
           credit_applied?: number;
           days_remaining?: number;
@@ -421,6 +433,7 @@ export type Database = {
         Update: {
           admin_id?: string;
           amount?: number;
+          billing_cycle?: string;
           created_at?: string;
           credit_applied?: number;
           days_remaining?: number;
@@ -445,6 +458,7 @@ export type Database = {
         Row: {
           admin_id: string;
           amount: number;
+          billing_cycle: string;
           created_at: string;
           currency: string;
           id: string;
@@ -458,6 +472,7 @@ export type Database = {
         Insert: {
           admin_id: string;
           amount?: number;
+          billing_cycle?: string;
           created_at?: string;
           currency?: string;
           id?: string;
@@ -471,6 +486,7 @@ export type Database = {
         Update: {
           admin_id?: string;
           amount?: number;
+          billing_cycle?: string;
           created_at?: string;
           currency?: string;
           id?: string;
@@ -498,6 +514,7 @@ export type Database = {
           city: string;
           created_at: string;
           electricity_mode: string;
+          electricity_rate_per_unit: number | null;
           id: string;
           name: string;
           updated_at: string;
@@ -508,6 +525,7 @@ export type Database = {
           city?: string;
           created_at?: string;
           electricity_mode?: string;
+          electricity_rate_per_unit?: number | null;
           id?: string;
           name: string;
           updated_at?: string;
@@ -518,6 +536,7 @@ export type Database = {
           city?: string;
           created_at?: string;
           electricity_mode?: string;
+          electricity_rate_per_unit?: number | null;
           id?: string;
           name?: string;
           updated_at?: string;
@@ -726,6 +745,7 @@ export type Database = {
       settings: {
         Row: {
           admin_id: string;
+          billing_cycle: string;
           brand_logo_url: string | null;
           brand_name: string;
           brand_primary_color: string;
@@ -751,6 +771,7 @@ export type Database = {
         };
         Insert: {
           admin_id?: string;
+          billing_cycle?: string;
           brand_logo_url?: string | null;
           brand_name?: string;
           brand_primary_color?: string;
@@ -776,6 +797,7 @@ export type Database = {
         };
         Update: {
           admin_id?: string;
+          billing_cycle?: string;
           brand_logo_url?: string | null;
           brand_name?: string;
           brand_primary_color?: string;

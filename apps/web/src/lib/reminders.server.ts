@@ -12,6 +12,8 @@ import {
 import { sendTenantEmail } from "@/lib/email.server";
 import { buildBillNote, tryBuildUpiIntent } from "@/lib/upi";
 import { isWhatsAppConfigured, sendTenantWhatsApp } from "@/lib/whatsapp.server";
+import { checkWhatsAppQuota } from "@/lib/whatsapp-quota.server";
+import { tierByKey } from "@/lib/pricing-plans";
 
 /** Minimum gap between two overdue reminders for the same bill. */
 const OVERDUE_EVERY_DAYS = 3;
@@ -119,7 +121,7 @@ export async function runPaymentReminders(
     supabase
       .from("settings")
       .select(
-        "admin_id, reminder_days_before, remind_on_due_date, upi_vpa, upi_payee_name, brand_name, whatsapp_enabled, whatsapp_country_code",
+        "admin_id, reminder_days_before, remind_on_due_date, upi_vpa, upi_payee_name, brand_name, whatsapp_enabled, whatsapp_country_code, plan, plan_updated_at",
       ),
     supabase.from("tenants").select("id, full_name, email, phone, room_id, status"),
     supabase
@@ -254,17 +256,28 @@ export async function runPaymentReminders(
       if (!tenant.phone) {
         reasons.push("WhatsApp: no phone number on file");
       } else {
-        const res = await sendTenantWhatsApp(supabase, {
-          tenantId: tenant.id,
-          billId: bill.id,
-          phone: tenant.phone,
-          dialCode: settings.whatsapp_country_code ?? "91",
-          template: buildReminderTemplate(data),
-          messageType: "payment-reminder",
-        });
-        whatsapp = res.sent;
-        if (res.sent) result.whatsappSent += 1;
-        else reasons.push(`WhatsApp: ${res.reason ?? "failed"}`);
+        const quota = await checkWhatsAppQuota(
+          supabase,
+          property.admin_id,
+          tierByKey(settings.plan ?? "starter"),
+          settings.plan_updated_at,
+        );
+        if (!quota.allowed) {
+          reasons.push(quota.reason);
+        } else {
+          const res = await sendTenantWhatsApp(supabase, {
+            tenantId: tenant.id,
+            adminId: property.admin_id,
+            billId: bill.id,
+            phone: tenant.phone,
+            dialCode: settings.whatsapp_country_code ?? "91",
+            template: buildReminderTemplate(data),
+            messageType: "payment-reminder",
+          });
+          whatsapp = res.sent;
+          if (res.sent) result.whatsappSent += 1;
+          else reasons.push(`WhatsApp: ${res.reason ?? "failed"}`);
+        }
       }
     }
 
@@ -347,7 +360,9 @@ export async function sendManualReminders(
   const [settingsRes, tenantsRes, roomsRes] = await Promise.all([
     supabase
       .from("settings")
-      .select("upi_vpa, upi_payee_name, brand_name, whatsapp_enabled, whatsapp_country_code")
+      .select(
+        "upi_vpa, upi_payee_name, brand_name, whatsapp_enabled, whatsapp_country_code, plan, plan_updated_at",
+      )
       .eq("admin_id", adminId)
       .maybeSingle(),
     supabase
@@ -443,17 +458,28 @@ export async function sendManualReminders(
       if (!tenant.phone) {
         reasons.push("WhatsApp: no phone number on file");
       } else {
-        const res = await sendTenantWhatsApp(supabase, {
-          tenantId: tenant.id,
-          billId: bill.id,
-          phone: tenant.phone,
-          dialCode: settings.whatsapp_country_code ?? "91",
-          template: buildReminderTemplate(data),
-          messageType: "payment-reminder",
-        });
-        whatsapp = res.sent;
-        if (res.sent) result.whatsappSent += 1;
-        else reasons.push(`WhatsApp: ${res.reason ?? "failed"}`);
+        const quota = await checkWhatsAppQuota(
+          supabase,
+          adminId,
+          tierByKey(settings.plan ?? "starter"),
+          settings.plan_updated_at,
+        );
+        if (!quota.allowed) {
+          reasons.push(quota.reason);
+        } else {
+          const res = await sendTenantWhatsApp(supabase, {
+            tenantId: tenant.id,
+            adminId,
+            billId: bill.id,
+            phone: tenant.phone,
+            dialCode: settings.whatsapp_country_code ?? "91",
+            template: buildReminderTemplate(data),
+            messageType: "payment-reminder",
+          });
+          whatsapp = res.sent;
+          if (res.sent) result.whatsappSent += 1;
+          else reasons.push(`WhatsApp: ${res.reason ?? "failed"}`);
+        }
       }
     }
 
@@ -510,7 +536,9 @@ async function sendOneReminder(
       .maybeSingle(),
     supabase
       .from("settings")
-      .select("upi_vpa, upi_payee_name, brand_name, whatsapp_enabled, whatsapp_country_code")
+      .select(
+        "upi_vpa, upi_payee_name, brand_name, whatsapp_enabled, whatsapp_country_code, plan, plan_updated_at",
+      )
       .eq("admin_id", args.adminId)
       .maybeSingle(),
   ]);
@@ -616,16 +644,27 @@ async function sendOneReminder(
     } else if (!tenant.phone) {
       reasons.push("WhatsApp: no phone number on file");
     } else {
-      const res = await sendTenantWhatsApp(supabase, {
-        tenantId: tenant.id,
-        billId: args.billId,
-        phone: tenant.phone,
-        dialCode: settings.whatsapp_country_code ?? "91",
-        template: buildReminderTemplate(data),
-        messageType: "payment-reminder",
-      });
-      whatsapp = res.sent;
-      if (!res.sent) reasons.push(`WhatsApp: ${res.reason ?? "failed"}`);
+      const quota = await checkWhatsAppQuota(
+        supabase,
+        args.adminId,
+        tierByKey(settings.plan ?? "starter"),
+        settings.plan_updated_at,
+      );
+      if (!quota.allowed) {
+        reasons.push(quota.reason);
+      } else {
+        const res = await sendTenantWhatsApp(supabase, {
+          tenantId: tenant.id,
+          adminId: args.adminId,
+          billId: args.billId,
+          phone: tenant.phone,
+          dialCode: settings.whatsapp_country_code ?? "91",
+          template: buildReminderTemplate(data),
+          messageType: "payment-reminder",
+        });
+        whatsapp = res.sent;
+        if (!res.sent) reasons.push(`WhatsApp: ${res.reason ?? "failed"}`);
+      }
     }
   }
 

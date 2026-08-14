@@ -71,7 +71,11 @@ export async function previewTenantBill(
   if (!room) throw new Error("This tenant has no room assigned.");
 
   const [property, settings, readings, roommates, existingBill] = await Promise.all([
-    supabase.from("properties").select("id, name").eq("id", room.property_id).maybeSingle(),
+    supabase
+      .from("properties")
+      .select("id, name, electricity_rate_per_unit")
+      .eq("id", room.property_id)
+      .maybeSingle(),
     supabase
       .from("settings")
       .select("electricity_rate_per_unit, due_date_offset_days")
@@ -96,7 +100,9 @@ export async function previewTenantBill(
   }
   if (!property.data) throw new Error("Property not found for this tenant's room.");
 
-  const rate = Number(settings.data?.electricity_rate_per_unit ?? 0);
+  const rate = Number(
+    property.data?.electricity_rate_per_unit ?? settings.data?.electricity_rate_per_unit ?? 0,
+  );
   const dueOffset = Number(settings.data?.due_date_offset_days ?? 10);
 
   const roomUnits = (readings.data ?? []).reduce(
