@@ -254,7 +254,7 @@ export type Database = {
             foreignKeyName: "coupons_created_by_fkey";
             columns: ["created_by"];
             isOneToOne: false;
-            referencedRelation: "admins";
+            referencedRelation: "super_admins";
             referencedColumns: ["id"];
           },
         ];

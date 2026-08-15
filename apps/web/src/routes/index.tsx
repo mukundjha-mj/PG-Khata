@@ -26,7 +26,7 @@ export const Route = createFileRoute("/")({
       { title: `${BRAND} - PG Billing, Sorted.` },
       {
         name: "description",
-        content: `${BRAND} generates rent, electricity and other charges for every PG tenant on the 1st, sends the bill with a UPI QR, and tracks who has paid.`,
+        content: `${BRAND} generates rent, electricity and other charges for every PG tenant on the 1st, sends the bill with a UPI pay link, and tracks who has paid.`,
       },
       { property: "og:title", content: `${BRAND} - PG Billing, Sorted.` },
       {
@@ -91,8 +91,8 @@ const features = [
     body: "On the 1st, every active tenant gets their rent, electricity and other charges, with email delivery you can rely on.",
   },
   {
-    title: "UPI QR, built into the bill",
-    body: "Tenants scan and pay directly from the bill. Paid bills mark themselves, no follow up needed.",
+    title: "A UPI pay link, built into the bill",
+    body: "Tenants tap and pay directly from the bill. Paid bills mark themselves, no follow up needed.",
   },
   {
     title: "Reminders that do not need you",
@@ -121,8 +121,8 @@ const steps = [
   },
   {
     step: "03",
-    title: "Tenants get the bill, with a QR",
-    body: "They scan, pay via UPI, and the bill marks itself paid. No app to download, nothing for them to log into.",
+    title: "Tenants get the bill, with a pay link",
+    body: "They tap, pay via UPI, and the bill marks itself paid. No app to download, nothing for them to log into.",
   },
   {
     step: "04",
@@ -190,7 +190,7 @@ function LandingPage() {
             </h1>
             <p className="mt-6 mb-8 max-w-[460px] text-[18px] leading-relaxed text-ink/70">
               {BRAND} generates every tenant's rent, electricity and other charges on the 1st, then
-              sends the bill with a UPI QR and payment link. You just watch the money come in.
+              sends the bill with a UPI payment link. You just watch the money come in.
             </p>
             <div className="flex flex-wrap items-center gap-4">
               <a

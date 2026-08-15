@@ -15,7 +15,6 @@ export const pricingPlans: PricingPlan[] = [
     items: [
       "Tenants up to your rooms' bed capacity",
       "Email billing",
-      "UPI QR payments",
       "Daily backups",
       "150 WhatsApp messages/month",
     ],
@@ -52,7 +51,7 @@ export const pricingPlans: PricingPlan[] = [
 /** Included on every plan, no matter the tier. */
 export const includedOnEveryPlan: string[] = [
   "Monthly bill generation with manual approval",
-  "UPI QR collection and payment ledger",
+  "UPI pay link collection and payment ledger",
   "Dues, collection and occupancy reports",
   "Electricity meter readings and per unit charges",
   "Daily automatic backups",
