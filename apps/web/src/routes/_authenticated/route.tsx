@@ -32,7 +32,9 @@ export const Route = createFileRoute("/_authenticated")({
         .select("plan_status")
         .eq("admin_id", data.user.id)
         .maybeSingle();
-      if (settings?.plan_status === "unpaid") throw redirect({ to: "/plan" });
+      if (settings?.plan_status === "unpaid" || settings?.plan_status === "cancelled") {
+        throw redirect({ to: "/plan" });
+      }
     }
     return { user: data.user };
   },

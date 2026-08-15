@@ -21,6 +21,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -33,10 +40,25 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/empty-state";
+import { cn } from "@/lib/utils";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { planTiers, type PlanKey } from "@/lib/pricing-plans";
-import { setAccountPlan } from "@/lib/super-admin.functions";
-import { getOwnerDetail, getOwnerQuickFacts, saveOwnerNote } from "@/lib/owner-detail.functions";
+import {
+  setAccountPlan,
+  cancelOwnerSubscription,
+  reactivateOwnerSubscription,
+  refundOwnerPayment,
+} from "@/lib/super-admin.functions";
+import {
+  getOwnerDetail,
+  getOwnerQuickFacts,
+  saveOwnerNote,
+  getOwnerTenants,
+  getOwnerRooms,
+  getOwnerBills,
+  getOwnerPayments,
+  getOwnerComplaints,
+} from "@/lib/owner-detail.functions";
 
 const PAGE_SIZE = 10;
 
@@ -417,12 +439,26 @@ function QuickActionsDialog({ adminId, onClose }: { adminId: string | null; onCl
   );
 }
 
-/** Full owner record with editable support notes. Each open is audit logged. */
+type WorkspaceTab = "overview" | "tenants" | "rooms" | "bills" | "payments" | "complaints";
+
+const WORKSPACE_TABS: { id: WorkspaceTab; label: string }[] = [
+  { id: "overview", label: "Overview" },
+  { id: "tenants", label: "Tenants" },
+  { id: "rooms", label: "Rooms" },
+  { id: "bills", label: "Bills" },
+  { id: "payments", label: "Payments" },
+  { id: "complaints", label: "Complaints" },
+];
+
+/** Full owner record, read-only workspace tabs, editable support notes. Each open is audit logged. */
 function OwnerDetailDialog({ adminId, onClose }: { adminId: string | null; onClose: () => void }) {
   const queryClient = useQueryClient();
   const load = useServerFn(getOwnerDetail);
   const save = useServerFn(saveOwnerNote);
+  const cancelFn = useServerFn(cancelOwnerSubscription);
+  const reactivateFn = useServerFn(reactivateOwnerSubscription);
   const [note, setNote] = useState<string | null>(null);
+  const [tab, setTab] = useState<WorkspaceTab>("overview");
 
   const { data, isLoading } = useQuery({
     queryKey: ["owner-detail", adminId],
@@ -441,162 +477,491 @@ function OwnerDetailDialog({ adminId, onClose }: { adminId: string | null; onClo
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const cancel = useMutation({
+    mutationFn: (reason: string) => cancelFn({ data: { adminId: adminId as string, reason } }),
+    onSuccess: () => {
+      toast.success("Subscription cancelled");
+      queryClient.invalidateQueries({ queryKey: ["owner-detail", adminId] });
+      queryClient.invalidateQueries({ queryKey: ["platform-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["platform-audit-log"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const reactivate = useMutation({
+    mutationFn: () => reactivateFn({ data: { adminId: adminId as string } }),
+    onSuccess: () => {
+      toast.success("Subscription reactivated");
+      queryClient.invalidateQueries({ queryKey: ["owner-detail", adminId] });
+      queryClient.invalidateQueries({ queryKey: ["platform-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["platform-audit-log"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const close = () => {
     setNote(null);
+    setTab("overview");
     onClose();
   };
 
   return (
-    <Dialog open={!!adminId} onOpenChange={(open) => (open ? null : close())}>
-      <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-2xl">
+    <Sheet open={!!adminId} onOpenChange={(open) => (open ? null : close())}>
+      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-3xl">
         {isLoading || !data ? (
           <Skeleton className="h-72 w-full" />
         ) : (
           <>
-            <DialogHeader>
-              <DialogTitle>{data.account.name || data.account.brandName}</DialogTitle>
-              <DialogDescription>
+            <SheetHeader>
+              <SheetTitle>{data.account.name || data.account.brandName}</SheetTitle>
+              <SheetDescription>
                 {data.account.email}
                 {data.account.phone ? ` - ${data.account.phone}` : ""} - joined{" "}
                 {day(data.account.created_at)}
-              </DialogDescription>
-            </DialogHeader>
+              </SheetDescription>
+            </SheetHeader>
 
-            <div className="space-y-5">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {[
-                  { label: "Properties", value: String(data.portfolio.properties.length) },
-                  { label: "Rooms", value: String(data.portfolio.roomCount) },
-                  { label: "Active tenants", value: String(data.portfolio.activeTenants) },
-                  { label: "Occupancy", value: `${data.portfolio.occupancyRate}%` },
-                ].map((c) => (
-                  <Card key={c.label}>
-                    <CardContent className="p-3">
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                        {c.label}
-                      </p>
-                      <p className="subsection-title mt-1">{c.value}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+            <div className="mt-4 flex flex-wrap gap-1 border-b pb-2">
+              {WORKSPACE_TABS.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTab(t.id)}
+                  className={cn(
+                    "min-h-9 rounded-md px-3 text-sm transition-colors",
+                    tab === t.id
+                      ? "bg-primary/10 font-medium text-primary"
+                      : "text-muted-foreground hover:bg-muted",
+                  )}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
 
-              <div>
-                <h3 className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">
-                  Properties
-                </h3>
-                {data.portfolio.properties.length === 0 ? (
-                  <p className="py-2 text-sm text-muted-foreground">No properties yet.</p>
-                ) : (
-                  data.portfolio.properties.map((p) => (
-                    <Row
-                      key={p.id}
-                      label={`${p.name}${p.city ? ` - ${p.city}` : ""}`}
-                      value={`${p.rooms} rooms - ${p.tenants} tenants`}
-                    />
-                  ))
-                )}
-              </div>
-
-              <Separator />
-
-              <div>
-                <h3 className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">
-                  Subscription
-                </h3>
-                <Row
-                  label="Status"
-                  value={
-                    <Badge variant={statusVariant(data.quick.planStatus)}>
-                      {data.quick.planStatus}
-                    </Badge>
-                  }
+            <div className="mt-4">
+              {tab === "overview" ? (
+                <OverviewTab
+                  data={data}
+                  adminId={adminId as string}
+                  note={note}
+                  setNote={setNote}
+                  saveNote={saveNote}
+                  cancel={cancel}
+                  reactivate={reactivate}
                 />
-                <Row label="Plan" value={data.quick.plan} />
-                <Row label="Renews" value={day(data.quick.periodEnd)} />
-                <Row label="Last login" value={when(data.quick.lastLoginAt)} />
-                <p className="mt-3 mb-1 text-xs uppercase tracking-wide text-muted-foreground">
-                  Plan change history
-                </p>
-                {data.subscription.history.length === 0 ? (
-                  <p className="py-2 text-sm text-muted-foreground">No plan changes yet.</p>
-                ) : (
-                  data.subscription.history.map((h) => (
-                    <Row
-                      key={h.id}
-                      label={`${h.from_plan} to ${h.to_plan} - ${day(h.created_at)}`}
-                      value={inr(h.amount)}
-                    />
-                  ))
-                )}
-                <p className="mt-3 mb-1 text-xs uppercase tracking-wide text-muted-foreground">
-                  Plan payments
-                </p>
-                {data.subscription.payments.length === 0 ? (
-                  <p className="py-2 text-sm text-muted-foreground">No payments recorded.</p>
-                ) : (
-                  data.subscription.payments.map((p) => (
-                    <Row
-                      key={p.id}
-                      label={`${p.target_plan} - ${p.status} - ${day(p.created_at)}`}
-                      value={inr(p.amount)}
-                    />
-                  ))
-                )}
-              </div>
-
-              <Separator />
-
-              <div>
-                <h3 className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">
-                  Notifications and usage
-                </h3>
-                <Row label="Notifications sent" value={String(data.usage.notificationsTotal)} />
-                <Row label="Last 30 days" value={String(data.usage.notifications30d)} />
-                <Row label="Last notification" value={when(data.usage.lastNotificationAt)} />
-                {data.usage.byChannel.map((c) => (
-                  <Row key={c.channel} label={`Channel: ${c.channel}`} value={String(c.count)} />
-                ))}
-                {data.usage.byStatus.map((s) => (
-                  <Row key={s.status} label={`Delivery: ${s.status}`} value={String(s.count)} />
-                ))}
-                <Row label="Bills generated" value={String(data.usage.billsTotal)} />
-                <Row label="Billed lifetime" value={inr(data.usage.billedLifetime)} />
-                <Row label="Collected lifetime" value={inr(data.usage.collectedLifetime)} />
-                <Row label="Outstanding" value={inr(data.usage.outstanding)} />
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <h3 className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-                  <NotebookPen className="h-3.5 w-3.5" /> Support notes
-                </h3>
-                <Textarea
-                  rows={4}
-                  value={note ?? data.supportNote.note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Private notes for the platform team about this owner"
-                />
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs text-muted-foreground">
-                    {data.supportNote.updated_at
-                      ? `Last edited ${when(data.supportNote.updated_at)} by ${data.supportNote.updated_by_email}`
-                      : "No notes saved yet"}
-                  </p>
-                  <Button
-                    className="h-11 md:h-9"
-                    disabled={note === null || saveNote.isPending}
-                    onClick={() => saveNote.mutate(note ?? "")}
-                  >
-                    Save note
-                  </Button>
-                </div>
-              </div>
+              ) : null}
+              {tab === "tenants" ? <TenantsTab adminId={adminId as string} /> : null}
+              {tab === "rooms" ? <RoomsTab adminId={adminId as string} /> : null}
+              {tab === "bills" ? <BillsTab adminId={adminId as string} /> : null}
+              {tab === "payments" ? <PaymentsTab adminId={adminId as string} /> : null}
+              {tab === "complaints" ? <ComplaintsTab adminId={adminId as string} /> : null}
             </div>
           </>
         )}
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function OverviewTab({
+  data,
+  adminId,
+  note,
+  setNote,
+  saveNote,
+  cancel,
+  reactivate,
+}: {
+  data: NonNullable<
+    ReturnType<typeof useQuery<Awaited<ReturnType<typeof getOwnerDetail>>>>["data"]
+  >;
+  adminId: string;
+  note: string | null;
+  setNote: (v: string) => void;
+  saveNote: ReturnType<typeof useMutation<unknown, Error, string>>;
+  cancel: ReturnType<typeof useMutation<unknown, Error, string>>;
+  reactivate: ReturnType<typeof useMutation<unknown, Error, void>>;
+}) {
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {[
+          { label: "Properties", value: String(data.portfolio.properties.length) },
+          { label: "Rooms", value: String(data.portfolio.roomCount) },
+          { label: "Active tenants", value: String(data.portfolio.activeTenants) },
+          { label: "Occupancy", value: `${data.portfolio.occupancyRate}%` },
+        ].map((c) => (
+          <Card key={c.label}>
+            <CardContent className="p-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">{c.label}</p>
+              <p className="subsection-title mt-1">{c.value}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div>
+        <h3 className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">Properties</h3>
+        {data.portfolio.properties.length === 0 ? (
+          <p className="py-2 text-sm text-muted-foreground">No properties yet.</p>
+        ) : (
+          data.portfolio.properties.map((p) => (
+            <Row
+              key={p.id}
+              label={`${p.name}${p.city ? ` - ${p.city}` : ""}`}
+              value={`${p.rooms} rooms - ${p.tenants} tenants`}
+            />
+          ))
+        )}
+      </div>
+
+      <Separator />
+
+      <div>
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-xs uppercase tracking-wide text-muted-foreground">Subscription</h3>
+          <div className="flex gap-2">
+            {data.quick.planStatus === "cancelled" ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-9"
+                disabled={reactivate.isPending}
+                onClick={() => reactivate.mutate()}
+              >
+                Reactivate
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-9"
+                disabled={cancel.isPending}
+                onClick={() => {
+                  const reason = window.prompt(
+                    `Reason for cancelling this subscription (saved to the audit log)`,
+                  );
+                  if (!reason || reason.trim().length < 4) {
+                    toast.error("A reason of at least 4 characters is required");
+                    return;
+                  }
+                  cancel.mutate(reason);
+                }}
+              >
+                Cancel subscription
+              </Button>
+            )}
+          </div>
+        </div>
+        <Row
+          label="Status"
+          value={
+            <Badge variant={statusVariant(data.quick.planStatus)}>{data.quick.planStatus}</Badge>
+          }
+        />
+        <Row label="Plan" value={data.quick.plan} />
+        <Row label="Renews" value={day(data.quick.periodEnd)} />
+        <Row label="Last login" value={when(data.quick.lastLoginAt)} />
+        <p className="mt-3 mb-1 text-xs uppercase tracking-wide text-muted-foreground">
+          Plan change history
+        </p>
+        {data.subscription.history.length === 0 ? (
+          <p className="py-2 text-sm text-muted-foreground">No plan changes yet.</p>
+        ) : (
+          data.subscription.history.map((h) => (
+            <Row key={h.id} label={`${h.direction} - ${day(h.created_at)}`} value={inr(h.amount)} />
+          ))
+        )}
+        <p className="mt-3 mb-1 text-xs uppercase tracking-wide text-muted-foreground">
+          Plan payments
+        </p>
+        {data.subscription.payments.length === 0 ? (
+          <p className="py-2 text-sm text-muted-foreground">No payments recorded.</p>
+        ) : (
+          data.subscription.payments.map((p) => (
+            <PaymentHistoryRow key={p.id} payment={p} adminId={adminId} />
+          ))
+        )}
+      </div>
+
+      <Separator />
+
+      <div>
+        <h3 className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">
+          Notifications and usage
+        </h3>
+        <Row label="Notifications sent" value={String(data.usage.notificationsTotal)} />
+        <Row label="Last 30 days" value={String(data.usage.notifications30d)} />
+        <Row label="Last notification" value={when(data.usage.lastNotificationAt)} />
+        {data.usage.byChannel.map((c) => (
+          <Row key={c.channel} label={`Channel: ${c.channel}`} value={String(c.count)} />
+        ))}
+        {data.usage.byStatus.map((s) => (
+          <Row key={s.status} label={`Delivery: ${s.status}`} value={String(s.count)} />
+        ))}
+        <Row label="Bills generated" value={String(data.usage.billsTotal)} />
+        <Row label="Billed lifetime" value={inr(data.usage.billedLifetime)} />
+        <Row label="Collected lifetime" value={inr(data.usage.collectedLifetime)} />
+        <Row label="Outstanding" value={inr(data.usage.outstanding)} />
+      </div>
+
+      <Separator />
+
+      <div className="space-y-2">
+        <h3 className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+          <NotebookPen className="h-3.5 w-3.5" /> Support notes
+        </h3>
+        <Textarea
+          rows={4}
+          value={note ?? data.supportNote.note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Private notes for the platform team about this owner"
+        />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-muted-foreground">
+            {data.supportNote.updated_at
+              ? `Last edited ${when(data.supportNote.updated_at)} by ${data.supportNote.updated_by_email}`
+              : "No notes saved yet"}
+          </p>
+          <Button
+            className="h-11 md:h-9"
+            disabled={note === null || saveNote.isPending}
+            onClick={() => saveNote.mutate(note ?? "")}
+          >
+            Save note
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** One plan_payments row in the overview's history, with a refund action when eligible. */
+function PaymentHistoryRow({
+  payment,
+  adminId,
+}: {
+  payment: {
+    id: string;
+    target_plan: string;
+    amount: number;
+    status: string;
+    created_at: string;
+  };
+  adminId: string;
+}) {
+  const queryClient = useQueryClient();
+  const refundFn = useServerFn(refundOwnerPayment);
+  const refund = useMutation({
+    mutationFn: (input: { amountInPaise: number; reason: string }) =>
+      refundFn({
+        data: {
+          adminId,
+          planPaymentId: payment.id,
+          amountInPaise: input.amountInPaise,
+          reason: input.reason,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Refund issued");
+      queryClient.invalidateQueries({ queryKey: ["owner-detail", adminId] });
+      queryClient.invalidateQueries({ queryKey: ["platform-audit-log"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const canRefund = payment.status === "paid";
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b py-2 text-sm last:border-0">
+      <span className="text-muted-foreground">
+        {payment.target_plan} - {payment.status} - {day(payment.created_at)}
+      </span>
+      <div className="flex items-center gap-2">
+        <span className="font-medium">{inr(payment.amount)}</span>
+        {canRefund ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8"
+            disabled={refund.isPending}
+            onClick={() => {
+              const amountStr = window.prompt(
+                `Refund amount in rupees (up to ${inr(payment.amount)})`,
+                String(payment.amount),
+              );
+              if (!amountStr) return;
+              const amount = Number(amountStr);
+              if (!Number.isFinite(amount) || amount <= 0) {
+                toast.error("Enter a valid amount");
+                return;
+              }
+              const reason = window.prompt("Reason for this refund (saved to the audit log)");
+              if (!reason || reason.trim().length < 4) {
+                toast.error("A reason of at least 4 characters is required");
+                return;
+              }
+              refund.mutate({ amountInPaise: Math.round(amount * 100), reason });
+            }}
+          >
+            Refund
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function WorkspaceEmpty({ label }: { label: string }) {
+  return <p className="py-6 text-center text-sm text-muted-foreground">No {label} yet.</p>;
+}
+
+function TenantsTab({ adminId }: { adminId: string }) {
+  const load = useServerFn(getOwnerTenants);
+  const { data, isLoading } = useQuery({
+    queryKey: ["owner-workspace-tenants", adminId],
+    queryFn: () => load({ data: { adminId } }),
+  });
+  if (isLoading) return <Skeleton className="h-64 w-full" />;
+  if (!data || data.length === 0) return <WorkspaceEmpty label="tenants" />;
+  return (
+    <div className="space-y-2">
+      {data.map((t) => (
+        <Card key={t.id}>
+          <CardContent className="flex flex-wrap items-center justify-between gap-2 p-3">
+            <div className="min-w-0">
+              <p className="truncate font-medium">{t.fullName}</p>
+              <p className="text-xs text-muted-foreground">
+                {t.propertyName} - Room {t.roomNumber} - {t.phone}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-right">
+              <Badge variant={t.status === "active" ? "default" : "secondary"}>{t.status}</Badge>
+              <span className="text-sm font-medium">{inr(t.monthlyRent)}</span>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function RoomsTab({ adminId }: { adminId: string }) {
+  const load = useServerFn(getOwnerRooms);
+  const { data, isLoading } = useQuery({
+    queryKey: ["owner-workspace-rooms", adminId],
+    queryFn: () => load({ data: { adminId } }),
+  });
+  if (isLoading) return <Skeleton className="h-64 w-full" />;
+  if (!data || data.length === 0) return <WorkspaceEmpty label="rooms" />;
+  return (
+    <div className="space-y-2">
+      {data.map((r) => (
+        <Card key={r.id}>
+          <CardContent className="flex flex-wrap items-center justify-between gap-2 p-3">
+            <div className="min-w-0">
+              <p className="truncate font-medium">
+                {r.propertyName} - Room {r.roomNumber}
+              </p>
+              <p className="text-xs text-muted-foreground capitalize">{r.roomType}</p>
+            </div>
+            <div className="text-right text-sm">
+              <p className="font-medium">{inr(r.monthlyRent)}</p>
+              <p className="text-xs text-muted-foreground">
+                {r.occupied}/{r.capacity} occupied
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function BillsTab({ adminId }: { adminId: string }) {
+  const load = useServerFn(getOwnerBills);
+  const { data, isLoading } = useQuery({
+    queryKey: ["owner-workspace-bills", adminId],
+    queryFn: () => load({ data: { adminId } }),
+  });
+  if (isLoading) return <Skeleton className="h-64 w-full" />;
+  if (!data || data.length === 0) return <WorkspaceEmpty label="bills" />;
+  return (
+    <div className="space-y-2">
+      {data.map((b) => (
+        <Card key={b.id}>
+          <CardContent className="flex flex-wrap items-center justify-between gap-2 p-3">
+            <div className="min-w-0">
+              <p className="truncate font-medium">{b.tenantName}</p>
+              <p className="text-xs text-muted-foreground">
+                {b.propertyName} - {b.billMonth}
+              </p>
+            </div>
+            <div className="text-right text-sm">
+              <Badge variant={b.status === "paid" ? "default" : "secondary"}>{b.status}</Badge>
+              <p className="mt-1 font-medium">
+                {inr(b.paidAmount)} / {inr(b.totalAmount)}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function PaymentsTab({ adminId }: { adminId: string }) {
+  const load = useServerFn(getOwnerPayments);
+  const { data, isLoading } = useQuery({
+    queryKey: ["owner-workspace-payments", adminId],
+    queryFn: () => load({ data: { adminId } }),
+  });
+  if (isLoading) return <Skeleton className="h-64 w-full" />;
+  if (!data || data.length === 0) return <WorkspaceEmpty label="payments" />;
+  return (
+    <div className="space-y-2">
+      {data.map((p) => (
+        <Card key={p.id}>
+          <CardContent className="flex flex-wrap items-center justify-between gap-2 p-3">
+            <div className="min-w-0">
+              <p className="truncate font-medium">{p.tenantName}</p>
+              <p className="text-xs text-muted-foreground">
+                {p.propertyName} - {p.paymentMethod} - {when(p.paidAt)}
+              </p>
+            </div>
+            <span className="font-medium">{inr(p.amount)}</span>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function ComplaintsTab({ adminId }: { adminId: string }) {
+  const load = useServerFn(getOwnerComplaints);
+  const { data, isLoading } = useQuery({
+    queryKey: ["owner-workspace-complaints", adminId],
+    queryFn: () => load({ data: { adminId } }),
+  });
+  if (isLoading) return <Skeleton className="h-64 w-full" />;
+  if (!data || data.length === 0) return <WorkspaceEmpty label="complaints" />;
+  return (
+    <div className="space-y-2">
+      {data.map((c) => (
+        <Card key={c.id}>
+          <CardContent className="p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-medium">
+                {c.tenantName} - {c.propertyName} - Room {c.roomNumber}
+              </p>
+              <Badge variant={c.status === "resolved" ? "default" : "secondary"}>{c.status}</Badge>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">{c.note}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{when(c.createdAt)}</p>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   );
 }

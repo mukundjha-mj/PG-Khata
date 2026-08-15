@@ -42,6 +42,32 @@ export async function createRazorpayOrder(input: {
   return (await res.json()) as { id: string; amount: number; currency: string };
 }
 
+export async function createRazorpayRefund(input: {
+  paymentId: string;
+  amountInPaise: number;
+  notes: Record<string, string>;
+}) {
+  const { keyId, keySecret } = razorpayCreds();
+  const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+  const res = await fetch(`${RAZORPAY_API}/payments/${input.paymentId}/refund`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${auth}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      amount: input.amountInPaise,
+      notes: input.notes,
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    console.error(`Razorpay refund failed [${res.status}]: ${body}`);
+    throw new Error(`Could not process refund [${res.status}]: ${body}`);
+  }
+  return (await res.json()) as { id: string; amount: number; status: string };
+}
+
 export function verifyRazorpaySignature(input: {
   orderId: string;
   paymentId: string;

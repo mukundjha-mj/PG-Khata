@@ -22,24 +22,9 @@ export type AccountRow = {
 
 type Admin = SupabaseClient<Database>;
 
-/** Throws unless the caller holds the super_admin role. */
-export async function assertSuperAdmin(userId: string) {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data, error } = await supabaseAdmin.rpc("has_role", {
-    _user_id: userId,
-    _role: "super_admin",
-  });
-  if (error) {
-    console.error("[super-admin] role check failed", error);
-    throw new Error("Unable to verify permissions");
-  }
-  if (!data) throw new Error("Forbidden");
-  return supabaseAdmin as Admin;
-}
-
 /** Every owner account with its plan and portfolio size. */
 export async function loadAccounts(db: Admin): Promise<AccountRow[]> {
-  const [admins, settings, properties, rooms, tenants, roles] = await Promise.all([
+  const [admins, settings, properties, rooms, tenants, superAdmins] = await Promise.all([
     db.from("admins").select("id, name, email, phone, created_at").order("created_at"),
     db
       .from("settings")
@@ -47,7 +32,7 @@ export async function loadAccounts(db: Admin): Promise<AccountRow[]> {
     db.from("properties").select("id, admin_id"),
     db.from("rooms").select("id, property_id"),
     db.from("tenants").select("id, room_id, status"),
-    db.from("user_roles").select("user_id, role").eq("role", "super_admin"),
+    db.from("super_admins").select("id"),
   ]);
 
   const err =
@@ -56,14 +41,14 @@ export async function loadAccounts(db: Admin): Promise<AccountRow[]> {
     properties.error ||
     rooms.error ||
     tenants.error ||
-    roles.error;
+    superAdmins.error;
   if (err) {
     console.error("[super-admin] load failed", err);
     throw new Error("Unable to load accounts");
   }
 
   const settingsBy = new Map((settings.data ?? []).map((s) => [s.admin_id, s]));
-  const superIds = new Set((roles.data ?? []).map((r) => r.user_id));
+  const superIds = new Set((superAdmins.data ?? []).map((s) => s.id));
   const propOwner = new Map((properties.data ?? []).map((p) => [p.id, p.admin_id]));
   const roomOwner = new Map(
     (rooms.data ?? []).map((r) => [r.id, propOwner.get(r.property_id) ?? null] as const),
@@ -141,6 +126,128 @@ export async function overridePlan(db: Admin, adminId: string, plan: string) {
   return { ok: true as const };
 }
 
+/** Cancels an owner's subscription immediately, cutting off access right away. */
+export async function cancelSubscription(db: Admin, adminId: string, reason: string) {
+  const { data: current, error: readErr } = await db
+    .from("settings")
+    .select("plan")
+    .eq("admin_id", adminId)
+    .maybeSingle();
+  if (readErr) throw new Error("Unable to read current plan");
+
+  const { error } = await db
+    .from("settings")
+    .update({ plan_status: "cancelled", pending_plan: null })
+    .eq("admin_id", adminId);
+  if (error) throw new Error("Unable to cancel subscription");
+
+  await db.from("plan_change_history").insert({
+    admin_id: adminId,
+    from_plan: current?.plan ?? "starter",
+    to_plan: current?.plan ?? "starter",
+    direction: "cancellation",
+    amount: 0,
+    credit_applied: 0,
+    days_remaining: 0,
+    note: reason,
+  });
+
+  return { ok: true as const };
+}
+
+export type RefundResult = {
+  refundReference: string;
+  refundedAmount: number;
+  remainingRefundable: number;
+};
+
+/** Refunds part or all of a captured plan payment via Razorpay, and records it. */
+export async function refundOwnerPayment(
+  db: Admin,
+  input: { adminId: string; planPaymentId: string; amountInPaise: number; reason: string },
+): Promise<RefundResult> {
+  const { data: payment, error: readErr } = await db
+    .from("plan_payments")
+    .select("id, admin_id, amount, status, provider_payment_id, refunded_amount, target_plan")
+    .eq("id", input.planPaymentId)
+    .maybeSingle();
+  if (readErr) throw new Error("Unable to read payment");
+  if (!payment || payment.admin_id !== input.adminId) throw new Error("Payment not found");
+  if (payment.status !== "paid") throw new Error("Only captured payments can be refunded");
+  if (!payment.provider_payment_id) throw new Error("Payment has no provider reference");
+
+  const alreadyRefunded = Number(payment.refunded_amount ?? 0);
+  const remainingPaise = Math.round((Number(payment.amount) - alreadyRefunded) * 100);
+  if (input.amountInPaise <= 0 || input.amountInPaise > remainingPaise) {
+    throw new Error("Refund amount exceeds what remains on this payment");
+  }
+
+  const { createRazorpayRefund } = await import("@/lib/plan-checkout.server");
+  const refund = await createRazorpayRefund({
+    paymentId: payment.provider_payment_id,
+    amountInPaise: input.amountInPaise,
+    notes: { reason: input.reason, admin_id: input.adminId },
+  });
+
+  const refundedAmount = alreadyRefunded + input.amountInPaise / 100;
+  const { error } = await db
+    .from("plan_payments")
+    .update({
+      refunded_amount: refundedAmount,
+      refunded_at: new Date().toISOString(),
+      refund_reference: refund.id,
+    })
+    .eq("id", input.planPaymentId);
+  if (error) throw new Error("Refund succeeded but the record could not be updated");
+
+  await db.from("plan_change_history").insert({
+    admin_id: input.adminId,
+    from_plan: payment.target_plan,
+    to_plan: payment.target_plan,
+    direction: "refund",
+    amount: -(input.amountInPaise / 100),
+    credit_applied: 0,
+    days_remaining: 0,
+    note: input.reason,
+    payment_id: refund.id,
+  });
+
+  return {
+    refundReference: refund.id,
+    refundedAmount,
+    remainingRefundable: Number(payment.amount) - refundedAmount,
+  };
+}
+
+/** Reactivates a previously cancelled owner account, restoring access. */
+export async function reactivateSubscription(db: Admin, adminId: string) {
+  const { data: current, error: readErr } = await db
+    .from("settings")
+    .select("plan")
+    .eq("admin_id", adminId)
+    .maybeSingle();
+  if (readErr) throw new Error("Unable to read current plan");
+
+  const { error } = await db
+    .from("settings")
+    .update({ plan_status: "active" })
+    .eq("admin_id", adminId);
+  if (error) throw new Error("Unable to reactivate subscription");
+
+  await db.from("plan_change_history").insert({
+    admin_id: adminId,
+    from_plan: current?.plan ?? "starter",
+    to_plan: current?.plan ?? "starter",
+    direction: "reactivation",
+    amount: 0,
+    credit_applied: 0,
+    days_remaining: 0,
+    note: "Reactivated by super admin.",
+  });
+
+  return { ok: true as const };
+}
+
 export type CouponRow = {
   id: string;
   code: string;
@@ -197,24 +304,6 @@ export async function listCoupons(db: Admin): Promise<CouponRow[]> {
 export async function deactivateCoupon(db: Admin, couponId: string) {
   const { error } = await db.from("coupons").update({ active: false }).eq("id", couponId);
   if (error) throw new Error("Unable to deactivate coupon");
-  return { ok: true as const };
-}
-
-/** Grants or removes the super admin role for an account. */
-export async function setSuperAdmin(db: Admin, adminId: string, enabled: boolean) {
-  if (enabled) {
-    const { error } = await db
-      .from("user_roles")
-      .upsert({ user_id: adminId, role: "super_admin" }, { onConflict: "user_id,role" });
-    if (error) throw new Error("Unable to grant super admin");
-  } else {
-    const { error } = await db
-      .from("user_roles")
-      .delete()
-      .eq("user_id", adminId)
-      .eq("role", "super_admin");
-    if (error) throw new Error("Unable to remove super admin");
-  }
   return { ok: true as const };
 }
 

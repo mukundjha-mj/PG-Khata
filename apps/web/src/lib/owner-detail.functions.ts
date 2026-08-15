@@ -40,6 +40,101 @@ export const getOwnerDetail = createServerFn({ method: "POST" })
     return detail;
   });
 
+/** Every tenant across an owner's properties. Read-only support view, platform team only. */
+export const getOwnerTenants = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { adminId: string }) => ({ adminId: String(input.adminId) }))
+  .handler(async ({ data, context }) => {
+    const { assertPlatformAdmin, logAction } = await import("@/lib/platform-auth.server");
+    const { loadOwnerTenants } = await import("@/lib/owner-detail.server");
+    const { db, email } = await assertPlatformAdmin(context as never);
+    const rows = await loadOwnerTenants(db, data.adminId);
+    await logAction(db, {
+      actorId: context.userId,
+      actorEmail: email,
+      action: "view_owner_workspace",
+      targetAdminId: data.adminId,
+      details: { section: "tenants" },
+    });
+    return rows;
+  });
+
+/** Every room across an owner's properties. Read-only support view, platform team only. */
+export const getOwnerRooms = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { adminId: string }) => ({ adminId: String(input.adminId) }))
+  .handler(async ({ data, context }) => {
+    const { assertPlatformAdmin, logAction } = await import("@/lib/platform-auth.server");
+    const { loadOwnerRooms } = await import("@/lib/owner-detail.server");
+    const { db, email } = await assertPlatformAdmin(context as never);
+    const rows = await loadOwnerRooms(db, data.adminId);
+    await logAction(db, {
+      actorId: context.userId,
+      actorEmail: email,
+      action: "view_owner_workspace",
+      targetAdminId: data.adminId,
+      details: { section: "rooms" },
+    });
+    return rows;
+  });
+
+/** Newest 300 bills across an owner's properties. Read-only support view, platform team only. */
+export const getOwnerBills = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { adminId: string }) => ({ adminId: String(input.adminId) }))
+  .handler(async ({ data, context }) => {
+    const { assertPlatformAdmin, logAction } = await import("@/lib/platform-auth.server");
+    const { loadOwnerBills } = await import("@/lib/owner-detail.server");
+    const { db, email } = await assertPlatformAdmin(context as never);
+    const rows = await loadOwnerBills(db, data.adminId);
+    await logAction(db, {
+      actorId: context.userId,
+      actorEmail: email,
+      action: "view_owner_workspace",
+      targetAdminId: data.adminId,
+      details: { section: "bills" },
+    });
+    return rows;
+  });
+
+/** Newest 300 payments across an owner's properties. Read-only support view, platform team only. */
+export const getOwnerPayments = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { adminId: string }) => ({ adminId: String(input.adminId) }))
+  .handler(async ({ data, context }) => {
+    const { assertPlatformAdmin, logAction } = await import("@/lib/platform-auth.server");
+    const { loadOwnerPaymentsList } = await import("@/lib/owner-detail.server");
+    const { db, email } = await assertPlatformAdmin(context as never);
+    const rows = await loadOwnerPaymentsList(db, data.adminId);
+    await logAction(db, {
+      actorId: context.userId,
+      actorEmail: email,
+      action: "view_owner_workspace",
+      targetAdminId: data.adminId,
+      details: { section: "payments" },
+    });
+    return rows;
+  });
+
+/** Newest 300 complaints for an owner. Read-only support view, platform team only. */
+export const getOwnerComplaints = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { adminId: string }) => ({ adminId: String(input.adminId) }))
+  .handler(async ({ data, context }) => {
+    const { assertPlatformAdmin, logAction } = await import("@/lib/platform-auth.server");
+    const { loadOwnerComplaints } = await import("@/lib/owner-detail.server");
+    const { db, email } = await assertPlatformAdmin(context as never);
+    const rows = await loadOwnerComplaints(db, data.adminId);
+    await logAction(db, {
+      actorId: context.userId,
+      actorEmail: email,
+      action: "view_owner_workspace",
+      targetAdminId: data.adminId,
+      details: { section: "complaints" },
+    });
+    return rows;
+  });
+
 /** Saves the platform team's private support note for an owner. */
 export const saveOwnerNote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

@@ -18,6 +18,7 @@ import { EmptyState } from "@/components/empty-state";
 import { OwnerDirectory } from "@/components/owner-directory";
 import { CouponManager } from "@/components/coupon-manager";
 import { ConsoleCard, ConsoleLayout, type ConsoleTab } from "@/components/console-layout";
+import { BroadcastPanel } from "@/components/broadcast-panel";
 import { PlatformSignIn, TotpChallenge, TotpEnroll } from "@/components/platform-auth-gates";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlatformIdentity } from "@/lib/use-super-admin";
@@ -166,18 +167,7 @@ function ConsolePage() {
 
       {tab === "audit" ? <AuditLog rows={audit.data ?? []} loading={audit.isLoading} full /> : null}
 
-      {tab === "broadcast" ? (
-        <ConsoleCard>
-          <CardTitle
-            title="Platform broadcast"
-            subtitle="Send an announcement to every PG owner, or to one plan tier"
-          />
-          <p className="mt-4 text-sm text-console-muted">
-            Broadcasting is not switched on yet. Once messaging delivery is configured, drafts sent
-            from here will be logged in the audit trail with the recipient segment.
-          </p>
-        </ConsoleCard>
-      ) : null}
+      {tab === "broadcast" ? <BroadcastPanel /> : null}
 
       {tab === "settings" ? (
         <ConsoleCard>

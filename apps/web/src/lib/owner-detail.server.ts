@@ -22,6 +22,254 @@ async function ownerScope(db: Admin, adminId: string) {
   return { properties: props ?? [], rooms: rooms ?? [], propertyIds };
 }
 
+export type OwnerTenantRow = {
+  id: string;
+  fullName: string;
+  phone: string;
+  status: string;
+  roomNumber: string;
+  propertyName: string;
+  monthlyRent: number;
+  joiningDate: string;
+  vacatedDate: string | null;
+};
+
+/** Every tenant across an owner's properties, newest first. Read-only support view. */
+export async function loadOwnerTenants(db: Admin, adminId: string): Promise<OwnerTenantRow[]> {
+  const { properties, propertyIds } = await ownerScope(db, adminId);
+  if (!propertyIds.length) return [];
+
+  const { data: rooms, error: roomErr } = await db
+    .from("rooms")
+    .select("id, room_number, monthly_rent, property_id")
+    .in("property_id", propertyIds);
+  if (roomErr) throw new Error("Unable to load rooms");
+
+  const roomIds = (rooms ?? []).map((r) => r.id);
+  if (!roomIds.length) return [];
+
+  const { data: tenants, error } = await db
+    .from("tenants")
+    .select(
+      "id, full_name, phone, status, room_id, joining_date, vacated_date, monthly_rent_override, created_at",
+    )
+    .in("room_id", roomIds)
+    .order("created_at", { ascending: false })
+    .limit(300);
+  if (error) throw new Error("Unable to load tenants");
+
+  const propertyName = new Map(properties.map((p) => [p.id, p.name]));
+  const roomInfo = new Map((rooms ?? []).map((r) => [r.id, r]));
+
+  return (tenants ?? []).map((t) => {
+    const room = roomInfo.get(t.room_id);
+    return {
+      id: t.id,
+      fullName: t.full_name,
+      phone: t.phone,
+      status: t.status,
+      roomNumber: room?.room_number ?? "-",
+      propertyName: room ? (propertyName.get(room.property_id) ?? "-") : "-",
+      monthlyRent: Number(t.monthly_rent_override ?? room?.monthly_rent ?? 0),
+      joiningDate: t.joining_date,
+      vacatedDate: t.vacated_date,
+    };
+  });
+}
+
+export type OwnerRoomRow = {
+  id: string;
+  roomNumber: string;
+  propertyName: string;
+  roomType: string;
+  capacity: number;
+  monthlyRent: number;
+  occupied: number;
+};
+
+/** Every room across an owner's properties, with live occupancy. Read-only support view. */
+export async function loadOwnerRooms(db: Admin, adminId: string): Promise<OwnerRoomRow[]> {
+  const { properties, propertyIds } = await ownerScope(db, adminId);
+  if (!propertyIds.length) return [];
+
+  const { data: rooms, error } = await db
+    .from("rooms")
+    .select("id, room_number, room_type, capacity, monthly_rent, property_id")
+    .in("property_id", propertyIds)
+    .order("room_number");
+  if (error) throw new Error("Unable to load rooms");
+
+  const roomIds = (rooms ?? []).map((r) => r.id);
+  const { data: tenants } = roomIds.length
+    ? await db.from("tenants").select("room_id, status").in("room_id", roomIds)
+    : { data: [] };
+
+  const occupiedCount = new Map<string, number>();
+  for (const t of tenants ?? []) {
+    if (t.status !== "active") continue;
+    occupiedCount.set(t.room_id, (occupiedCount.get(t.room_id) ?? 0) + 1);
+  }
+  const propertyName = new Map(properties.map((p) => [p.id, p.name]));
+
+  return (rooms ?? []).map((r) => ({
+    id: r.id,
+    roomNumber: r.room_number,
+    propertyName: propertyName.get(r.property_id) ?? "-",
+    roomType: r.room_type,
+    capacity: r.capacity,
+    monthlyRent: Number(r.monthly_rent ?? 0),
+    occupied: occupiedCount.get(r.id) ?? 0,
+  }));
+}
+
+export type OwnerBillRow = {
+  id: string;
+  tenantName: string;
+  propertyName: string;
+  billMonth: string;
+  totalAmount: number;
+  paidAmount: number;
+  status: string;
+  dueDate: string | null;
+  createdAt: string;
+};
+
+/** Newest 300 bills across an owner's properties. Read-only support view. */
+export async function loadOwnerBills(db: Admin, adminId: string): Promise<OwnerBillRow[]> {
+  const { properties, propertyIds } = await ownerScope(db, adminId);
+  if (!propertyIds.length) return [];
+
+  const { data: bills, error } = await db
+    .from("bills")
+    .select(
+      "id, tenant_id, property_id, bill_month, total_amount, paid_amount, status, due_date, created_at",
+    )
+    .in("property_id", propertyIds)
+    .order("created_at", { ascending: false })
+    .limit(300);
+  if (error) throw new Error("Unable to load bills");
+
+  const tenantIds = [...new Set((bills ?? []).map((b) => b.tenant_id))];
+  const { data: tenants } = tenantIds.length
+    ? await db.from("tenants").select("id, full_name").in("id", tenantIds)
+    : { data: [] };
+
+  const tenantName = new Map((tenants ?? []).map((t) => [t.id, t.full_name]));
+  const propertyName = new Map(properties.map((p) => [p.id, p.name]));
+
+  return (bills ?? []).map((b) => ({
+    id: b.id,
+    tenantName: tenantName.get(b.tenant_id) ?? "-",
+    propertyName: propertyName.get(b.property_id) ?? "-",
+    billMonth: b.bill_month,
+    totalAmount: Number(b.total_amount ?? 0),
+    paidAmount: Number(b.paid_amount ?? 0),
+    status: b.status,
+    dueDate: b.due_date,
+    createdAt: b.created_at,
+  }));
+}
+
+export type OwnerPaymentRow = {
+  id: string;
+  tenantName: string;
+  propertyName: string;
+  amount: number;
+  paymentMethod: string;
+  paidAt: string;
+  transactionRef: string | null;
+};
+
+/** Newest 300 payments across an owner's properties. Read-only support view. */
+export async function loadOwnerPaymentsList(
+  db: Admin,
+  adminId: string,
+): Promise<OwnerPaymentRow[]> {
+  const { properties, propertyIds } = await ownerScope(db, adminId);
+  if (!propertyIds.length) return [];
+
+  const { data: bills, error: billErr } = await db
+    .from("bills")
+    .select("id, tenant_id, property_id")
+    .in("property_id", propertyIds);
+  if (billErr) throw new Error("Unable to load bills");
+
+  const billIds = (bills ?? []).map((b) => b.id);
+  if (!billIds.length) return [];
+
+  const { data: payments, error } = await db
+    .from("payments")
+    .select("id, bill_id, amount, payment_method, paid_at, transaction_ref")
+    .in("bill_id", billIds)
+    .order("paid_at", { ascending: false })
+    .limit(300);
+  if (error) throw new Error("Unable to load payments");
+
+  const tenantIds = [...new Set((bills ?? []).map((b) => b.tenant_id))];
+  const { data: tenants } = tenantIds.length
+    ? await db.from("tenants").select("id, full_name").in("id", tenantIds)
+    : { data: [] };
+
+  const tenantName = new Map((tenants ?? []).map((t) => [t.id, t.full_name]));
+  const propertyName = new Map(properties.map((p) => [p.id, p.name]));
+  const billInfo = new Map((bills ?? []).map((b) => [b.id, b]));
+
+  return (payments ?? []).map((p) => {
+    const bill = billInfo.get(p.bill_id);
+    return {
+      id: p.id,
+      tenantName: bill ? (tenantName.get(bill.tenant_id) ?? "-") : "-",
+      propertyName: bill ? (propertyName.get(bill.property_id) ?? "-") : "-",
+      amount: Number(p.amount ?? 0),
+      paymentMethod: p.payment_method,
+      paidAt: p.paid_at,
+      transactionRef: p.transaction_ref,
+    };
+  });
+}
+
+export type OwnerComplaintRow = {
+  id: string;
+  tenantName: string;
+  propertyName: string;
+  roomNumber: string;
+  note: string;
+  status: string;
+  phone: string;
+  createdAt: string;
+};
+
+/** Newest 300 complaints for an owner, across every property. Read-only support view. */
+export async function loadOwnerComplaints(
+  db: Admin,
+  adminId: string,
+): Promise<OwnerComplaintRow[]> {
+  const { data, error } = await db
+    .from("complaints")
+    .select("id, tenant_name, property_id, room_number, note, status, phone, created_at")
+    .eq("admin_id", adminId)
+    .order("created_at", { ascending: false })
+    .limit(300);
+  if (error) throw new Error("Unable to load complaints");
+
+  const propertyIds = [...new Set((data ?? []).map((c) => c.property_id))];
+  const { data: properties } = propertyIds.length
+    ? await db.from("properties").select("id, name").in("id", propertyIds)
+    : { data: [] };
+  const propertyName = new Map((properties ?? []).map((p) => [p.id, p.name]));
+
+  return (data ?? []).map((c) => ({
+    id: c.id,
+    tenantName: c.tenant_name,
+    propertyName: propertyName.get(c.property_id) ?? "-",
+    roomNumber: c.room_number,
+    note: c.note,
+    status: c.status,
+    phone: c.phone,
+    createdAt: c.created_at,
+  }));
+}
+
 export type QuickFacts = {
   adminId: string;
   email: string;

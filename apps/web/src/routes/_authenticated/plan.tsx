@@ -114,6 +114,7 @@ const statusTone: Record<string, string> = {
   trial: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
   past_due: "bg-destructive/10 text-destructive",
   unpaid: "bg-destructive/10 text-destructive",
+  cancelled: "bg-destructive/10 text-destructive",
 };
 
 const statusLabel: Record<string, string> = {
@@ -121,6 +122,7 @@ const statusLabel: Record<string, string> = {
   trial: "Free trial",
   past_due: "Payment due",
   unpaid: "Not activated",
+  cancelled: "Subscription cancelled",
 };
 
 function PlanPage() {
@@ -698,7 +700,10 @@ function PlanPage() {
                     row.growing === row.scale &&
                     row.scale === row.enterprise;
                   return (
-                    <TableRow key={row.feature} className={sameAcrossTiers ? "opacity-60" : undefined}>
+                    <TableRow
+                      key={row.feature}
+                      className={sameAcrossTiers ? "opacity-60" : undefined}
+                    >
                       <TableCell className="font-medium">{row.feature}</TableCell>
                       <TableCell className={current === "starter" ? "bg-muted/40" : undefined}>
                         {row.starter}

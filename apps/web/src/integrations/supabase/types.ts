@@ -548,6 +548,9 @@ export type Database = {
           provider: string;
           provider_order_id: string | null;
           provider_payment_id: string | null;
+          refund_reference: string | null;
+          refunded_amount: number;
+          refunded_at: string | null;
           status: string;
           target_plan: string;
           updated_at: string;
@@ -562,6 +565,9 @@ export type Database = {
           provider?: string;
           provider_order_id?: string | null;
           provider_payment_id?: string | null;
+          refund_reference?: string | null;
+          refunded_amount?: number;
+          refunded_at?: string | null;
           status?: string;
           target_plan: string;
           updated_at?: string;
@@ -576,6 +582,9 @@ export type Database = {
           provider?: string;
           provider_order_id?: string | null;
           provider_payment_id?: string | null;
+          refund_reference?: string | null;
+          refunded_amount?: number;
+          refunded_at?: string | null;
           status?: string;
           target_plan?: string;
           updated_at?: string;

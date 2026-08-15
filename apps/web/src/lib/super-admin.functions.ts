@@ -93,6 +93,82 @@ export const deactivateCoupon = createServerFn({ method: "POST" })
     return result;
   });
 
+/** Cancels an owner's subscription immediately, cutting off access. Platform team only. */
+export const cancelOwnerSubscription = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { adminId: string; reason: string }) => {
+    const reason = String(input.reason ?? "").trim();
+    if (reason.length < 4) throw new Error("A reason is required to cancel a subscription");
+    return { adminId: String(input.adminId), reason: reason.slice(0, 500) };
+  })
+  .handler(async ({ data, context }) => {
+    const { assertPlatformAdmin, logAction } = await import("@/lib/platform-auth.server");
+    const { cancelSubscription } = await import("@/lib/super-admin.server");
+    const { db, email } = await assertPlatformAdmin(context as never);
+    const result = await cancelSubscription(db, data.adminId, data.reason);
+    await logAction(db, {
+      actorId: context.userId,
+      actorEmail: email,
+      action: "cancel_subscription",
+      targetAdminId: data.adminId,
+      reason: data.reason,
+    });
+    return result;
+  });
+
+/** Reactivates a cancelled owner account, restoring access. Platform team only. */
+export const reactivateOwnerSubscription = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { adminId: string }) => ({ adminId: String(input.adminId) }))
+  .handler(async ({ data, context }) => {
+    const { assertPlatformAdmin, logAction } = await import("@/lib/platform-auth.server");
+    const { reactivateSubscription } = await import("@/lib/super-admin.server");
+    const { db, email } = await assertPlatformAdmin(context as never);
+    const result = await reactivateSubscription(db, data.adminId);
+    await logAction(db, {
+      actorId: context.userId,
+      actorEmail: email,
+      action: "reactivate_subscription",
+      targetAdminId: data.adminId,
+    });
+    return result;
+  });
+
+/** Refunds part or all of a captured plan payment via Razorpay. Platform team only. */
+export const refundOwnerPayment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (input: { adminId: string; planPaymentId: string; amountInPaise: number; reason: string }) => {
+      const reason = String(input.reason ?? "").trim();
+      if (reason.length < 4) throw new Error("A reason is required to issue a refund");
+      const amountInPaise = Math.round(Number(input.amountInPaise));
+      if (!Number.isFinite(amountInPaise) || amountInPaise <= 0) {
+        throw new Error("Refund amount must be greater than zero");
+      }
+      return {
+        adminId: String(input.adminId),
+        planPaymentId: String(input.planPaymentId),
+        amountInPaise,
+        reason: reason.slice(0, 500),
+      };
+    },
+  )
+  .handler(async ({ data, context }) => {
+    const { assertPlatformAdmin, logAction } = await import("@/lib/platform-auth.server");
+    const { refundOwnerPayment: refund } = await import("@/lib/super-admin.server");
+    const { db, email } = await assertPlatformAdmin(context as never);
+    const result = await refund(db, data);
+    await logAction(db, {
+      actorId: context.userId,
+      actorEmail: email,
+      action: "refund_payment",
+      targetAdminId: data.adminId,
+      reason: data.reason,
+      details: { planPaymentId: data.planPaymentId, amountInPaise: data.amountInPaise },
+    });
+    return result;
+  });
+
 /** Sets an account's plan directly, with no charge. Platform team only. */
 export const setAccountPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
