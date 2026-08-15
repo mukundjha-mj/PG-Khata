@@ -17,6 +17,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { BrandMark } from "@/components/brand-mark";
 import { useBranding } from "@/lib/branding";
+import { useAdminProfile } from "@/lib/use-admin-profile";
 
 const items: { title: string; url: string; icon: AnimatedIconName }[] = [
   { title: "Dashboard", url: "/dashboard", icon: "line-md:home-md-twotone" },
@@ -40,6 +41,10 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { brandName } = useBranding();
+  // Two owners can share the same brand name ("PG Manager" is the default),
+  // so show the signed-in owner's own name underneath it - editable on the
+  // Settings page - instead of a generic label that can't tell them apart.
+  const { data: profile } = useAdminProfile();
   const pathname = useRouterState({ select: (r) => r.location.pathname });
 
   async function signOut() {
@@ -57,7 +62,9 @@ export function AppSidebar() {
           {showLabels && (
             <div className="min-w-0">
               <p className="truncate text-[13px] font-semibold tracking-tight">{brandName}</p>
-              <p className="truncate text-[11px] text-muted-foreground">Admin workspace</p>
+              <p className="truncate text-[11px] text-muted-foreground">
+                {profile?.name || "Admin workspace"}
+              </p>
             </div>
           )}
         </div>

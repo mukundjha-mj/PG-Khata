@@ -3,6 +3,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PlanStatusBanner } from "@/components/plan-status-banner";
+import { AuthenticatedSkeleton } from "@/components/authenticated-skeleton";
 import { useBranding } from "@/lib/branding";
 import { PropertyScopeProvider } from "@/lib/property-scope";
 
@@ -15,29 +16,29 @@ export const Route = createFileRoute("/_authenticated")({
     const { supabase } = await import("@/integrations/supabase/client");
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) throw redirect({ to: "/auth" });
-    // Platform team accounts are not PG owners and must never load the owner app.
-    const { data: platform } = await supabase
-      .from("super_admins")
-      .select("id")
-      .eq("id", data.user.id)
-      .maybeSingle();
+    const userId = data.user.id;
+    // Neither check depends on the other, so run them together instead of
+    // paying two sequential round trips.
+    const [{ data: platform }, { data: settings }] = await Promise.all([
+      // Platform team accounts are not PG owners and must never load the owner app.
+      supabase.from("super_admins").select("id").eq("id", userId).maybeSingle(),
+      // A signup with no active plan and no redeemed coupon never sees the
+      // dashboard: it lands on the plan page to pay or redeem a code first. The
+      // plan page itself is exempt, since this beforeLoad also runs for it - a
+      // plain redirect there would loop forever.
+      location.pathname !== "/plan"
+        ? supabase.from("settings").select("plan_status").eq("admin_id", userId).maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
     if (platform) throw redirect({ to: "/console" });
-    // A signup with no active plan and no redeemed coupon never sees the
-    // dashboard: it lands on the plan page to pay or redeem a code first. The
-    // plan page itself is exempt, since this beforeLoad also runs for it - a
-    // plain redirect there would loop forever.
-    if (location.pathname !== "/plan") {
-      const { data: settings } = await supabase
-        .from("settings")
-        .select("plan_status")
-        .eq("admin_id", data.user.id)
-        .maybeSingle();
-      if (settings?.plan_status === "unpaid" || settings?.plan_status === "cancelled") {
-        throw redirect({ to: "/plan" });
-      }
+    if (settings?.plan_status === "unpaid" || settings?.plan_status === "cancelled") {
+      throw redirect({ to: "/plan" });
     }
     return { user: data.user };
   },
+  pendingComponent: AuthenticatedSkeleton,
+  pendingMs: 0,
+  pendingMinMs: 0,
   component: AuthenticatedLayout,
 });
 

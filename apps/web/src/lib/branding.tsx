@@ -33,13 +33,13 @@ function applyThemeClass(mode: "light" | "dark") {
 }
 
 function readStoredTheme(): ThemeMode {
-  if (typeof window === "undefined") return "system";
+  if (typeof window === "undefined") return "light";
   const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-  return stored === "light" || stored === "dark" || stored === "system" ? stored : "system";
+  return stored === "light" || stored === "dark" || stored === "system" ? stored : "light";
 }
 
 export function BrandingProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeMode>("system");
+  const [theme, setThemeState] = useState<ThemeMode>("light");
   const [systemDark, setSystemDark] = useState(false);
 
   const { data, refetch } = useQuery({
@@ -110,7 +110,7 @@ export function useBranding(): Branding {
   if (ctx) return ctx;
   return {
     brandName: DEFAULT_BRAND_NAME,
-    theme: "system",
+    theme: "light",
     resolvedTheme: "light",
     setTheme: () => {},
     refresh: () => {},
