@@ -11,6 +11,7 @@ import {
   enterprisePlan,
 } from "@/lib/pricing-plans";
 import { rupees, type BillingCycle } from "@/lib/plan-proration";
+import { computeDiscount } from "@/lib/price-display";
 import { onAdminHost } from "@/lib/admin-host";
 import { BRAND, appUrl, siteUrl } from "@/lib/site";
 import { MarketingNav } from "@/components/marketing-nav";
@@ -185,7 +186,7 @@ function LandingPage() {
       <header className="ledger-lines relative overflow-hidden px-6 pt-32 pb-20 sm:pt-36">
         <div className="relative mx-auto grid max-w-[1180px] items-start gap-14 lg:grid-cols-[1fr_1.05fr]">
           <div>
-            <h1 className="font-marketing-display text-[clamp(38px,5vw,66px)] leading-[1.05] font-bold tracking-[-0.01em] text-ink">
+            <h1 className="text-balance font-marketing-display text-[clamp(38px,5vw,66px)] leading-[1.05] font-bold tracking-[-0.01em] text-ink">
               Rent day, without the reminders.
             </h1>
             <p className="mt-6 mb-8 max-w-[460px] text-[18px] leading-relaxed text-ink/70">
@@ -271,7 +272,7 @@ function LandingPage() {
       {/* PAIN */}
       <section className="border-t-2 border-ink bg-ink px-6 py-24 text-cream">
         <div className="reveal mx-auto max-w-[1180px]">
-          <h2 className="max-w-[640px] font-marketing-display text-[clamp(28px,3.2vw,42px)] leading-[1.1] font-bold">
+          <h2 className="font-marketing-display text-[clamp(22px,3.2vw,42px)] leading-[1.1] font-bold">
             <RefTag>Ref. Old Way</RefTag>
             You did not start a PG business to become a bill sending machine.
           </h2>
@@ -297,7 +298,7 @@ function LandingPage() {
       {/* FEATURES — bill line-item list, not an icon-tile card grid */}
       <section id="features" className="px-6 py-24">
         <div className="reveal mx-auto max-w-[1180px]">
-          <h2 className="max-w-[640px] font-marketing-display text-[clamp(30px,3.4vw,44px)] font-bold text-ink">
+          <h2 className="font-marketing-display text-[clamp(24px,3.4vw,44px)] font-bold text-ink">
             <RefTag>Ref. Statement</RefTag>
             One dashboard. Every bill sent for you.
           </h2>
@@ -328,7 +329,7 @@ function LandingPage() {
       {/* HOW */}
       <section id="how" className="px-6 pb-24">
         <div className="reveal mx-auto max-w-[1180px]">
-          <h2 className="max-w-[640px] font-marketing-display text-[clamp(30px,3.4vw,44px)] font-bold text-ink">
+          <h2 className="font-marketing-display text-[clamp(22px,3.4vw,44px)] font-bold text-ink">
             <RefTag>Ref. Procedure</RefTag>
             Set it up once. It runs every month after.
           </h2>
@@ -356,7 +357,7 @@ function LandingPage() {
       {/* PRICING — rate table, not floating cards */}
       <section id="pricing" className="px-6 pb-24">
         <div className="reveal mx-auto max-w-[1180px]">
-          <h2 className="max-w-[640px] font-marketing-display text-[clamp(30px,3.4vw,44px)] font-bold text-ink">
+          <h2 className="font-marketing-display text-[clamp(24px,3.4vw,44px)] font-bold text-ink">
             <RefTag>Ref. Tariff</RefTag>
             Priced for what you actually run.
           </h2>
@@ -371,55 +372,121 @@ function LandingPage() {
             ) : null}
           </div>
 
-          <div className="mt-6 overflow-hidden border-2 border-ink">
+          {/* Tier cards — stack vertically on phones, no horizontal drag to read a price. */}
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+            {plans.map((p) => {
+              const tier = planTiers.find((t) => t.name === p.name)!;
+              const annualPrice = tier.annualAmount ?? tier.amount * 12;
+              const showingAnnual = billingCycle === "annual";
+              return (
+                <div
+                  key={p.name}
+                  className={`flex flex-col border-2 bg-paper p-6 ${
+                    p.popular ? "border-clay" : "border-ink"
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-marketing-display text-[16px] font-bold text-ink uppercase">
+                      {p.name}
+                    </span>
+                    {p.popular && <span className="stamp">Recommended</span>}
+                  </div>
+                  <p className="mt-1 text-[12px] text-ink/55">{p.sub}</p>
+
+                  <div className="mt-5">
+                    {showingAnnual ? (
+                      <>
+                        <p className="font-marketing-mono text-[28px] font-bold text-ink">
+                          {rupees(annualPrice)}
+                          <span className="text-[13px] font-normal text-ink/50">/yr</span>
+                        </p>
+                        <p className="mt-0.5 text-[12px] text-ink/50">
+                          <span className="line-through">{rupees(tier.amount * 12)}</span> about{" "}
+                          {rupees(annualPrice / 12)}/mo
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="flex flex-wrap items-baseline gap-1.5 font-marketing-mono text-[28px] font-bold text-ink">
+                          {p.price}
+                          <span className="text-[13px] font-normal text-ink/50">/mo</span>
+                        </p>
+                        {tier.mrpAmount ? (
+                          <p className="mt-0.5 text-[12px] text-ink/50">
+                            <span className="line-through">{rupees(tier.mrpAmount)}</span>{" "}
+                            <span className="font-marketing-mono font-bold text-clay">
+                              {computeDiscount(tier.mrpAmount, tier.amount).discountPercent}% off
+                            </span>
+                          </p>
+                        ) : null}
+                      </>
+                    )}
+                  </div>
+
+                  <ul className="mt-5 flex-1 space-y-2.5">
+                    {p.items.map((it) => (
+                      <li key={it} className="flex items-start gap-2 text-[13.5px] text-ink/75">
+                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 bg-clay" />
+                        {it}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <a
+                    href={appUrl("/auth")}
+                    className="mt-6 block border-2 border-ink bg-clay py-3 text-center text-[13.5px] font-semibold text-paper"
+                  >
+                    Get started
+                  </a>
+                  <p className="mt-2 text-center text-[11px] text-ink/55">Billed from day one</p>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 flex flex-col gap-4 border-2 border-ink bg-paper p-6 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <span className="font-marketing-display text-[16px] font-bold text-ink uppercase">
+                {enterprisePlan.name}
+              </span>
+              <p className="mt-1 text-[12px] text-ink/55">{enterprisePlan.sub}</p>
+              <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-1.5">
+                {enterprisePlan.items.map((it) => (
+                  <li key={it} className="flex items-start gap-2 text-[13.5px] text-ink/75">
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 bg-clay" />
+                    {it}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <a
+              href="/contact-us"
+              className="shrink-0 border-2 border-ink bg-cream px-6 py-3 text-center text-[13.5px] font-semibold text-ink"
+            >
+              Contact us
+            </a>
+          </div>
+
+          {/* Full feature comparison — a real table on desktop, stacked feature cards on phones. */}
+          <div className="mt-10 hidden overflow-hidden border-2 border-ink md:block">
             <div className="w-full overflow-x-auto">
               <table className="w-full min-w-[640px] border-collapse text-left">
                 <thead>
                   <tr className="border-b-2 border-ink bg-sage-light/50">
                     <th className="px-6 py-4 font-marketing-mono text-[12px] font-bold tracking-[0.06em] text-ink/70 uppercase">
-                      Tariff slab
+                      Feature
                     </th>
-                    {plans.map((p) => {
-                      const tier = planTiers.find((t) => t.name === p.name)!;
-                      const annualPrice = tier.annualAmount ?? tier.amount * 12;
-                      const showingAnnual = billingCycle === "annual";
-                      return (
-                        <th key={p.name} className="px-6 py-4 text-left">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-marketing-display text-[15px] font-bold text-ink uppercase">
-                              {p.name}
-                            </span>
-                            {p.popular && <span className="stamp">Recommended</span>}
-                          </div>
-                          {showingAnnual ? (
-                            <>
-                              <p className="mt-1 font-marketing-mono text-[22px] font-bold text-ink">
-                                {rupees(annualPrice)}
-                                <span className="text-[12px] font-normal text-ink/50">/yr</span>
-                              </p>
-                              <p className="text-[11.5px] text-ink/50">
-                                <span className="line-through">{rupees(tier.amount * 12)}</span>{" "}
-                                about {rupees(annualPrice / 12)}/mo
-                              </p>
-                            </>
-                          ) : (
-                            <p className="mt-1 font-marketing-mono text-[22px] font-bold text-ink">
-                              {p.price}
-                              <span className="text-[12px] font-normal text-ink/50">/mo</span>
-                            </p>
-                          )}
-                          <p className="mt-0.5 text-[12px] text-ink/55">{p.sub}</p>
-                        </th>
-                      );
-                    })}
-                    <th className="px-6 py-4 text-left">
-                      <span className="font-marketing-display text-[15px] font-bold text-ink uppercase">
-                        {enterprisePlan.name}
-                      </span>
-                      <p className="mt-1 font-marketing-mono text-[22px] font-bold text-ink">
-                        {enterprisePlan.price}
-                      </p>
-                      <p className="mt-0.5 text-[12px] text-ink/55">{enterprisePlan.sub}</p>
+                    <th className="px-6 py-4 font-marketing-display text-[13px] font-bold text-ink/70 uppercase">
+                      Starter
+                    </th>
+                    <th className="px-6 py-4 font-marketing-display text-[13px] font-bold text-ink/70 uppercase">
+                      Growing
+                    </th>
+                    <th className="px-6 py-4 font-marketing-display text-[13px] font-bold text-ink/70 uppercase">
+                      Scale
+                    </th>
+                    <th className="px-6 py-4 font-marketing-display text-[13px] font-bold text-ink/70 uppercase">
+                      Enterprise
                     </th>
                   </tr>
                 </thead>
@@ -452,36 +519,42 @@ function LandingPage() {
                       </tr>
                     );
                   })}
-                  <tr className="border-t-2 border-ink bg-sage-light/30">
-                    <td className="px-6 py-4" />
-                    {plans.map((p) => (
-                      <td key={p.name} className="px-6 py-5">
-                        <a
-                          href={appUrl("/auth")}
-                          className="block border-2 border-ink bg-clay py-3 text-center text-[13.5px] font-semibold text-paper"
-                        >
-                          Get started
-                        </a>
-                        <p className="mt-2 text-center text-[11.5px] text-ink/55">
-                          Billed from day one
-                        </p>
-                      </td>
-                    ))}
-                    <td className="px-6 py-5">
-                      <a
-                        href="/contact-us"
-                        className="block border-2 border-ink bg-paper py-3 text-center text-[13.5px] font-semibold text-ink"
-                      >
-                        Contact us
-                      </a>
-                      <p className="mt-2 text-center text-[11.5px] text-ink/55">
-                        We'll price it with you
-                      </p>
-                    </td>
-                  </tr>
                 </tbody>
               </table>
             </div>
+          </div>
+
+          {/* Mobile: one card per feature, each plan's value stacked underneath. */}
+          <div className="mt-10 flex flex-col gap-3 md:hidden">
+            {planComparison.map((row) => {
+              const sameAcrossTiers =
+                row.starter === row.growing &&
+                row.growing === row.scale &&
+                row.scale === row.enterprise;
+              return (
+                <div
+                  key={row.feature}
+                  className={`border border-line bg-paper p-4 ${sameAcrossTiers ? "opacity-60" : ""}`}
+                >
+                  <p className="text-[14px] font-medium text-ink/80">{row.feature}</p>
+                  <dl className="mt-3 grid grid-cols-2 gap-y-2">
+                    {[
+                      ["Starter", row.starter],
+                      ["Growing", row.growing],
+                      ["Scale", row.scale],
+                      ["Enterprise", row.enterprise],
+                    ].map(([label, value]) => (
+                      <div key={label}>
+                        <dt className="font-marketing-mono text-[10.5px] tracking-[0.04em] text-ink/45 uppercase">
+                          {label}
+                        </dt>
+                        <dd className="font-marketing-mono text-[13px] text-ink/70">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              );
+            })}
           </div>
 
           {/* Included on every plan */}
@@ -511,7 +584,7 @@ function LandingPage() {
       {/* CTA */}
       <section className="px-6">
         <div className="reveal mx-auto max-w-[1180px] border-2 border-ink bg-sage-light px-8 py-16 text-center sm:px-16">
-          <h2 className="mx-auto max-w-[640px] font-marketing-display text-[clamp(28px,3.6vw,44px)] font-bold text-ink">
+          <h2 className="mx-auto font-marketing-display text-[clamp(22px,3.6vw,44px)] font-bold text-ink">
             Stop typing the same bill message thirty times a month.
           </h2>
           <p className="mt-5 mb-8 text-[16px] text-ink/60">
