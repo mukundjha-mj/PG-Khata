@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 
+import logoMark from "@/assets/logo.png";
 import { BRAND, appUrl } from "@/lib/site";
-import logoMark from "@/assets/logo-mark.png";
 
 const linkClass = "mb-3 block text-[14.5px] text-ink/70 hover:text-ink";
 
@@ -11,10 +11,10 @@ export function MarketingFooter({ maxWidth = "1180px" }: { maxWidth?: string }) 
     <footer className="mx-auto px-6 pt-16 pb-10" style={{ maxWidth }}>
       <div className="flex flex-wrap justify-between gap-8 border-t-2 border-ink pt-8">
         <div className="max-w-[300px]">
-          <span className="flex items-center gap-2 font-marketing-display text-lg font-bold text-ink">
-            <img src={logoMark} alt="" className="h-6 w-6" width={24} height={24} />
-            {BRAND}
-          </span>
+          <div className="flex items-center gap-2 text-lg font-bold tracking-tight text-ink">
+            <img src={logoMark} alt="" className="h-8 w-8 object-contain" />
+            <span>{BRAND}</span>
+          </div>
           <p className="mt-3 text-[14.5px] text-ink/60">
             Billing and tenant management for PG and hostel owners across India.
           </p>

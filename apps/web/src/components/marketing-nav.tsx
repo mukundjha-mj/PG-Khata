@@ -3,8 +3,8 @@ import { Menu } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import logoMark from "@/assets/logo.png";
 import { BRAND, appUrl } from "@/lib/site";
-import logoMark from "@/assets/logo-mark.png";
 
 type NavLink = { href: string; label: string };
 
@@ -26,10 +26,10 @@ export function MarketingNav({ links = DEFAULT_LINKS }: { links?: NavLink[] }) {
         <div className="mx-auto flex max-w-[1180px] items-center justify-between px-6">
           <Link
             to="/"
-            className="flex items-center gap-2 font-marketing-display text-xl font-bold tracking-tight text-ink"
+            className="flex items-center gap-2 text-xl font-bold tracking-tight text-ink"
           >
-            <img src={logoMark} alt="" className="h-7 w-7" width={28} height={28} />
-            {BRAND}
+            <img src={logoMark} alt="" className="h-8 w-8 object-contain" />
+            <span>{BRAND}</span>
           </Link>
           <div className="hidden items-center gap-8 text-sm font-medium md:flex">
             {links.map((link) => (
@@ -57,9 +57,9 @@ export function MarketingNav({ links = DEFAULT_LINKS }: { links?: NavLink[] }) {
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="bg-cream text-ink">
-          <SheetTitle className="flex items-center gap-2 font-marketing-display text-lg font-bold text-ink">
-            <img src={logoMark} alt="" className="h-6 w-6" width={24} height={24} />
-            {BRAND}
+          <SheetTitle className="flex items-center gap-2 text-lg font-bold text-ink">
+            <img src={logoMark} alt="" className="h-7 w-7 object-contain" />
+            <span>{BRAND}</span>
           </SheetTitle>
           <nav className="mt-6 flex flex-col gap-1 text-base font-medium">
             {links.map((link) => (

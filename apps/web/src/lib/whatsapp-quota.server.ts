@@ -1,6 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 
+export const DEFAULT_WHATSAPP_MONTHLY_LIMIT = 100;
+
+// Meta updates accepted messages from sent to delivered/read through the webhook.
+// All three statuses consume quota; failed attempts do not.
+const QUOTA_CONSUMING_WHATSAPP_STATUSES: Database["public"]["Enums"]["notification_status"][] = [
+  "sent",
+  "delivered",
+  "read",
+];
+
 export type QuotaCheck = { allowed: true } | { allowed: false; reason: string };
 
 export type QuotaStatus = {
@@ -49,20 +59,20 @@ export async function getWhatsAppQuotaStatus(
       .select("id", { count: "exact", head: true })
       .eq("admin_id", adminId)
       .eq("channel", "whatsapp")
-      .eq("status", "sent")
+      .in("status", QUOTA_CONSUMING_WHATSAPP_STATUSES)
       .gte("sent_at", windowStart());
     if (error) throw new Error(error.message);
     return { used: count ?? 0, limit: null, remaining: null };
   }
 
-  const limit = settings?.whatsapp_monthly_limit ?? 50;
+  const limit = settings?.whatsapp_monthly_limit ?? DEFAULT_WHATSAPP_MONTHLY_LIMIT;
 
   const { count, error } = await supabase
     .from("notification_logs")
     .select("id", { count: "exact", head: true })
     .eq("admin_id", adminId)
     .eq("channel", "whatsapp")
-    .eq("status", "sent")
+    .in("status", QUOTA_CONSUMING_WHATSAPP_STATUSES)
     .gte("sent_at", windowStart());
   if (error) throw new Error(error.message);
 

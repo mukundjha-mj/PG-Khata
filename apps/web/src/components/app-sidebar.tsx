@@ -56,7 +56,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2.5 px-1.5 py-2">
-          <BrandMark size={26} priority className="rounded-[7px]" />
+          <BrandMark size={30} priority />
           {showLabels && (
             <div className="min-w-0">
               <p className="truncate text-[13px] font-semibold tracking-tight">{brandName}</p>

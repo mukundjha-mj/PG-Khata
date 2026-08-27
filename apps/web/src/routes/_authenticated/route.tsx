@@ -44,7 +44,7 @@ function AuthenticatedLayout() {
               <span className="truncate text-[13px] font-medium tracking-tight text-foreground">
                 {brandName}
               </span>
-              <ThemeToggle className="ml-auto h-10 w-10 md:h-8 md:w-8" />
+              <ThemeToggle className="ml-auto" />
             </header>
             <main className="min-w-0 flex-1 overflow-x-hidden px-3 py-5 sm:px-4 sm:py-6 md:px-8 md:py-8">
               <div className="mx-auto w-full max-w-[1400px]">

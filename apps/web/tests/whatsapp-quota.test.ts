@@ -7,6 +7,7 @@ type Settings = { whatsapp_monthly_limit: number; whatsapp_unlimited: boolean };
 
 function quotaClient(settings: Settings, sentCount: number) {
   const windowStarts: string[] = [];
+  const countedStatuses: string[][] = [];
   const client = {
     from(table: string) {
       if (table === "settings") {
@@ -24,8 +25,9 @@ function quotaClient(settings: Settings, sentCount: number) {
           select: () => ({
             eq: () => ({
               eq: () => ({
-                eq: () => ({
-                  gte: (_column: string, value: string) => {
+                in: (_column: string, statuses: string[]) => ({
+                  gte: (_gteColumn: string, value: string) => {
+                    countedStatuses.push(statuses);
                     windowStarts.push(value);
                     return Promise.resolve({ count: sentCount, error: null });
                   },
@@ -40,7 +42,7 @@ function quotaClient(settings: Settings, sentCount: number) {
     },
   } as unknown as SupabaseClient<Database>;
 
-  return { client, windowStarts };
+  return { client, windowStarts, countedStatuses };
 }
 
 afterEach(() => vi.useRealTimers());
@@ -49,7 +51,7 @@ describe("WhatsApp monthly quota", () => {
   it("returns remaining messages from this month's sent notification count", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-27T15:30:00.000Z"));
-    const { client, windowStarts } = quotaClient(
+    const { client, windowStarts, countedStatuses } = quotaClient(
       { whatsapp_monthly_limit: 50, whatsapp_unlimited: false },
       17,
     );
@@ -60,6 +62,7 @@ describe("WhatsApp monthly quota", () => {
       remaining: 33,
     });
     expect(windowStarts).toEqual(["2026-08-01T00:00:00.000Z"]);
+    expect(countedStatuses).toEqual([["sent", "delivered", "read"]]);
   });
 
   it("reports unlimited owners without imposing a numeric limit", async () => {

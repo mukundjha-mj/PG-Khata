@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
 import { onAdminHost } from "@/lib/admin-host";
+import fullLogo from "@/assets/full logo.png";
 import { BRAND, appUrl, siteUrl } from "@/lib/site";
 import { MarketingNav } from "@/components/marketing-nav";
 import { MarketingFooter } from "@/components/marketing-footer";
@@ -27,6 +28,9 @@ export const Route = createFileRoute("/")({
       { property: "og:type", content: "website" },
       { property: "og:url", content: siteUrl("/") },
       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:image", content: siteUrl(fullLogo) },
+      { property: "og:image:alt", content: `${BRAND} logo` },
+      { name: "twitter:image", content: siteUrl(fullLogo) },
     ],
     links: [{ rel: "canonical", href: siteUrl("/") }],
     scripts: [

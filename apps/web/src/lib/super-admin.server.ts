@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { BRAND } from "@/lib/site";
+import { DEFAULT_WHATSAPP_MONTHLY_LIMIT } from "@/lib/whatsapp-quota.server";
 
 export type AccountRow = {
   id: string;
@@ -90,7 +91,7 @@ export async function loadAccounts(db: Admin): Promise<AccountRow[]> {
 
   return (admins.data ?? []).map((admin) => {
     const setting = settingsBy.get(admin.id);
-    const limit = setting?.whatsapp_monthly_limit ?? 50;
+    const limit = setting?.whatsapp_monthly_limit ?? DEFAULT_WHATSAPP_MONTHLY_LIMIT;
     const unlimited = setting?.whatsapp_unlimited ?? false;
     const sent = sentCount.get(admin.id) ?? 0;
     return {

@@ -175,7 +175,12 @@ function Dashboard() {
   });
   // Shares the "whatsapp-quota-status" query key with Settings, so both read
   // the same cached value instead of issuing a duplicate request.
-  const { data: quota } = useQuery({
+  const {
+    data: quota,
+    isError: isQuotaError,
+    isLoading: isQuotaLoading,
+    refetch: refetchQuota,
+  } = useQuery({
     queryKey: ["whatsapp-quota-status"],
     queryFn: () => getQuotaStatus({}),
   });
@@ -417,37 +422,65 @@ function Dashboard() {
         onOpenChange={setPersonalReminderOpen}
       />
 
-      {quota && quota.limit !== null ? (
-        <Card className={quota.remaining === 0 ? "border-warning/40 bg-warning/5" : ""}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="flex items-center gap-2">
-              <MessageCircle className="h-4 w-4 text-muted-foreground" />
-              WhatsApp quota
-            </CardTitle>
-            <Button asChild size="sm" variant="ghost">
-              <Link to="/settings">
-                Settings <ArrowRight className="ml-1 h-3.5 w-3.5" />
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-baseline justify-between text-sm">
-              <span className="text-muted-foreground">Sent this month</span>
-              <span className="font-medium tabular-nums">
-                {quota.used} / {quota.limit}
-              </span>
-            </div>
-            <Progress value={Math.min(100, (quota.used / quota.limit) * 100)} />
-            {quota.remaining === 0 ? (
-              <p className="text-xs text-destructive">
-                Your WhatsApp allowance is used for this month. Contact us to request more.
+      <Card className={quota?.remaining === 0 ? "border-warning/40 bg-warning/5" : ""}>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="flex items-center gap-2">
+            <MessageCircle className="h-4 w-4 text-muted-foreground" />
+            WhatsApp quota
+          </CardTitle>
+          <Button asChild size="sm" variant="ghost">
+            <Link to="/settings">
+              Settings <ArrowRight className="ml-1 h-3.5 w-3.5" />
+            </Link>
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {isQuotaLoading ? (
+            <>
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-2 w-full" />
+            </>
+          ) : isQuotaError ? (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-muted-foreground">
+                Couldn&apos;t load your WhatsApp quota.
               </p>
-            ) : (
-              <p className="text-xs text-muted-foreground">{quota.remaining} messages left.</p>
-            )}
-          </CardContent>
-        </Card>
-      ) : null}
+              <Button size="sm" variant="outline" onClick={() => void refetchQuota()}>
+                Try again
+              </Button>
+            </div>
+          ) : quota?.limit === null ? (
+            <>
+              <div className="flex items-baseline justify-between text-sm">
+                <span className="text-muted-foreground">Sent this month</span>
+                <span className="font-medium tabular-nums">{quota.used}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">Your WhatsApp allowance is unlimited.</p>
+            </>
+          ) : quota ? (
+            <>
+              <div className="flex items-baseline justify-between text-sm">
+                <span className="text-muted-foreground">Sent this month</span>
+                <span className="font-medium tabular-nums">
+                  {quota.used} / {quota.limit}
+                </span>
+              </div>
+              <Progress value={Math.min(100, (quota.used / quota.limit) * 100)} />
+              {quota.remaining === 0 ? (
+                <p className="text-xs text-destructive">
+                  Your WhatsApp allowance is used for this month. Contact us to request more.
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">{quota.remaining} messages left.</p>
+              )}
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              WhatsApp quota is unavailable right now.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card
         className={openComplaints && openComplaints > 0 ? "border-warning/40 bg-warning/5" : ""}
