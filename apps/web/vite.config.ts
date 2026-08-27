@@ -3,6 +3,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
+import { VitePWA } from "vite-plugin-pwa";
 import { defineConfig, loadEnv } from "vite";
 import tsConfigPaths from "vite-tsconfig-paths";
 
@@ -60,6 +61,63 @@ export default defineConfig(({ mode }) => {
       // expects; on Vercel it auto-detects and writes .vercel/output.
       nitro(),
       viteReact(),
+      VitePWA({
+        // TanStack Start/Nitro serves .output/public, not Vite's default dist.
+        // Keep the generated worker and its runtime beside the deployed manifest.
+        outDir: ".output/public",
+        registerType: "autoUpdate",
+        injectRegister: "auto",
+        manifest: {
+          id: "/",
+          name: "PGKhata – PG & hostel manager",
+          short_name: "PGKhata",
+          description: "Manage PG tenants, rooms, occupancy, rent billing, and reminders.",
+          lang: "en",
+          start_url: "/",
+          scope: "/",
+          display: "standalone",
+          theme_color: "#1da1f2",
+          background_color: "#ffffff",
+          categories: ["business", "productivity"],
+          icons: [
+            { src: "pwa-192x192.png", sizes: "192x192", type: "image/png" },
+            { src: "pwa-512x512.png", sizes: "512x512", type: "image/png" },
+            {
+              src: "maskable-icon-512x512.png",
+              sizes: "512x512",
+              type: "image/png",
+              purpose: "maskable",
+            },
+          ],
+        },
+        workbox: {
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true,
+          // Cache design resources only. Owner records and authentication stay
+          // network-backed so the installed app never presents stale account data.
+          runtimeCaching: [
+            {
+              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*$/i,
+              handler: "StaleWhileRevalidate",
+              options: {
+                cacheName: "google-fonts-stylesheets",
+                expiration: { maxEntries: 4, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*$/i,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "google-fonts-webfonts",
+                expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+          ],
+        },
+      }),
     ],
   };
 });

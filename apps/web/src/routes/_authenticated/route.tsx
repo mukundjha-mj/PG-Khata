@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { InstallAppPrompt } from "@/components/install-app-prompt";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AuthenticatedSkeleton } from "@/components/authenticated-skeleton";
 import { getOwnerRouteAccess, type OwnerRouteAccess } from "@/lib/owner-route-auth";
@@ -51,6 +52,7 @@ function AuthenticatedLayout() {
                 <Outlet />
               </div>
             </main>
+            <InstallAppPrompt />
           </div>
         </div>
       </SidebarProvider>
