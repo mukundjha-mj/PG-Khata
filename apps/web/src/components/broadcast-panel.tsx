@@ -22,11 +22,8 @@ import type { BroadcastSegment } from "@/lib/broadcast.server";
 
 const SEGMENT_LABELS: Record<BroadcastSegment, string> = {
   all: "All owners",
-  trial: "On trial",
-  active: "Active subscribers",
-  starter: "Starter plan",
-  growing: "Growing plan",
-  scale: "Scale plan",
+  whatsapp_reached: "WhatsApp allowance reached",
+  whatsapp_unlimited: "Unlimited WhatsApp allowance",
 };
 
 /** Super-admin-only: email an announcement to a segment of PG owners. */

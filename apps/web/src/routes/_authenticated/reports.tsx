@@ -23,7 +23,6 @@ import { DataPagination, usePagination } from "@/components/data-pagination";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveTable, TableSkeleton } from "@/components/responsive-table";
 import { EmptyState } from "@/components/empty-state";
-import { PlanGate } from "@/components/plan-gate";
 import {
   Table,
   TableBody,
@@ -54,16 +53,8 @@ export const Route = createFileRoute("/_authenticated/reports")({
       { property: "og:description", content: "Collection performance across your PG properties." },
     ],
   }),
-  component: GatedReportsPage,
+  component: ReportsPage,
 });
-
-function GatedReportsPage() {
-  return (
-    <PlanGate min="scale" feature="Reports and analytics">
-      <ReportsPage />
-    </PlanGate>
-  );
-}
 
 function ReportsPage() {
   const directory = useDirectory();

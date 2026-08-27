@@ -162,7 +162,9 @@ export async function runMonthlyBilling(
     }
 
     const config = settingsByAdmin.get(property.admin_id);
-    const rate = Number(property.electricity_rate_per_unit ?? config?.electricity_rate_per_unit ?? 0);
+    const rate = Number(
+      property.electricity_rate_per_unit ?? config?.electricity_rate_per_unit ?? 0,
+    );
     const offset = Number(config?.due_date_offset_days ?? 10);
 
     const roomUnits = unitsByRoom.get(room.id) ?? 0;

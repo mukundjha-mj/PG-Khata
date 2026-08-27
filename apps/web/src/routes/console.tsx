@@ -1,29 +1,36 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   AlertTriangle,
-  ArrowUpRight,
   Banknote,
   CheckCircle2,
   CircleDot,
-  Clock,
+  MessageCircle,
   ShieldCheck,
   TrendingUp,
   UserPlus,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { OwnerDirectory } from "@/components/owner-directory";
-import { CouponManager } from "@/components/coupon-manager";
 import { ConsoleCard, ConsoleLayout, type ConsoleTab } from "@/components/console-layout";
 import { BroadcastPanel } from "@/components/broadcast-panel";
 import { PlatformSignIn, TotpChallenge, TotpEnroll } from "@/components/platform-auth-gates";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlatformIdentity } from "@/lib/use-super-admin";
 import { listAuditLog } from "@/lib/platform-auth.functions";
-import { getPlatformStats, listAllAccounts } from "@/lib/super-admin.functions";
+import {
+  getGlobalWhatsAppQuota,
+  getPlatformStats,
+  listAllAccounts,
+  setGlobalWhatsAppQuota,
+} from "@/lib/super-admin.functions";
 import type { AccountRow, PlatformStats } from "@/lib/super-admin.server";
 
 export const Route = createFileRoute("/console")({
@@ -33,7 +40,8 @@ export const Route = createFileRoute("/console")({
       { title: "PGKhata Control - Super admin" },
       {
         name: "description",
-        content: "Internal PGKhata platform console for managing every PG owner account.",
+        content:
+          "Internal PGKhata platform console for managing PG owner operations and WhatsApp allowances.",
       },
       { property: "og:title", content: "PGKhata Control - Super admin" },
       { property: "og:description", content: "Internal console for the PGKhata platform team." },
@@ -60,7 +68,7 @@ async function signOutEverything(queryClient: ReturnType<typeof useQueryClient>)
   window.location.reload();
 }
 
-const inr = (n: number) => "Rs. " + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
+const inr = (value: number) => `Rs. ${value.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 
 function ConsolePage() {
   const { data: user, isLoading: sessionLoading } = useSession();
@@ -68,11 +76,10 @@ function ConsolePage() {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<ConsoleTab>("overview");
   const [search, setSearch] = useState("");
-
   const statsFn = useServerFn(getPlatformStats);
   const accountsFn = useServerFn(listAllAccounts);
   const auditFn = useServerFn(listAuditLog);
-
+  const quotaFn = useServerFn(getGlobalWhatsAppQuota);
   const ready = Boolean(identity?.isSuperAdmin && identity?.mfaSatisfied);
   const stats = useQuery({
     queryKey: ["platform-stats"],
@@ -89,14 +96,17 @@ function ConsolePage() {
     queryFn: () => auditFn(),
     enabled: ready,
   });
+  const defaultQuota = useQuery({
+    queryKey: ["global-whatsapp-quota"],
+    queryFn: () => quotaFn(),
+    enabled: ready,
+  });
 
   if (sessionLoading) return <Loading />;
   if (!user) return <PlatformSignIn />;
   if (identityLoading || !identity) return <Loading />;
-
   const signOut = () => signOutEverything(queryClient);
   const email = user.email ?? "";
-
   if (!identity.isSuperAdmin) {
     return (
       <div className="console-shell dark min-h-screen p-6">
@@ -107,22 +117,20 @@ function ConsolePage() {
       </div>
     );
   }
-
   const afterMfa = async () => {
     await supabase.auth.refreshSession();
     queryClient.clear();
     await refetch();
     window.location.reload();
   };
-
   if (!identity.mfaEnrolled) return <TotpEnroll onDone={afterMfa} />;
   if (!identity.mfaSatisfied) return <TotpChallenge onDone={afterMfa} onSignOut={signOut} />;
 
   const rows = accounts.data ?? [];
-  const q = search.trim().toLowerCase();
-  const filtered = q
-    ? rows.filter((r) =>
-        [r.name, r.email, r.brand_name].some((v) => (v ?? "").toLowerCase().includes(q)),
+  const term = search.trim().toLowerCase();
+  const filtered = term
+    ? rows.filter((row) =>
+        [row.name, row.email, row.brand_name].some((value) => value.toLowerCase().includes(term)),
       )
     : rows;
 
@@ -141,44 +149,23 @@ function ConsolePage() {
           stats={stats.data}
           loading={stats.isLoading}
           accounts={filtered}
-          accountsLoading={accounts.isLoading}
-          audit={audit.data ?? []}
           onOpenOwners={() => setTab("owners")}
         />
       ) : null}
-
       {tab === "owners" ? (
         <div className="rounded-xl border border-console-border bg-console-panel p-2 sm:p-4">
           <OwnerDirectory accounts={filtered} isLoading={accounts.isLoading} />
         </div>
       ) : null}
-
-      {tab === "coupons" ? (
-        <div className="rounded-xl border border-console-border bg-console-panel p-2 sm:p-4">
-          <CouponManager />
-        </div>
-      ) : null}
-
-      {tab === "revenue" ? <Revenue stats={stats.data} loading={stats.isLoading} /> : null}
-
       {tab === "usage" ? <Usage stats={stats.data} accounts={rows} /> : null}
-
       {tab === "health" ? <Health stats={stats.data} /> : null}
-
       {tab === "audit" ? <AuditLog rows={audit.data ?? []} loading={audit.isLoading} full /> : null}
-
       {tab === "broadcast" ? <BroadcastPanel /> : null}
-
       {tab === "settings" ? (
-        <ConsoleCard>
-          <CardTitle title="Platform settings" subtitle="Security posture of this console" />
-          <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-            <Fact label="Signed in as" value={email} />
-            <Fact label="Two factor" value={identity.mfaEnrolled ? "Enabled (TOTP)" : "Not set"} />
-            <Fact label="Session assurance" value={identity.mfaSatisfied ? "aal2" : "aal1"} />
-            <Fact label="Audit log" value="Append only" />
-          </dl>
-        </ConsoleCard>
+        <PlatformSettings
+          defaultLimit={defaultQuota.data?.limit}
+          loading={defaultQuota.isLoading}
+        />
       ) : null}
     </ConsoleLayout>
   );
@@ -202,34 +189,25 @@ function CardTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   );
 }
 
-function Fact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-console-border bg-console-raised px-3 py-2">
-      <dt className="text-[11px] uppercase tracking-wide text-console-muted">{label}</dt>
-      <dd className="truncate text-sm">{value}</dd>
-    </div>
-  );
-}
-
 function Metric({
   icon: Icon,
   chip,
-  chipTone = "ok",
+  tone = "ok",
   label,
   value,
   hint,
 }: {
   icon: typeof TrendingUp;
   chip: string;
-  chipTone?: "ok" | "warn" | "muted";
+  tone?: "ok" | "warn" | "muted";
   label: string;
   value: string;
   hint: string;
 }) {
-  const tone =
-    chipTone === "ok"
+  const textTone =
+    tone === "ok"
       ? "text-console-ok"
-      : chipTone === "warn"
+      : tone === "warn"
         ? "text-console-warn"
         : "text-console-muted";
   return (
@@ -238,7 +216,7 @@ function Metric({
         <div className="grid h-9 w-9 place-items-center rounded-lg bg-console-raised">
           <Icon className="h-4 w-4 text-console-accent" />
         </div>
-        <span className={`text-xs font-medium ${tone}`}>{chip}</span>
+        <span className={`text-xs font-medium ${textTone}`}>{chip}</span>
       </div>
       <p className="eyebrow mt-4">{label}</p>
       <p className="console-num stat-value mt-1">{value}</p>
@@ -247,136 +225,113 @@ function Metric({
   );
 }
 
-type AuditRow = {
-  id: string;
-  action: string;
-  actor_email: string;
-  reason: string | null;
-  created_at: string;
-};
-
 function Overview({
   stats,
   loading,
   accounts,
-  accountsLoading,
-  audit,
   onOpenOwners,
 }: {
   stats: PlatformStats | undefined;
   loading: boolean;
   accounts: AccountRow[];
-  accountsLoading: boolean;
-  audit: AuditRow[];
   onOpenOwners: () => void;
 }) {
-  const attention = useMemo(
-    () => accounts.filter((a) => a.plan_status !== "active" || a.pending_plan).slice(0, 6),
-    [accounts],
-  );
-
+  const reached = accounts
+    .filter((account) => !account.whatsapp_unlimited && account.whatsapp_remaining === 0)
+    .slice(0, 6);
   return (
     <>
-      {attention.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-console-border bg-console-accent-soft px-4 py-3">
+      {reached.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-console-warn/40 bg-console-accent-soft px-4 py-3">
           <AlertTriangle className="h-4 w-4 text-console-warn" />
           <p className="text-sm">
-            {attention.length} PG owner{attention.length === 1 ? "" : "s"} need a look at their
-            subscription.
+            {reached.length} owner{reached.length === 1 ? "" : "s"} reached their WhatsApp
+            allowance.
           </p>
           <button
             type="button"
             onClick={onOpenOwners}
             className="ml-auto inline-flex min-h-9 items-center gap-1 rounded-md border border-console-border px-3 text-sm"
           >
-            Review owners <ArrowUpRight className="h-3.5 w-3.5" />
+            Review owners
           </button>
         </div>
       ) : null}
-
       {loading || !stats ? (
         <Skeleton className="h-32 w-full" />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Metric
-            icon={TrendingUp}
-            chip={`${stats.payingOwners} paying`}
-            label="Monthly recurring revenue"
-            value={inr(stats.mrr)}
-            hint={`${stats.owners} PG owner accounts`}
-          />
-          <Metric
             icon={UserPlus}
             chip={`+ ${stats.newOwners30d}`}
             label="New signups, last 30 days"
             value={String(stats.newOwners30d)}
-            hint={`${stats.trialOwners} on trial, ${stats.payingOwners} paying`}
+            hint={`${stats.owners} PG owner accounts`}
+          />
+          <Metric
+            icon={MessageCircle}
+            chip={`${stats.quotaReachedOwners} reached`}
+            tone={stats.quotaReachedOwners ? "warn" : "ok"}
+            label="WhatsApp messages this month"
+            value={String(stats.whatsappSentThisMonth)}
+            hint={`${stats.unlimitedOwners} owners have unlimited access`}
           />
           <Metric
             icon={Banknote}
             chip={stats.outstanding > 0 ? "Dues open" : "All clear"}
-            chipTone={stats.outstanding > 0 ? "warn" : "ok"}
+            tone={stats.outstanding > 0 ? "warn" : "ok"}
             label="Collected this month"
             value={inr(stats.collectedThisMonth)}
             hint={`${inr(stats.outstanding)} outstanding across owners`}
           />
           <Metric
             icon={ShieldCheck}
-            chip="All clear"
+            chip="Operations"
             label="Bills raised this month"
             value={String(stats.billsThisMonth)}
             hint={`${inr(stats.billedThisMonth)} billed platform wide`}
           />
         </div>
       )}
-
       <div className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
         <ConsoleCard>
           <div className="flex flex-wrap items-start gap-3">
             <CardTitle
-              title="PG owners needing attention"
-              subtitle="Overdue payments, expiring trials, and pending plan changes"
+              title="Owners at their WhatsApp allowance"
+              subtitle="Sales and support signal for additional WhatsApp capacity"
             />
             <button
               type="button"
               onClick={onOpenOwners}
-              className="ml-auto inline-flex min-h-9 items-center gap-1 rounded-md border border-console-border px-3 text-sm"
+              className="ml-auto inline-flex min-h-9 items-center rounded-md border border-console-border px-3 text-sm"
             >
-              View all
+              Manage allowances
             </button>
           </div>
-
-          {accountsLoading ? (
-            <Skeleton className="mt-4 h-40 w-full" />
-          ) : attention.length === 0 ? (
+          {reached.length === 0 ? (
             <p className="mt-4 text-sm text-console-muted">
-              Every owner account is active with nothing pending.
+              No owner has exhausted a finite allowance this month.
             </p>
           ) : (
             <ul className="mt-4 divide-y divide-console-border">
-              {attention.map((a) => (
-                <li key={a.id} className="flex flex-wrap items-center gap-3 py-3">
+              {reached.map((account) => (
+                <li key={account.id} className="flex flex-wrap items-center gap-3 py-3">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{a.name || a.brand_name}</p>
-                    <p className="truncate text-xs text-console-muted">{a.email}</p>
+                    <p className="truncate text-sm font-medium">
+                      {account.name || account.brand_name}
+                    </p>
+                    <p className="truncate text-xs text-console-muted">{account.email}</p>
                   </div>
-                  <div className="ml-auto flex flex-wrap items-center gap-2">
-                    <Tag>{a.plan}</Tag>
-                    <Tag tone={a.plan_status === "active" ? "ok" : "warn"}>
-                      {a.plan_status.replace(/_/g, " ")}
-                    </Tag>
-                    <span className="console-num text-xs text-console-muted">
-                      {a.rooms} rooms, {a.tenants} tenants
-                    </span>
-                  </div>
+                  <span className="console-num ml-auto text-xs text-console-warn">
+                    {account.whatsapp_sent_this_month} / {account.whatsapp_monthly_limit} sent
+                  </span>
                 </li>
               ))}
             </ul>
           )}
         </ConsoleCard>
-
         <ConsoleCard>
-          <CardTitle title="System health" subtitle="Platform wide job status" />
+          <CardTitle title="System health" subtitle="Free-product operations" />
           <div className="mt-4 space-y-3">
             <HealthRow
               ok
@@ -384,9 +339,9 @@ function Overview({
               detail={`${stats?.billsThisMonth ?? 0} bills raised this month`}
             />
             <HealthRow
-              ok
-              title="Plan payments"
-              detail={`${inr(stats?.planRevenueCaptured ?? 0)} captured to date`}
+              ok={(stats?.quotaReachedOwners ?? 0) === 0}
+              title="WhatsApp allowances"
+              detail={`${stats?.quotaReachedOwners ?? 0} owners at their allowance`}
             />
             <HealthRow
               ok={(stats?.outstanding ?? 0) === 0}
@@ -401,34 +356,96 @@ function Overview({
           </div>
         </ConsoleCard>
       </div>
-
-      <AuditLog rows={audit} loading={false} />
     </>
   );
 }
 
-function Tag({
-  children,
-  tone = "muted",
-}: {
-  children: React.ReactNode;
-  tone?: "ok" | "warn" | "muted";
-}) {
-  const cls =
-    tone === "ok"
-      ? "text-console-ok"
-      : tone === "warn"
-        ? "text-console-warn"
-        : "text-console-muted";
+function Usage({ stats, accounts }: { stats: PlatformStats | undefined; accounts: AccountRow[] }) {
+  const top = [...accounts]
+    .sort((a, b) => b.whatsapp_sent_this_month - a.whatsapp_sent_this_month)
+    .slice(0, 8);
   return (
-    <span
-      className={`rounded-md border border-console-border bg-console-raised px-2 py-0.5 text-[11px] capitalize ${cls}`}
-    >
-      {children}
-    </span>
+    <>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Metric
+          icon={MessageCircle}
+          chip="Calendar month"
+          label="WhatsApp messages sent"
+          value={String(stats?.whatsappSentThisMonth ?? 0)}
+          hint="Successful messages only"
+        />
+        <Metric
+          icon={AlertTriangle}
+          chip="Action needed"
+          tone={(stats?.quotaReachedOwners ?? 0) > 0 ? "warn" : "ok"}
+          label="Owners at allowance"
+          value={String(stats?.quotaReachedOwners ?? 0)}
+          hint="Use owner controls to adjust"
+        />
+        <Metric
+          icon={TrendingUp}
+          chip="Platform"
+          label="Active tenants"
+          value={String(stats?.activeTenants ?? 0)}
+          hint="Across all PG owners"
+        />
+        <Metric
+          icon={ShieldCheck}
+          chip="Exceptions"
+          label="Unlimited owners"
+          value={String(stats?.unlimitedOwners ?? 0)}
+          hint="Explicit super-admin overrides"
+        />
+      </div>
+      <ConsoleCard>
+        <CardTitle title="Highest WhatsApp usage" subtitle="Current calendar month" />
+        <ul className="mt-4 divide-y divide-console-border">
+          {top.map((account) => (
+            <li key={account.id} className="flex items-center gap-3 py-2.5">
+              <span className="min-w-0 truncate text-sm">{account.name || account.brand_name}</span>
+              <span className="ml-auto console-num text-xs text-console-muted">
+                {account.whatsapp_unlimited
+                  ? `${account.whatsapp_sent_this_month} sent · unlimited`
+                  : `${account.whatsapp_sent_this_month} / ${account.whatsapp_monthly_limit}`}
+              </span>
+            </li>
+          ))}
+          {top.length === 0 ? <p className="text-sm text-console-muted">No owners yet.</p> : null}
+        </ul>
+      </ConsoleCard>
+    </>
   );
 }
 
+function Health({ stats }: { stats: PlatformStats | undefined }) {
+  return (
+    <ConsoleCard>
+      <CardTitle title="System health" subtitle="Platform-wide operations" />
+      <div className="mt-4 space-y-3">
+        <HealthRow
+          ok
+          title="Monthly billing run"
+          detail={`${stats?.billsThisMonth ?? 0} bills raised this month`}
+        />
+        <HealthRow
+          ok
+          title="WhatsApp usage accounting"
+          detail={`${stats?.whatsappSentThisMonth ?? 0} sent messages this month`}
+        />
+        <HealthRow
+          ok={(stats?.outstanding ?? 0) === 0}
+          title="Outstanding dues"
+          detail={inr(stats?.outstanding ?? 0)}
+        />
+        <HealthRow
+          ok
+          title="Console security"
+          detail="Two factor enforced on every platform session"
+        />
+      </div>
+    </ConsoleCard>
+  );
+}
 function HealthRow({ ok, title, detail }: { ok: boolean; title: string; detail: string }) {
   return (
     <div className="flex items-start gap-3 rounded-lg border border-console-border bg-console-raised px-3 py-2">
@@ -445,151 +462,13 @@ function HealthRow({ ok, title, detail }: { ok: boolean; title: string; detail: 
   );
 }
 
-function Revenue({ stats, loading }: { stats: PlatformStats | undefined; loading: boolean }) {
-  if (loading || !stats) return <Skeleton className="h-64 w-full" />;
-  const mix = [
-    { label: "Starter", value: stats.planCounts.starter },
-    { label: "Growing", value: stats.planCounts.growing },
-    { label: "Scale", value: stats.planCounts.scale },
-  ];
-  const max = Math.max(1, ...mix.map((m) => m.value));
-
-  return (
-    <>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric
-          icon={TrendingUp}
-          chip="Monthly"
-          label="Recurring revenue"
-          value={inr(stats.mrr)}
-          hint={`${stats.payingOwners} paying owners`}
-        />
-        <Metric
-          icon={Banknote}
-          chip="Lifetime"
-          label="Plan revenue captured"
-          value={inr(stats.planRevenueCaptured)}
-          hint="Successful plan payments"
-        />
-        <Metric
-          icon={Clock}
-          chip="Trials"
-          chipTone="warn"
-          label="Owners on trial"
-          value={String(stats.trialOwners)}
-          hint="Not yet converted"
-        />
-        <Metric
-          icon={Banknote}
-          chip="This month"
-          label="Rent collected"
-          value={inr(stats.collectedThisMonth)}
-          hint={`${inr(stats.billedThisMonth)} billed`}
-        />
-      </div>
-
-      <ConsoleCard>
-        <CardTitle title="Plan mix" subtitle="Active owner accounts by tier" />
-        <div className="mt-5 flex h-40 items-end gap-6">
-          {mix.map((m) => (
-            <div key={m.label} className="flex flex-1 flex-col items-center gap-2">
-              <span className="console-num text-xs text-console-muted">{m.value}</span>
-              <div
-                className="w-full rounded-t-md bg-console-accent"
-                style={{ height: `${(m.value / max) * 100}%`, minHeight: 6 }}
-              />
-              <span className="text-xs text-console-muted">{m.label}</span>
-            </div>
-          ))}
-        </div>
-      </ConsoleCard>
-    </>
-  );
-}
-
-function Usage({ stats, accounts }: { stats: PlatformStats | undefined; accounts: AccountRow[] }) {
-  const top = [...accounts].sort((a, b) => b.rooms - a.rooms).slice(0, 8);
-  return (
-    <>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric
-          icon={TrendingUp}
-          chip="Platform"
-          label="Properties"
-          value={String(stats?.properties ?? 0)}
-          hint="Across all owners"
-        />
-        <Metric
-          icon={TrendingUp}
-          chip="Platform"
-          label="Rooms"
-          value={String(stats?.rooms ?? 0)}
-          hint="Managed inventory"
-        />
-        <Metric
-          icon={TrendingUp}
-          chip="Platform"
-          label="Active tenants"
-          value={String(stats?.activeTenants ?? 0)}
-          hint="Currently checked in"
-        />
-        <Metric
-          icon={Banknote}
-          chip="This month"
-          label="Bills raised"
-          value={String(stats?.billsThisMonth ?? 0)}
-          hint={inr(stats?.billedThisMonth ?? 0)}
-        />
-      </div>
-
-      <ConsoleCard>
-        <CardTitle title="Heaviest accounts" subtitle="Owners using the most room capacity" />
-        <ul className="mt-4 divide-y divide-console-border">
-          {top.map((a) => (
-            <li key={a.id} className="flex items-center gap-3 py-2.5">
-              <span className="min-w-0 truncate text-sm">{a.name || a.brand_name}</span>
-              <span className="ml-auto console-num text-xs text-console-muted">
-                {a.properties} properties, {a.rooms} rooms, {a.tenants} tenants
-              </span>
-            </li>
-          ))}
-          {top.length === 0 ? <p className="text-sm text-console-muted">No accounts yet.</p> : null}
-        </ul>
-      </ConsoleCard>
-    </>
-  );
-}
-
-function Health({ stats }: { stats: PlatformStats | undefined }) {
-  return (
-    <ConsoleCard>
-      <CardTitle title="System health" subtitle="Platform wide job status" />
-      <div className="mt-4 space-y-3">
-        <HealthRow
-          ok
-          title="Monthly billing run"
-          detail={`${stats?.billsThisMonth ?? 0} bills raised this month`}
-        />
-        <HealthRow
-          ok
-          title="Payment capture"
-          detail={`${inr(stats?.collectedThisMonth ?? 0)} collected this month`}
-        />
-        <HealthRow
-          ok={(stats?.outstanding ?? 0) === 0}
-          title="Outstanding dues"
-          detail={inr(stats?.outstanding ?? 0)}
-        />
-        <HealthRow
-          ok
-          title="Console security"
-          detail="Two factor enforced on every platform session"
-        />
-      </div>
-    </ConsoleCard>
-  );
-}
-
+type AuditRow = {
+  id: string;
+  action: string;
+  actor_email: string;
+  reason: string | null;
+  created_at: string;
+};
 function AuditLog({
   rows,
   loading,
@@ -621,6 +500,63 @@ function AuditLog({
           ))}
         </ul>
       )}
+    </ConsoleCard>
+  );
+}
+
+function PlatformSettings({
+  defaultLimit,
+  loading,
+}: {
+  defaultLimit: number | undefined;
+  loading: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const setQuota = useServerFn(setGlobalWhatsAppQuota);
+  const [limit, setLimit] = useState<string | null>(null);
+  const value = limit ?? (defaultLimit === undefined ? "" : String(defaultLimit));
+  const numericLimit = Number(value);
+  const valid = Number.isInteger(numericLimit) && numericLimit >= 0 && numericLimit <= 100_000;
+  const save = useMutation({
+    mutationFn: () => setQuota({ data: { limit: numericLimit } }),
+    onSuccess: () => {
+      toast.success("Default WhatsApp allowance updated for future owners");
+      queryClient.invalidateQueries({ queryKey: ["global-whatsapp-quota"] });
+      queryClient.invalidateQueries({ queryKey: ["platform-audit-log"] });
+      setLimit(null);
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  if (loading) return <Skeleton className="h-48 w-full" />;
+  return (
+    <ConsoleCard>
+      <CardTitle
+        title="Default WhatsApp allowance"
+        subtitle="Applied only when a new PG owner account is created"
+      />
+      <div className="mt-5 max-w-md space-y-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="global-whatsapp-quota">Messages per calendar month</Label>
+          <Input
+            id="global-whatsapp-quota"
+            type="number"
+            min={0}
+            max={100000}
+            value={value}
+            onChange={(event) => setLimit(event.target.value)}
+            className="border-console-border bg-console-raised"
+          />
+          <p className="text-xs text-console-muted">
+            Existing owners keep their own current quota. Change those individually from PG Owners.
+          </p>
+        </div>
+        <Button
+          disabled={!valid || save.isPending || numericLimit === defaultLimit}
+          onClick={() => save.mutate()}
+        >
+          Save default for future owners
+        </Button>
+      </div>
     </ConsoleCard>
   );
 }

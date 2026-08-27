@@ -1,100 +1,47 @@
 import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  CalendarClock,
   ChevronLeft,
   ChevronRight,
-  CreditCard,
-  Eye,
-  LogIn,
-  NotebookPen,
+  Infinity as InfinityIcon,
+  MessageCircle,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/empty-state";
-import { cn } from "@/lib/utils";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
-import { planTiers, type PlanKey } from "@/lib/pricing-plans";
-import {
-  setAccountPlan,
-  cancelOwnerSubscription,
-  reactivateOwnerSubscription,
-  refundOwnerPayment,
-} from "@/lib/super-admin.functions";
-import {
-  getOwnerDetail,
-  getOwnerQuickFacts,
-  saveOwnerNote,
-  getOwnerTenants,
-  getOwnerRooms,
-  getOwnerBills,
-  getOwnerPayments,
-  getOwnerComplaints,
-} from "@/lib/owner-detail.functions";
+import { setOwnerWhatsAppQuota } from "@/lib/super-admin.functions";
 
 const PAGE_SIZE = 10;
-
-export const inr = (n: number) =>
-  "Rs. " + Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
-
-const when = (value: string | null | undefined) =>
-  value
-    ? new Date(value).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })
-    : "Never";
-
-const day = (value: string | null | undefined) =>
-  value ? new Date(value).toLocaleDateString("en-IN", { dateStyle: "medium" }) : "-";
 
 type Account = {
   id: string;
   name: string;
   email: string;
   brand_name: string;
-  plan: string;
-  plan_status: string;
-  pending_plan: string | null;
-  current_period_end: string | null;
   created_at: string;
   properties: number;
   rooms: number;
   tenants: number;
+  whatsapp_monthly_limit: number;
+  whatsapp_unlimited: boolean;
+  whatsapp_sent_this_month: number;
+  whatsapp_remaining: number | null;
 };
 
-function statusVariant(status: string) {
-  if (status === "active") return "default" as const;
-  if (status === "past_due" || status === "cancelled") return "destructive" as const;
-  return "secondary" as const;
-}
+type Draft = { limit: string; unlimited: boolean };
 
-/** Searchable, filterable, paginated directory of every PG owner account. */
+const day = (value: string) => new Date(value).toLocaleDateString("en-IN", { dateStyle: "medium" });
+
+/** Searchable super-admin directory with per-owner WhatsApp quota controls. */
 export function OwnerDirectory({
   accounts,
   isLoading,
@@ -103,135 +50,128 @@ export function OwnerDirectory({
   isLoading: boolean;
 }) {
   const queryClient = useQueryClient();
-  const savePlan = useServerFn(setAccountPlan);
-
+  const setQuota = useServerFn(setOwnerWhatsAppQuota);
   const [search, setSearch] = useState("");
-  const [plan, setPlan] = useState("all");
-  const [status, setStatus] = useState("all");
-  const [sort, setSort] = useState("newest");
+  const [quotaState, setQuotaState] = useState<"all" | "available" | "reached" | "unlimited">(
+    "all",
+  );
+  const [sort, setSort] = useState<"newest" | "usage" | "tenants" | "name">("newest");
   const [page, setPage] = useState(1);
-  const [detailId, setDetailId] = useState<string | null>(null);
-  const [quickId, setQuickId] = useState<string | null>(null);
-
+  const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const term = useDebouncedValue(search, 300).toLowerCase();
 
-  const change = useMutation({
-    mutationFn: (input: { adminId: string; plan: PlanKey; reason: string }) =>
-      savePlan({ data: input }),
+  const save = useMutation({
+    mutationFn: (input: { adminId: string; monthlyLimit: number; unlimited: boolean }) =>
+      setQuota({ data: input }),
     onSuccess: () => {
-      toast.success("Plan updated and logged");
+      toast.success("WhatsApp allowance updated");
       queryClient.invalidateQueries({ queryKey: ["platform-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["platform-stats"] });
       queryClient.invalidateQueries({ queryKey: ["platform-audit-log"] });
-      queryClient.invalidateQueries({ queryKey: ["owner-detail"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (error: Error) => toast.error(error.message),
   });
 
   const filtered = useMemo(() => {
-    const rows = accounts.filter((a) => {
-      const matches =
+    const rows = accounts.filter((account) => {
+      const matchesText =
         !term ||
-        a.name.toLowerCase().includes(term) ||
-        a.email.toLowerCase().includes(term) ||
-        a.brand_name.toLowerCase().includes(term);
-      return (
-        matches &&
-        (plan === "all" || a.plan === plan) &&
-        (status === "all" || a.plan_status === status)
-      );
+        [account.name, account.email, account.brand_name].some((value) =>
+          value.toLowerCase().includes(term),
+        );
+      const matchesQuota =
+        quotaState === "all" ||
+        (quotaState === "unlimited" && account.whatsapp_unlimited) ||
+        (quotaState === "reached" &&
+          !account.whatsapp_unlimited &&
+          account.whatsapp_remaining === 0) ||
+        (quotaState === "available" &&
+          !account.whatsapp_unlimited &&
+          (account.whatsapp_remaining ?? 0) > 0);
+      return matchesText && matchesQuota;
     });
-    const sorted = [...rows];
-    if (sort === "newest") sorted.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
-    if (sort === "oldest") sorted.sort((a, b) => (a.created_at > b.created_at ? 1 : -1));
-    if (sort === "tenants") sorted.sort((a, b) => b.tenants - a.tenants);
-    if (sort === "name")
-      sorted.sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
-    return sorted;
-  }, [accounts, term, plan, status, sort]);
+    return [...rows].sort((a, b) => {
+      if (sort === "usage") return b.whatsapp_sent_this_month - a.whatsapp_sent_this_month;
+      if (sort === "tenants") return b.tenants - a.tenants;
+      if (sort === "name") return (a.name || a.email).localeCompare(b.name || b.email);
+      return a.created_at < b.created_at ? 1 : -1;
+    });
+  }, [accounts, quotaState, sort, term]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, pageCount);
   const rows = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
+  const filtersOn = Boolean(search) || quotaState !== "all" || sort !== "newest";
 
   const reset = () => {
     setSearch("");
-    setPlan("all");
-    setStatus("all");
+    setQuotaState("all");
     setSort("newest");
     setPage(1);
   };
-  const filtersOn = !!search || plan !== "all" || status !== "all" || sort !== "newest";
+
+  const draftFor = (account: Account): Draft =>
+    drafts[account.id] ?? {
+      limit: String(account.whatsapp_monthly_limit),
+      unlimited: account.whatsapp_unlimited,
+    };
+
+  const updateDraft = (id: string, patch: Partial<Draft>, account: Account) => {
+    setDrafts((currentDrafts) => ({ ...currentDrafts, [id]: { ...draftFor(account), ...patch } }));
+  };
 
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-          PG owner directory
-        </h2>
-        <span className="text-xs text-muted-foreground">
-          {filtered.length} of {accounts.length} accounts
+        <div>
+          <h2 className="text-sm font-medium uppercase tracking-wide text-console-muted">
+            PG owner WhatsApp allowances
+          </h2>
+          <p className="mt-1 text-xs text-console-muted">
+            Usage is counted from sent messages since the start of the current calendar month.
+          </p>
+        </div>
+        <span className="text-xs text-console-muted">
+          {filtered.length} of {accounts.length} owners
         </span>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         <Input
           placeholder="Search name, email, brand"
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
+          onChange={(event) => {
+            setSearch(event.target.value);
             setPage(1);
           }}
-          className="h-11 sm:h-9"
+          className="h-11 border-console-border bg-console-raised sm:h-9"
           aria-label="Search owners"
         />
-        <Select
-          value={plan}
-          onValueChange={(v) => {
-            setPlan(v);
+        <select
+          value={quotaState}
+          onChange={(event) => {
+            setQuotaState(event.target.value as typeof quotaState);
             setPage(1);
           }}
+          className="h-11 rounded-md border border-console-border bg-console-raised px-3 text-sm sm:h-9"
+          aria-label="Filter by WhatsApp allowance state"
         >
-          <SelectTrigger className="h-11 sm:h-9" aria-label="Filter by plan">
-            <SelectValue placeholder="Plan" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All plans</SelectItem>
-            {planTiers.map((t) => (
-              <SelectItem key={t.key} value={t.key}>
-                {t.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={status}
-          onValueChange={(v) => {
-            setStatus(v);
-            setPage(1);
-          }}
+          <option value="all">All allowance states</option>
+          <option value="available">Messages remaining</option>
+          <option value="reached">Allowance reached</option>
+          <option value="unlimited">Unlimited</option>
+        </select>
+        <select
+          value={sort}
+          onChange={(event) => setSort(event.target.value as typeof sort)}
+          className="h-11 rounded-md border border-console-border bg-console-raised px-3 text-sm sm:h-9"
+          aria-label="Sort owners"
         >
-          <SelectTrigger className="h-11 sm:h-9" aria-label="Filter by subscription status">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="trial">Trial</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="past_due">Past due</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={sort} onValueChange={setSort}>
-          <SelectTrigger className="h-11 sm:h-9" aria-label="Sort owners">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="newest">Newest first</SelectItem>
-            <SelectItem value="oldest">Oldest first</SelectItem>
-            <SelectItem value="tenants">Most tenants</SelectItem>
-            <SelectItem value="name">Name A to Z</SelectItem>
-          </SelectContent>
-        </Select>
+          <option value="newest">Newest first</option>
+          <option value="usage">Most WhatsApp sent</option>
+          <option value="tenants">Most tenants</option>
+          <option value="name">Name A to Z</option>
+        </select>
       </div>
 
       {filtersOn ? (
@@ -245,723 +185,145 @@ export function OwnerDirectory({
       ) : rows.length === 0 ? (
         <EmptyState
           title="No matching owners"
-          description="Try a different search term or clear the filters."
+          description="Try a different search term or clear filters."
         />
       ) : (
         <div className="grid gap-3">
-          {rows.map((a) => (
-            <Card key={a.id}>
-              <CardContent className="space-y-3 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{a.name || a.brand_name}</p>
-                    <p className="truncate text-sm text-muted-foreground">{a.email}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {a.properties} properties - {a.rooms} rooms - {a.tenants} active tenants -
-                      joined {day(a.created_at)}
-                    </p>
+          {rows.map((account) => {
+            const draft = draftFor(account);
+            const limit = Number(draft.limit);
+            const validLimit = Number.isInteger(limit) && limit >= 0 && limit <= 100_000;
+            const changed =
+              draft.unlimited !== account.whatsapp_unlimited ||
+              (validLimit && limit !== account.whatsapp_monthly_limit);
+            return (
+              <Card key={account.id} className="border-console-border bg-console-panel">
+                <CardContent className="space-y-4 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{account.name || account.brand_name}</p>
+                      <p className="truncate text-sm text-console-muted">{account.email}</p>
+                      <p className="mt-1 text-xs text-console-muted">
+                        {account.properties} properties · {account.rooms} rooms · {account.tenants}{" "}
+                        active tenants · joined {day(account.created_at)}
+                      </p>
+                    </div>
+                    <QuotaStatus account={account} />
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant={statusVariant(a.plan_status)}>{a.plan_status}</Badge>
-                    {a.pending_plan ? (
-                      <Badge variant="outline">pending {a.pending_plan}</Badge>
-                    ) : null}
-                    <Select
-                      value={a.plan}
-                      onValueChange={(next) => {
-                        const reason = window.prompt(
-                          `Reason for changing ${a.email} to ${next} (saved to the audit log)`,
-                        );
-                        if (!reason || reason.trim().length < 4) {
-                          toast.error("A reason of at least 4 characters is required");
-                          return;
-                        }
-                        change.mutate({ adminId: a.id, plan: next as PlanKey, reason });
-                      }}
-                    >
-                      <SelectTrigger className="h-11 w-36 md:h-9">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {planTiers.map((t) => (
-                          <SelectItem key={t.key} value={t.key}>
-                            {t.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-10 md:h-9"
-                    onClick={() => setQuickId(a.id)}
-                  >
-                    <CalendarClock className="mr-2 h-4 w-4" />
-                    Quick actions
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-10 md:h-9"
-                    onClick={() => setDetailId(a.id)}
-                  >
-                    <Eye className="mr-2 h-4 w-4" />
-                    Open owner
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="grid gap-3 rounded-lg border border-console-border bg-console-raised p-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-end">
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`quota-${account.id}`} className="text-console-muted">
+                        Monthly message allowance
+                      </Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id={`quota-${account.id}`}
+                          type="number"
+                          min={0}
+                          max={100000}
+                          value={draft.limit}
+                          disabled={draft.unlimited}
+                          onChange={(event) =>
+                            updateDraft(account.id, { limit: event.target.value }, account)
+                          }
+                          className="h-10 border-console-border bg-console-panel"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-10 shrink-0"
+                          disabled={draft.unlimited}
+                          onClick={() =>
+                            updateDraft(
+                              account.id,
+                              { limit: String((Number(draft.limit) || 0) + 50) },
+                              account,
+                            )
+                          }
+                        >
+                          <Plus className="mr-1 h-3.5 w-3.5" />
+                          50
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex h-10 items-center gap-2 rounded-md border border-console-border px-3">
+                      <Switch
+                        id={`unlimited-${account.id}`}
+                        checked={draft.unlimited}
+                        onCheckedChange={(unlimited) =>
+                          updateDraft(account.id, { unlimited }, account)
+                        }
+                      />
+                      <Label htmlFor={`unlimited-${account.id}`} className="cursor-pointer text-sm">
+                        Unlimited
+                      </Label>
+                    </div>
+                    <Button
+                      className="h-10"
+                      disabled={!validLimit || !changed || save.isPending}
+                      onClick={() =>
+                        save.mutate({
+                          adminId: account.id,
+                          monthlyLimit: limit,
+                          unlimited: draft.unlimited,
+                        })
+                      }
+                    >
+                      Save allowance
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
       {pageCount > 1 ? (
         <div className="flex items-center justify-between gap-3">
-          <span className="text-xs text-muted-foreground">
+          <span className="text-xs text-console-muted">
             Page {current} of {pageCount}
           </span>
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
-              className="h-10 md:h-9"
               disabled={current <= 1}
               onClick={() => setPage(current - 1)}
             >
-              <ChevronLeft className="h-4 w-4" />
-              Previous
+              <ChevronLeft className="h-4 w-4" /> Previous
             </Button>
             <Button
               variant="outline"
               size="sm"
-              className="h-10 md:h-9"
               disabled={current >= pageCount}
               onClick={() => setPage(current + 1)}
             >
-              Next
-              <ChevronRight className="h-4 w-4" />
+              Next <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
       ) : null}
-
-      <QuickActionsDialog adminId={quickId} onClose={() => setQuickId(null)} />
-      <OwnerDetailDialog adminId={detailId} onClose={() => setDetailId(null)} />
     </section>
   );
 }
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+function QuotaStatus({ account }: { account: Account }) {
+  if (account.whatsapp_unlimited) {
+    return (
+      <Badge variant="outline" className="gap-1 border-console-ok/40 text-console-ok">
+        <InfinityIcon className="h-3.5 w-3.5" /> {account.whatsapp_sent_this_month} sent · unlimited
+      </Badge>
+    );
+  }
+  const reached = account.whatsapp_remaining === 0;
   return (
-    <div className="flex items-baseline justify-between gap-3 border-b py-2 text-sm last:border-0">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="text-right font-medium">{value}</span>
-    </div>
-  );
-}
-
-/** Billing run dates, last login and subscription status. Each open is audit logged. */
-function QuickActionsDialog({ adminId, onClose }: { adminId: string | null; onClose: () => void }) {
-  const load = useServerFn(getOwnerQuickFacts);
-  const { data, isLoading } = useQuery({
-    queryKey: ["owner-quick-facts", adminId],
-    queryFn: () => load({ data: { adminId: adminId as string } }),
-    enabled: !!adminId,
-  });
-
-  return (
-    <Dialog open={!!adminId} onOpenChange={(open) => (open ? null : onClose())}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Quick actions</DialogTitle>
-          <DialogDescription>
-            Opening this panel is recorded in the audit log as a view event.
-          </DialogDescription>
-        </DialogHeader>
-        {isLoading || !data ? (
-          <Skeleton className="h-48 w-full" />
-        ) : (
-          <div className="space-y-4">
-            <div>
-              <p className="mb-1 flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-                <LogIn className="h-3.5 w-3.5" /> Access
-              </p>
-              <Row label="Last login" value={when(data.lastLoginAt)} />
-              <Row label="Email confirmed" value={data.emailConfirmed ? "Yes" : "No"} />
-            </div>
-            <div>
-              <p className="mb-1 flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-                <CreditCard className="h-3.5 w-3.5" /> Subscription
-              </p>
-              <Row
-                label="Status"
-                value={<Badge variant={statusVariant(data.planStatus)}>{data.planStatus}</Badge>}
-              />
-              <Row label="Plan" value={data.plan} />
-              {data.pendingPlan ? <Row label="Pending change" value={data.pendingPlan} /> : null}
-              <Row
-                label="Current period"
-                value={`${day(data.periodStart)} to ${day(data.periodEnd)}`}
-              />
-              <Row
-                label="Last payment"
-                value={
-                  data.lastPaymentAt
-                    ? `${inr(data.lastPaymentAmount)} on ${day(data.lastPaymentAt)}`
-                    : "None"
-                }
-              />
-            </div>
-            <div>
-              <p className="mb-1 flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-                <CalendarClock className="h-3.5 w-3.5" /> Billing runs
-              </p>
-              {data.billingRuns.length === 0 ? (
-                <p className="py-2 text-sm text-muted-foreground">No bills generated yet.</p>
-              ) : (
-                data.billingRuns.map((r) => (
-                  <Row
-                    key={r.billMonth}
-                    label={`${r.billMonth} - ${r.bills} bills`}
-                    value={when(r.lastCreatedAt)}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-type WorkspaceTab = "overview" | "tenants" | "rooms" | "bills" | "payments" | "complaints";
-
-const WORKSPACE_TABS: { id: WorkspaceTab; label: string }[] = [
-  { id: "overview", label: "Overview" },
-  { id: "tenants", label: "Tenants" },
-  { id: "rooms", label: "Rooms" },
-  { id: "bills", label: "Bills" },
-  { id: "payments", label: "Payments" },
-  { id: "complaints", label: "Complaints" },
-];
-
-/** Full owner record, read-only workspace tabs, editable support notes. Each open is audit logged. */
-function OwnerDetailDialog({ adminId, onClose }: { adminId: string | null; onClose: () => void }) {
-  const queryClient = useQueryClient();
-  const load = useServerFn(getOwnerDetail);
-  const save = useServerFn(saveOwnerNote);
-  const cancelFn = useServerFn(cancelOwnerSubscription);
-  const reactivateFn = useServerFn(reactivateOwnerSubscription);
-  const [note, setNote] = useState<string | null>(null);
-  const [tab, setTab] = useState<WorkspaceTab>("overview");
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["owner-detail", adminId],
-    queryFn: () => load({ data: { adminId: adminId as string } }),
-    enabled: !!adminId,
-  });
-
-  const saveNote = useMutation({
-    mutationFn: (value: string) => save({ data: { adminId: adminId as string, note: value } }),
-    onSuccess: () => {
-      toast.success("Support note saved");
-      queryClient.invalidateQueries({ queryKey: ["owner-detail", adminId] });
-      queryClient.invalidateQueries({ queryKey: ["platform-audit-log"] });
-      setNote(null);
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const cancel = useMutation({
-    mutationFn: (reason: string) => cancelFn({ data: { adminId: adminId as string, reason } }),
-    onSuccess: () => {
-      toast.success("Subscription cancelled");
-      queryClient.invalidateQueries({ queryKey: ["owner-detail", adminId] });
-      queryClient.invalidateQueries({ queryKey: ["platform-accounts"] });
-      queryClient.invalidateQueries({ queryKey: ["platform-audit-log"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const reactivate = useMutation({
-    mutationFn: () => reactivateFn({ data: { adminId: adminId as string } }),
-    onSuccess: () => {
-      toast.success("Subscription reactivated");
-      queryClient.invalidateQueries({ queryKey: ["owner-detail", adminId] });
-      queryClient.invalidateQueries({ queryKey: ["platform-accounts"] });
-      queryClient.invalidateQueries({ queryKey: ["platform-audit-log"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const close = () => {
-    setNote(null);
-    setTab("overview");
-    onClose();
-  };
-
-  return (
-    <Sheet open={!!adminId} onOpenChange={(open) => (open ? null : close())}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-3xl">
-        {isLoading || !data ? (
-          <Skeleton className="h-72 w-full" />
-        ) : (
-          <>
-            <SheetHeader>
-              <SheetTitle>{data.account.name || data.account.brandName}</SheetTitle>
-              <SheetDescription>
-                {data.account.email}
-                {data.account.phone ? ` - ${data.account.phone}` : ""} - joined{" "}
-                {day(data.account.created_at)}
-              </SheetDescription>
-            </SheetHeader>
-
-            <div className="mt-4 flex flex-wrap gap-1 border-b pb-2">
-              {WORKSPACE_TABS.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setTab(t.id)}
-                  className={cn(
-                    "min-h-9 rounded-md px-3 text-sm transition-colors",
-                    tab === t.id
-                      ? "bg-primary/10 font-medium text-primary"
-                      : "text-muted-foreground hover:bg-muted",
-                  )}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-4">
-              {tab === "overview" ? (
-                <OverviewTab
-                  data={data}
-                  adminId={adminId as string}
-                  note={note}
-                  setNote={setNote}
-                  saveNote={saveNote}
-                  cancel={cancel}
-                  reactivate={reactivate}
-                />
-              ) : null}
-              {tab === "tenants" ? <TenantsTab adminId={adminId as string} /> : null}
-              {tab === "rooms" ? <RoomsTab adminId={adminId as string} /> : null}
-              {tab === "bills" ? <BillsTab adminId={adminId as string} /> : null}
-              {tab === "payments" ? <PaymentsTab adminId={adminId as string} /> : null}
-              {tab === "complaints" ? <ComplaintsTab adminId={adminId as string} /> : null}
-            </div>
-          </>
-        )}
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-function OverviewTab({
-  data,
-  adminId,
-  note,
-  setNote,
-  saveNote,
-  cancel,
-  reactivate,
-}: {
-  data: NonNullable<
-    ReturnType<typeof useQuery<Awaited<ReturnType<typeof getOwnerDetail>>>>["data"]
-  >;
-  adminId: string;
-  note: string | null;
-  setNote: (v: string) => void;
-  saveNote: ReturnType<typeof useMutation<unknown, Error, string>>;
-  cancel: ReturnType<typeof useMutation<unknown, Error, string>>;
-  reactivate: ReturnType<typeof useMutation<unknown, Error, void>>;
-}) {
-  return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {[
-          { label: "Properties", value: String(data.portfolio.properties.length) },
-          { label: "Rooms", value: String(data.portfolio.roomCount) },
-          { label: "Active tenants", value: String(data.portfolio.activeTenants) },
-          { label: "Occupancy", value: `${data.portfolio.occupancyRate}%` },
-        ].map((c) => (
-          <Card key={c.label}>
-            <CardContent className="p-3">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">{c.label}</p>
-              <p className="subsection-title mt-1">{c.value}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <div>
-        <h3 className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">Properties</h3>
-        {data.portfolio.properties.length === 0 ? (
-          <p className="py-2 text-sm text-muted-foreground">No properties yet.</p>
-        ) : (
-          data.portfolio.properties.map((p) => (
-            <Row
-              key={p.id}
-              label={`${p.name}${p.city ? ` - ${p.city}` : ""}`}
-              value={`${p.rooms} rooms - ${p.tenants} tenants`}
-            />
-          ))
-        )}
-      </div>
-
-      <Separator />
-
-      <div>
-        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-xs uppercase tracking-wide text-muted-foreground">Subscription</h3>
-          <div className="flex gap-2">
-            {data.quick.planStatus === "cancelled" ? (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-9"
-                disabled={reactivate.isPending}
-                onClick={() => reactivate.mutate()}
-              >
-                Reactivate
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-9"
-                disabled={cancel.isPending}
-                onClick={() => {
-                  const reason = window.prompt(
-                    `Reason for cancelling this subscription (saved to the audit log)`,
-                  );
-                  if (!reason || reason.trim().length < 4) {
-                    toast.error("A reason of at least 4 characters is required");
-                    return;
-                  }
-                  cancel.mutate(reason);
-                }}
-              >
-                Cancel subscription
-              </Button>
-            )}
-          </div>
-        </div>
-        <Row
-          label="Status"
-          value={
-            <Badge variant={statusVariant(data.quick.planStatus)}>{data.quick.planStatus}</Badge>
-          }
-        />
-        <Row label="Plan" value={data.quick.plan} />
-        <Row label="Renews" value={day(data.quick.periodEnd)} />
-        <Row label="Last login" value={when(data.quick.lastLoginAt)} />
-        <p className="mt-3 mb-1 text-xs uppercase tracking-wide text-muted-foreground">
-          Plan change history
-        </p>
-        {data.subscription.history.length === 0 ? (
-          <p className="py-2 text-sm text-muted-foreground">No plan changes yet.</p>
-        ) : (
-          data.subscription.history.map((h) => (
-            <Row key={h.id} label={`${h.direction} - ${day(h.created_at)}`} value={inr(h.amount)} />
-          ))
-        )}
-        <p className="mt-3 mb-1 text-xs uppercase tracking-wide text-muted-foreground">
-          Plan payments
-        </p>
-        {data.subscription.payments.length === 0 ? (
-          <p className="py-2 text-sm text-muted-foreground">No payments recorded.</p>
-        ) : (
-          data.subscription.payments.map((p) => (
-            <PaymentHistoryRow key={p.id} payment={p} adminId={adminId} />
-          ))
-        )}
-      </div>
-
-      <Separator />
-
-      <div>
-        <h3 className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">
-          Notifications and usage
-        </h3>
-        <Row label="Notifications sent" value={String(data.usage.notificationsTotal)} />
-        <Row label="Last 30 days" value={String(data.usage.notifications30d)} />
-        <Row label="Last notification" value={when(data.usage.lastNotificationAt)} />
-        {data.usage.byChannel.map((c) => (
-          <Row key={c.channel} label={`Channel: ${c.channel}`} value={String(c.count)} />
-        ))}
-        {data.usage.byStatus.map((s) => (
-          <Row key={s.status} label={`Delivery: ${s.status}`} value={String(s.count)} />
-        ))}
-        <Row label="Bills generated" value={String(data.usage.billsTotal)} />
-        <Row label="Billed lifetime" value={inr(data.usage.billedLifetime)} />
-        <Row label="Collected lifetime" value={inr(data.usage.collectedLifetime)} />
-        <Row label="Outstanding" value={inr(data.usage.outstanding)} />
-      </div>
-
-      <Separator />
-
-      <div className="space-y-2">
-        <h3 className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-          <NotebookPen className="h-3.5 w-3.5" /> Support notes
-        </h3>
-        <Textarea
-          rows={4}
-          value={note ?? data.supportNote.note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="Private notes for the platform team about this owner"
-        />
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs text-muted-foreground">
-            {data.supportNote.updated_at
-              ? `Last edited ${when(data.supportNote.updated_at)} by ${data.supportNote.updated_by_email}`
-              : "No notes saved yet"}
-          </p>
-          <Button
-            className="h-11 md:h-9"
-            disabled={note === null || saveNote.isPending}
-            onClick={() => saveNote.mutate(note ?? "")}
-          >
-            Save note
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** One plan_payments row in the overview's history, with a refund action when eligible. */
-function PaymentHistoryRow({
-  payment,
-  adminId,
-}: {
-  payment: {
-    id: string;
-    target_plan: string;
-    amount: number;
-    status: string;
-    created_at: string;
-  };
-  adminId: string;
-}) {
-  const queryClient = useQueryClient();
-  const refundFn = useServerFn(refundOwnerPayment);
-  const refund = useMutation({
-    mutationFn: (input: { amountInPaise: number; reason: string }) =>
-      refundFn({
-        data: {
-          adminId,
-          planPaymentId: payment.id,
-          amountInPaise: input.amountInPaise,
-          reason: input.reason,
-        },
-      }),
-    onSuccess: () => {
-      toast.success("Refund issued");
-      queryClient.invalidateQueries({ queryKey: ["owner-detail", adminId] });
-      queryClient.invalidateQueries({ queryKey: ["platform-audit-log"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const canRefund = payment.status === "paid";
-
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-b py-2 text-sm last:border-0">
-      <span className="text-muted-foreground">
-        {payment.target_plan} - {payment.status} - {day(payment.created_at)}
-      </span>
-      <div className="flex items-center gap-2">
-        <span className="font-medium">{inr(payment.amount)}</span>
-        {canRefund ? (
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8"
-            disabled={refund.isPending}
-            onClick={() => {
-              const amountStr = window.prompt(
-                `Refund amount in rupees (up to ${inr(payment.amount)})`,
-                String(payment.amount),
-              );
-              if (!amountStr) return;
-              const amount = Number(amountStr);
-              if (!Number.isFinite(amount) || amount <= 0) {
-                toast.error("Enter a valid amount");
-                return;
-              }
-              const reason = window.prompt("Reason for this refund (saved to the audit log)");
-              if (!reason || reason.trim().length < 4) {
-                toast.error("A reason of at least 4 characters is required");
-                return;
-              }
-              refund.mutate({ amountInPaise: Math.round(amount * 100), reason });
-            }}
-          >
-            Refund
-          </Button>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function WorkspaceEmpty({ label }: { label: string }) {
-  return <p className="py-6 text-center text-sm text-muted-foreground">No {label} yet.</p>;
-}
-
-function TenantsTab({ adminId }: { adminId: string }) {
-  const load = useServerFn(getOwnerTenants);
-  const { data, isLoading } = useQuery({
-    queryKey: ["owner-workspace-tenants", adminId],
-    queryFn: () => load({ data: { adminId } }),
-  });
-  if (isLoading) return <Skeleton className="h-64 w-full" />;
-  if (!data || data.length === 0) return <WorkspaceEmpty label="tenants" />;
-  return (
-    <div className="space-y-2">
-      {data.map((t) => (
-        <Card key={t.id}>
-          <CardContent className="flex flex-wrap items-center justify-between gap-2 p-3">
-            <div className="min-w-0">
-              <p className="truncate font-medium">{t.fullName}</p>
-              <p className="text-xs text-muted-foreground">
-                {t.propertyName} - Room {t.roomNumber} - {t.phone}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-right">
-              <Badge variant={t.status === "active" ? "default" : "secondary"}>{t.status}</Badge>
-              <span className="text-sm font-medium">{inr(t.monthlyRent)}</span>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-function RoomsTab({ adminId }: { adminId: string }) {
-  const load = useServerFn(getOwnerRooms);
-  const { data, isLoading } = useQuery({
-    queryKey: ["owner-workspace-rooms", adminId],
-    queryFn: () => load({ data: { adminId } }),
-  });
-  if (isLoading) return <Skeleton className="h-64 w-full" />;
-  if (!data || data.length === 0) return <WorkspaceEmpty label="rooms" />;
-  return (
-    <div className="space-y-2">
-      {data.map((r) => (
-        <Card key={r.id}>
-          <CardContent className="flex flex-wrap items-center justify-between gap-2 p-3">
-            <div className="min-w-0">
-              <p className="truncate font-medium">
-                {r.propertyName} - Room {r.roomNumber}
-              </p>
-              <p className="text-xs text-muted-foreground capitalize">{r.roomType}</p>
-            </div>
-            <div className="text-right text-sm">
-              <p className="font-medium">{inr(r.monthlyRent)}</p>
-              <p className="text-xs text-muted-foreground">
-                {r.occupied}/{r.capacity} occupied
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-function BillsTab({ adminId }: { adminId: string }) {
-  const load = useServerFn(getOwnerBills);
-  const { data, isLoading } = useQuery({
-    queryKey: ["owner-workspace-bills", adminId],
-    queryFn: () => load({ data: { adminId } }),
-  });
-  if (isLoading) return <Skeleton className="h-64 w-full" />;
-  if (!data || data.length === 0) return <WorkspaceEmpty label="bills" />;
-  return (
-    <div className="space-y-2">
-      {data.map((b) => (
-        <Card key={b.id}>
-          <CardContent className="flex flex-wrap items-center justify-between gap-2 p-3">
-            <div className="min-w-0">
-              <p className="truncate font-medium">{b.tenantName}</p>
-              <p className="text-xs text-muted-foreground">
-                {b.propertyName} - {b.billMonth}
-              </p>
-            </div>
-            <div className="text-right text-sm">
-              <Badge variant={b.status === "paid" ? "default" : "secondary"}>{b.status}</Badge>
-              <p className="mt-1 font-medium">
-                {inr(b.paidAmount)} / {inr(b.totalAmount)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-function PaymentsTab({ adminId }: { adminId: string }) {
-  const load = useServerFn(getOwnerPayments);
-  const { data, isLoading } = useQuery({
-    queryKey: ["owner-workspace-payments", adminId],
-    queryFn: () => load({ data: { adminId } }),
-  });
-  if (isLoading) return <Skeleton className="h-64 w-full" />;
-  if (!data || data.length === 0) return <WorkspaceEmpty label="payments" />;
-  return (
-    <div className="space-y-2">
-      {data.map((p) => (
-        <Card key={p.id}>
-          <CardContent className="flex flex-wrap items-center justify-between gap-2 p-3">
-            <div className="min-w-0">
-              <p className="truncate font-medium">{p.tenantName}</p>
-              <p className="text-xs text-muted-foreground">
-                {p.propertyName} - {p.paymentMethod} - {when(p.paidAt)}
-              </p>
-            </div>
-            <span className="font-medium">{inr(p.amount)}</span>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-function ComplaintsTab({ adminId }: { adminId: string }) {
-  const load = useServerFn(getOwnerComplaints);
-  const { data, isLoading } = useQuery({
-    queryKey: ["owner-workspace-complaints", adminId],
-    queryFn: () => load({ data: { adminId } }),
-  });
-  if (isLoading) return <Skeleton className="h-64 w-full" />;
-  if (!data || data.length === 0) return <WorkspaceEmpty label="complaints" />;
-  return (
-    <div className="space-y-2">
-      {data.map((c) => (
-        <Card key={c.id}>
-          <CardContent className="p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="font-medium">
-                {c.tenantName} - {c.propertyName} - Room {c.roomNumber}
-              </p>
-              <Badge variant={c.status === "resolved" ? "default" : "secondary"}>{c.status}</Badge>
-            </div>
-            <p className="mt-1 text-sm text-muted-foreground">{c.note}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{when(c.createdAt)}</p>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+    <Badge variant="outline" className={reached ? "border-console-warn/40 text-console-warn" : ""}>
+      <MessageCircle className="mr-1 h-3.5 w-3.5" />
+      {account.whatsapp_sent_this_month} / {account.whatsapp_monthly_limit} sent ·{" "}
+      {account.whatsapp_remaining} left
+    </Badge>
   );
 }

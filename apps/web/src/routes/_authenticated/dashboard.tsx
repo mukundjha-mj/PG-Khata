@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { getScheduledReminders, cancelReminderFn } from "@/lib/reminders.functions";
-import { getMyWhatsAppQuotaStatus } from "@/lib/plan.functions";
+import { getMyWhatsAppQuotaStatus } from "@/lib/whatsapp.functions";
 import { PersonalReminderDialog } from "@/components/personal-reminder-dialog";
 import { PropertyScopeSwitcher } from "@/components/property-scope-switcher";
 import { usePropertyScope } from "@/lib/property-scope";
@@ -231,7 +231,8 @@ function Dashboard() {
   const collected = monthBills.reduce((s, b) => s + Number(b.paid_amount), 0);
   const outstanding = monthBills.reduce((s, b) => s + balanceOf(b), 0);
   const collectedPct = billed > 0 ? Math.round((collected / billed) * 100) : 0;
-  const occupancyPct = data.rooms.length > 0 ? Math.round((occupiedRooms / data.rooms.length) * 100) : 0;
+  const occupancyPct =
+    data.rooms.length > 0 ? Math.round((occupiedRooms / data.rooms.length) * 100) : 0;
   const counts: Record<DisplayStatus, number> = {
     paid: 0,
     pending: 0,
@@ -279,7 +280,9 @@ function Dashboard() {
         <Stat
           label="Pending collection"
           value={formatMoney(outstanding)}
-          hint={monthBills.length > 0 ? `${counts.overdue} overdue this month` : "Nothing billed yet"}
+          hint={
+            monthBills.length > 0 ? `${counts.overdue} overdue this month` : "Nothing billed yet"
+          }
           icon={Receipt}
         />
         <Stat
@@ -437,7 +440,7 @@ function Dashboard() {
             <Progress value={Math.min(100, (quota.used / quota.limit) * 100)} />
             {quota.remaining === 0 ? (
               <p className="text-xs text-destructive">
-                Quota reached - new WhatsApp sends are skipped until next month or an upgrade.
+                Your WhatsApp allowance is used for this month. Contact us to request more.
               </p>
             ) : (
               <p className="text-xs text-muted-foreground">{quota.remaining} messages left.</p>

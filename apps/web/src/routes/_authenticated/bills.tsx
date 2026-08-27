@@ -33,7 +33,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveTable, TableSkeleton } from "@/components/responsive-table";
 import { DensityToggle } from "@/components/density-toggle";
 import { EmptyState } from "@/components/empty-state";
-import { PremiumAction } from "@/components/plan-gate";
 import { useDensity } from "@/lib/use-density";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import {
@@ -671,8 +670,8 @@ function BillsPage() {
             />
             <p className="mt-3 text-xs text-muted-foreground">
               Electricity is priced at {formatMoney(defaultRate)}/unit by default (a property with
-              its own rate uses that instead) and due dates are set {dueOffset} days after the
-              cycle ends.
+              its own rate uses that instead) and due dates are set {dueOffset} days after the cycle
+              ends.
             </p>
           </CardContent>
         </Card>
@@ -769,21 +768,19 @@ function BillsPage() {
               </SelectContent>
             </Select>
 
-            <PremiumAction min="scale" label="Export all as PDF">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full sm:w-auto"
-                disabled={(bills ?? []).length === 0}
-                onClick={() => {
-                  downloadMonthPdf(bills ?? [], pdfContext, month);
-                  toast.success(`Exported ${(bills ?? []).length} bills as PDF.`);
-                }}
-              >
-                <FileDown className="mr-2 h-4 w-4" />
-                Export all as PDF
-              </Button>
-            </PremiumAction>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto"
+              disabled={(bills ?? []).length === 0}
+              onClick={() => {
+                downloadMonthPdf(bills ?? [], pdfContext, month);
+                toast.success(`Exported ${(bills ?? []).length} bills as PDF.`);
+              }}
+            >
+              <FileDown className="mr-2 h-4 w-4" />
+              Export all as PDF
+            </Button>
           </FilterBar>
         </CardHeader>
         <CardContent>
@@ -928,16 +925,14 @@ function BillsPage() {
                             >
                               <Send className="h-4 w-4" />
                             </Button>
-                            <PremiumAction min="scale" label="Download PDF">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label="Download PDF"
-                                onClick={() => downloadBillPdf(b, pdfContext(b))}
-                              >
-                                <Download className="h-4 w-4" />
-                              </Button>
-                            </PremiumAction>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Download PDF"
+                              onClick={() => downloadBillPdf(b, pdfContext(b))}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"

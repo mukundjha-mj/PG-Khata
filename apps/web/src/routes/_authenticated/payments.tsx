@@ -31,7 +31,6 @@ import { DataPagination, usePagination } from "@/components/data-pagination";
 import { ResponsiveTable, TableSkeleton } from "@/components/responsive-table";
 import { DensityToggle } from "@/components/density-toggle";
 import { EmptyState } from "@/components/empty-state";
-import { PremiumAction } from "@/components/plan-gate";
 import { useDensity } from "@/lib/use-density";
 import { RecordPaymentDialog, type PaymentTarget } from "@/components/record-payment-dialog";
 
@@ -345,31 +344,29 @@ function PaymentsPage() {
                 <SelectItem value="all">All bills</SelectItem>
               </SelectContent>
             </Select>
-            <PremiumAction min="growing" label="Export CSV">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full sm:w-auto"
-                disabled={rows.length === 0}
-                onClick={() =>
-                  downloadCsv("dues.csv", [
-                    ["Tenant", "Month", "Total", "Paid", "Balance", "Due date", "Status"],
-                    ...rows.map((b) => [
-                      nameOf(b),
-                      b.bill_month,
-                      Number(b.total_amount),
-                      Number(b.paid_amount),
-                      balanceOf(b),
-                      b.due_date ?? "",
-                      STATUS_LABEL[displayStatus(b)],
-                    ]),
-                  ])
-                }
-              >
-                <FileDown className="mr-2 h-4 w-4" />
-                CSV
-              </Button>
-            </PremiumAction>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto"
+              disabled={rows.length === 0}
+              onClick={() =>
+                downloadCsv("dues.csv", [
+                  ["Tenant", "Month", "Total", "Paid", "Balance", "Due date", "Status"],
+                  ...rows.map((b) => [
+                    nameOf(b),
+                    b.bill_month,
+                    Number(b.total_amount),
+                    Number(b.paid_amount),
+                    balanceOf(b),
+                    b.due_date ?? "",
+                    STATUS_LABEL[displayStatus(b)],
+                  ]),
+                ])
+              }
+            >
+              <FileDown className="mr-2 h-4 w-4" />
+              CSV
+            </Button>
           </FilterBar>
         </CardHeader>
         <CardContent>

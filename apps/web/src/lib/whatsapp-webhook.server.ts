@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { constantTimeEqual } from "@/lib/plan-checkout.server";
+import { constantTimeEqual } from "@/lib/constant-time-equal.server";
 
 /**
  * WhatsApp Cloud API webhook logic, split out of the route file so it can be
@@ -75,7 +75,10 @@ export function parseWhatsAppWebhookPayload(body: unknown): {
           typeof status === "string" &&
           KNOWN_STATUSES.has(status as Database["public"]["Enums"]["notification_status"])
         ) {
-          statuses.push({ id, status: status as Database["public"]["Enums"]["notification_status"] });
+          statuses.push({
+            id,
+            status: status as Database["public"]["Enums"]["notification_status"],
+          });
         }
       }
 

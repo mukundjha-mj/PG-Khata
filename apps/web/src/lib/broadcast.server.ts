@@ -4,14 +4,7 @@ import { loadAccounts } from "@/lib/super-admin.server";
 
 type Admin = SupabaseClient<Database>;
 
-export const BROADCAST_SEGMENTS = [
-  "all",
-  "trial",
-  "active",
-  "starter",
-  "growing",
-  "scale",
-] as const;
+export const BROADCAST_SEGMENTS = ["all", "whatsapp_reached", "whatsapp_unlimited"] as const;
 export type BroadcastSegment = (typeof BROADCAST_SEGMENTS)[number];
 
 const RESEND_API_URL = "https://api.resend.com";
@@ -28,14 +21,10 @@ export async function resolveSegmentRecipients(
     switch (segment) {
       case "all":
         return true;
-      case "trial":
-        return a.plan_status === "trial";
-      case "active":
-        return a.plan_status === "active";
-      case "starter":
-      case "growing":
-      case "scale":
-        return a.plan === segment;
+      case "whatsapp_reached":
+        return !a.whatsapp_unlimited && a.whatsapp_remaining === 0;
+      case "whatsapp_unlimited":
+        return a.whatsapp_unlimited;
       default:
         return false;
     }

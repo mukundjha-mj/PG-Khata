@@ -64,8 +64,8 @@ function ContactPage() {
             Contact Us
           </h1>
           <p className="mt-5 max-w-[560px] text-[16px] leading-relaxed text-ink/65">
-            Questions about your account, billing, or how {BRAND} works? Reach us directly, we
-            reply from a real inbox, not a ticket queue.
+            Questions about your account, billing, or how {BRAND} works? Reach us directly, we reply
+            from a real inbox, not a ticket queue.
           </p>
 
           <div className="mt-10 grid gap-px overflow-hidden border-2 border-ink sm:grid-cols-2">

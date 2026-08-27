@@ -124,7 +124,9 @@ export function SendBillDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Send bill</DialogTitle>
-          <DialogDescription>Pick who to notify, then choose email, WhatsApp, or both.</DialogDescription>
+          <DialogDescription>
+            Pick who to notify, then choose email, WhatsApp, or both.
+          </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4">
           {candidates.length > 1 && (

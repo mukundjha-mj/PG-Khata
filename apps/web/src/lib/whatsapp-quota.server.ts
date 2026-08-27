@@ -1,46 +1,61 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import type { PlanTier } from "@/lib/pricing-plans";
 
 export type QuotaCheck = { allowed: true } | { allowed: false; reason: string };
 
 export type QuotaStatus = {
   used: number;
-  /** null = unlimited (no cap on this tier). */
+  /** null = unlimited (owner has whatsapp_unlimited = true). */
   limit: number | null;
   /** null = unlimited. Never negative. */
   remaining: number | null;
 };
 
 /**
- * The window resets on both triggers the founder asked for: the start of the
- * calendar month, and the moment the plan last changed (plan_updated_at is
- * already bumped on every real transition - see plan-apply.server.ts,
- * plan.functions.ts, super-admin.server.ts). Whichever is more recent wins,
- * so an upgrade or downgrade resets the count immediately instead of waiting
- * for the next month.
+ * The quota window resets at the start of each calendar month.
+ * Simple and predictable for MVP — no plan-change reset logic needed.
  */
-function windowStart(planUpdatedAt: string | null): string {
-  const startOfMonth = new Date();
-  startOfMonth.setUTCDate(1);
-  startOfMonth.setUTCHours(0, 0, 0, 0);
-  const monthStart = startOfMonth.toISOString();
-  return planUpdatedAt && planUpdatedAt > monthStart ? planUpdatedAt : monthStart;
+function windowStart(): string {
+  const d = new Date();
+  d.setUTCDate(1);
+  d.setUTCHours(0, 0, 0, 0);
+  return d.toISOString();
 }
 
 /**
  * How much of this admin's monthly WhatsApp allowance is used, computed live
  * from notification_logs rather than a stored counter, so it can never drift
- * from what was actually sent. Shared by the send-time gate (checkWhatsAppQuota)
- * and the owner-facing "X of Y used" display, so both always agree.
+ * from what was actually sent.
+ *
+ * Reads quota configuration from `settings.whatsapp_monthly_limit` and
+ * `settings.whatsapp_unlimited` — controlled by the super-admin per owner.
  */
 export async function getWhatsAppQuotaStatus(
   supabase: SupabaseClient<Database>,
   adminId: string,
-  tier: PlanTier,
-  planUpdatedAt: string | null,
 ): Promise<QuotaStatus> {
-  if (tier.whatsappQuota === null) return { used: 0, limit: null, remaining: null };
+  const { data: settings, error: settingsErr } = await supabase
+    .from("settings")
+    .select("whatsapp_monthly_limit, whatsapp_unlimited")
+    .eq("admin_id", adminId)
+    .maybeSingle();
+  if (settingsErr) throw new Error(settingsErr.message);
+
+  // Unlimited owner — no cap at all.
+  if (settings?.whatsapp_unlimited) {
+    // Still count usage for analytics, but report no limit.
+    const { count, error } = await supabase
+      .from("notification_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("admin_id", adminId)
+      .eq("channel", "whatsapp")
+      .eq("status", "sent")
+      .gte("sent_at", windowStart());
+    if (error) throw new Error(error.message);
+    return { used: count ?? 0, limit: null, remaining: null };
+  }
+
+  const limit = settings?.whatsapp_monthly_limit ?? 50;
 
   const { count, error } = await supabase
     .from("notification_logs")
@@ -48,24 +63,26 @@ export async function getWhatsAppQuotaStatus(
     .eq("admin_id", adminId)
     .eq("channel", "whatsapp")
     .eq("status", "sent")
-    .gte("sent_at", windowStart(planUpdatedAt));
+    .gte("sent_at", windowStart());
   if (error) throw new Error(error.message);
 
   const used = count ?? 0;
-  return { used, limit: tier.whatsappQuota, remaining: Math.max(0, tier.whatsappQuota - used) };
+  return { used, limit, remaining: Math.max(0, limit - used) };
 }
 
-/** Whether this admin can send one more WhatsApp message this billing period. */
+/**
+ * Whether this admin can send one more WhatsApp message this month.
+ * Returns { allowed: true } or { allowed: false, reason } with a
+ * user-friendly message that does NOT mention plans or upgrades.
+ */
 export async function checkWhatsAppQuota(
   supabase: SupabaseClient<Database>,
   adminId: string,
-  tier: PlanTier,
-  planUpdatedAt: string | null,
 ): Promise<QuotaCheck> {
-  const status = await getWhatsAppQuotaStatus(supabase, adminId, tier, planUpdatedAt);
+  const status = await getWhatsAppQuotaStatus(supabase, adminId);
   if (status.limit === null || (status.remaining ?? 0) > 0) return { allowed: true };
   return {
     allowed: false,
-    reason: `WhatsApp quota reached for this month (${status.limit} on ${tier.name}). Upgrade for more, or wait for next month's reset.`,
+    reason: `You've reached your monthly WhatsApp allowance (${status.limit} messages). Contact us to request more.`,
   };
 }

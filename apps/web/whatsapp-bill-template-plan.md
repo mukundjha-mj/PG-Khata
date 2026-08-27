@@ -15,19 +15,19 @@ separate follow-up; you asked for the template only, so nothing in
 
 ## 2. Fields used, and where they come from
 
-| Field | Source | Notes |
-|---|---|---|
-| Tenant name | `tenants.full_name` | |
-| Property name | `properties.name` | |
-| Room number | `rooms.room_number` | |
-| Month | `bills.bill_month` | formatted via existing `monthLabel()` |
-| Rent | `bills.rent_amount` | |
-| Electricity | `bills.electricity_amount` + `bills.electricity_units_consumed` | "₹450 (32 units)" |
-| Other charges | `bills.other_charges` (jsonb array `{label, amount}`) | summed as one line; itemizing needs a variable-length list, which templates can't do — total is the practical choice |
-| Total | `bills.total_amount` | |
-| Due date | `bills.due_date` | |
-| UPI ID | `settings.upi_vpa` | owner's own VPA, already used in `upi.ts` / `reminders.server.ts` |
-| Payee name | `settings.upi_payee_name` (falls back to `brand_name` → property name) | |
+| Field         | Source                                                                 | Notes                                                                                                                |
+| ------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Tenant name   | `tenants.full_name`                                                    |                                                                                                                      |
+| Property name | `properties.name`                                                      |                                                                                                                      |
+| Room number   | `rooms.room_number`                                                    |                                                                                                                      |
+| Month         | `bills.bill_month`                                                     | formatted via existing `monthLabel()`                                                                                |
+| Rent          | `bills.rent_amount`                                                    |                                                                                                                      |
+| Electricity   | `bills.electricity_amount` + `bills.electricity_units_consumed`        | "₹450 (32 units)"                                                                                                    |
+| Other charges | `bills.other_charges` (jsonb array `{label, amount}`)                  | summed as one line; itemizing needs a variable-length list, which templates can't do — total is the practical choice |
+| Total         | `bills.total_amount`                                                   |                                                                                                                      |
+| Due date      | `bills.due_date`                                                       |                                                                                                                      |
+| UPI ID        | `settings.upi_vpa`                                                     | owner's own VPA, already used in `upi.ts` / `reminders.server.ts`                                                    |
+| Payee name    | `settings.upi_payee_name` (falls back to `brand_name` → property name) |                                                                                                                      |
 
 Meta template variables are positional (`{{1}}`, `{{2}}`, ...) with **no
 conditionals** — so unlike the email/PDF versions, this can't cleanly skip the

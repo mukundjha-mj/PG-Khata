@@ -1,13 +1,11 @@
 import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Property } from "@/lib/pg";
-import { usePlan } from "@/lib/use-plan";
-import { checkPropertyLimit } from "@/lib/plan-limits";
 import { ShareLinkCard } from "@/components/share-link-card";
 import {
   getSignupLink,
@@ -84,12 +82,10 @@ const emptyDraft: Draft = {
 
 function PropertiesPage() {
   const queryClient = useQueryClient();
-  const { tier } = usePlan();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Property | null>(null);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [deleteTarget, setDeleteTarget] = useState<Property | null>(null);
-  const [limitReason, setLimitReason] = useState<string | null>(null);
 
   const { data: properties, isLoading } = useQuery({
     queryKey: ["properties"],
@@ -144,11 +140,6 @@ function PropertiesPage() {
   });
 
   function openNew() {
-    const check = checkPropertyLimit(tier, properties?.length ?? 0);
-    if (!check.allowed) {
-      setLimitReason(check.reason);
-      return;
-    }
     setEditing(null);
     setDraft(emptyDraft);
     setOpen(true);
@@ -317,21 +308,6 @@ function PropertiesPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => deleteTarget && remove.mutate(deleteTarget.id)}>
               Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={!!limitReason} onOpenChange={(o) => !o && setLimitReason(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>You've reached your plan's property limit</AlertDialogTitle>
-            <AlertDialogDescription>{limitReason}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Not now</AlertDialogCancel>
-            <AlertDialogAction asChild>
-              <Link to="/plan">See plans and upgrade</Link>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from "react";
 import {
   Activity,
-  BarChart3,
   Bell,
   Gauge,
   LayoutGrid,
@@ -11,7 +10,6 @@ import {
   Search,
   Settings,
   ShieldCheck,
-  Ticket,
   Users,
   X,
 } from "lucide-react";
@@ -20,8 +18,6 @@ import { cn } from "@/lib/utils";
 export type ConsoleTab =
   | "overview"
   | "owners"
-  | "coupons"
-  | "revenue"
   | "usage"
   | "health"
   | "audit"
@@ -31,9 +27,7 @@ export type ConsoleTab =
 const NAV: { id: ConsoleTab; label: string; icon: typeof LayoutGrid }[] = [
   { id: "overview", label: "Overview", icon: LayoutGrid },
   { id: "owners", label: "PG Owners", icon: Users },
-  { id: "coupons", label: "Coupons", icon: Ticket },
-  { id: "revenue", label: "Revenue", icon: BarChart3 },
-  { id: "usage", label: "Usage and Cost", icon: Gauge },
+  { id: "usage", label: "WhatsApp Usage", icon: Gauge },
   { id: "health", label: "System Health", icon: Activity },
   { id: "audit", label: "Audit Log", icon: ScrollText },
   { id: "broadcast", label: "Broadcast", icon: Bell },
@@ -50,17 +44,17 @@ export function ConsoleLayout({
   children,
 }: {
   tab: ConsoleTab;
-  onTab: (t: ConsoleTab) => void;
+  onTab: (tab: ConsoleTab) => void;
   email: string;
   onSignOut: () => void;
   counts: Partial<Record<ConsoleTab, number>>;
   search: string;
-  onSearch: (v: string) => void;
+  onSearch: (value: string) => void;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const title = [...NAV, { id: "settings" as const, label: "Settings", icon: Settings }].find(
-    (n) => n.id === tab,
+    (item) => item.id === tab,
   )?.label;
 
   const nav = (
@@ -74,7 +68,6 @@ export function ConsoleLayout({
           <p className="text-[11px] uppercase tracking-[0.18em] text-console-muted">Control</p>
         </div>
       </div>
-
       <nav className="space-y-1 px-3">
         {NAV.map((item) => (
           <NavButton
@@ -89,7 +82,6 @@ export function ConsoleLayout({
           />
         ))}
       </nav>
-
       <p className="px-6 pb-2 pt-6 text-[11px] uppercase tracking-[0.18em] text-console-muted">
         Configuration
       </p>
@@ -103,7 +95,6 @@ export function ConsoleLayout({
           }}
         />
       </nav>
-
       <div className="mt-auto border-t border-console-border p-3">
         <div className="flex items-center gap-3 rounded-lg px-2 py-2">
           <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-console-raised text-xs font-semibold">
@@ -132,7 +123,6 @@ export function ConsoleLayout({
         <aside className="hidden w-64 shrink-0 flex-col border-r border-console-border bg-console-panel lg:flex">
           {nav}
         </aside>
-
         {open ? (
           <div className="fixed inset-0 z-50 lg:hidden">
             <button
@@ -154,7 +144,6 @@ export function ConsoleLayout({
             </div>
           </div>
         ) : null}
-
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex flex-wrap items-center gap-3 border-b border-console-border bg-console-bg px-4 py-4 sm:px-6">
             <button
@@ -181,7 +170,7 @@ export function ConsoleLayout({
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-console-muted" />
                 <input
                   value={search}
-                  onChange={(e) => onSearch(e.target.value)}
+                  onChange={(event) => onSearch(event.target.value)}
                   placeholder="Search owners"
                   aria-label="Search owners"
                   className="h-11 w-full rounded-lg border border-console-border bg-console-panel pl-9 pr-3 text-sm text-console-fg outline-none placeholder:text-console-muted focus:border-console-accent"
@@ -189,7 +178,6 @@ export function ConsoleLayout({
               </div>
             </div>
           </header>
-
           <main className="min-w-0 flex-1 space-y-5 bg-console-bg p-4 sm:p-6">{children}</main>
         </div>
       </div>

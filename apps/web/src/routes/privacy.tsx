@@ -7,7 +7,7 @@ import { MarketingFooter } from "@/components/marketing-footer";
 const PAGE_URL = siteUrl("/privacy");
 const TITLE = `Privacy Policy - ${BRAND}`;
 const DESCRIPTION = `How ${BRAND} collects, stores and uses data for PG and hostel owners and their tenants.`;
-const UPDATED = "7 August 2026";
+const UPDATED = "27 August 2026";
 
 export const Route = createFileRoute("/privacy")({
   head: () => ({
@@ -43,15 +43,15 @@ const sections = [
   },
   {
     title: "5. How we use this data",
-    body: "To run the Service: generating and sending bills, calculating dues, sending payment reminders by email and WhatsApp, processing your subscription payment, and providing customer support. We do not use tenant data for marketing.",
+    body: "To run the Service: generating and sending bills, calculating dues, sending payment reminders by email and WhatsApp, administering your account's messaging allowance, and providing customer support. We do not use tenant data for marketing.",
   },
   {
     title: "6. Who we share data with",
-    body: "We share data only with the infrastructure providers needed to run the Service, each acting under their own security and privacy commitments: Supabase (database and file storage, hosted with encryption at rest), Resend (sending bill and reminder emails), Meta's WhatsApp Cloud API (sending WhatsApp reminders from our official business number), and Razorpay (processing your subscription payment to us). We do not sell or rent data to anyone.",
+    body: "We share data only with the infrastructure providers needed to run the Service, each acting under their own security and privacy commitments: Supabase (database and file storage, hosted with encryption at rest), Resend (sending bill and reminder emails), and Meta's WhatsApp Cloud API (sending WhatsApp reminders from our official business number). We do not sell or rent data to anyone.",
   },
   {
     title: "7. Data retention",
-    body: "We keep your account and tenant data for as long as your account is active, plus a reasonable period after cancellation to allow you to export it or reactivate. You can request deletion of your account and associated data by writing to support@pgkhata.com; some records may be retained longer where required by Indian tax or accounting law.",
+    body: "We keep your account and tenant data for as long as your account is active, plus a reasonable period after cancellation to allow you to export it. You can request deletion of your account and associated data by writing to support@pgkhata.com; some records may be retained longer where required by Indian tax or accounting law.",
   },
   {
     title: "8. Security",
@@ -79,7 +79,6 @@ function PrivacyPage() {
   return (
     <div className="marketing min-h-screen bg-cream font-marketing-body text-ink">
       <MarketingNav />
-
       <main className="px-6 pt-32 pb-16">
         <div className="mx-auto max-w-[760px]">
           <span className="font-marketing-mono text-[13px] font-semibold tracking-[0.06em] text-clay">
@@ -88,23 +87,19 @@ function PrivacyPage() {
           <h1 className="mt-3 font-marketing-display text-[clamp(30px,4vw,46px)] leading-[1.1] font-bold text-ink">
             Privacy Policy
           </h1>
-          <p className="mt-3 font-marketing-mono text-[13px] text-ink/55">
-            Last updated {UPDATED}
-          </p>
-
+          <p className="mt-3 font-marketing-mono text-[13px] text-ink/55">Last updated {UPDATED}</p>
           <div className="mt-10 border-t-2 border-ink">
-            {sections.map((s) => (
-              <section key={s.title} className="border-b border-line py-6">
+            {sections.map((section) => (
+              <section key={section.title} className="border-b border-line py-6">
                 <h2 className="font-marketing-display text-[18px] font-bold text-ink">
-                  {s.title}
+                  {section.title}
                 </h2>
-                <p className="mt-2 text-[15px] leading-relaxed text-ink/70">{s.body}</p>
+                <p className="mt-2 text-[15px] leading-relaxed text-ink/70">{section.body}</p>
               </section>
             ))}
           </div>
         </div>
       </main>
-
       <MarketingFooter maxWidth="760px" />
     </div>
   );

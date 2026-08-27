@@ -16,7 +16,6 @@ import {
   STATUS_STYLE,
 } from "@/lib/billing";
 import { downloadBillPdf } from "@/lib/bill-pdf";
-import { PremiumAction } from "@/components/plan-gate";
 import { RecordPaymentDialog, type PaymentTarget } from "@/components/record-payment-dialog";
 
 import { Button } from "@/components/ui/button";
@@ -211,23 +210,21 @@ function TenantLedger() {
                               Record
                             </Button>
                           )}
-                          <PremiumAction min="scale" label="Download invoice">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              aria-label="Download invoice"
-                              onClick={() =>
-                                downloadBillPdf(b, {
-                                  tenant,
-                                  room,
-                                  property,
-                                  monthLabel: monthLabel(b.bill_month),
-                                })
-                              }
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          </PremiumAction>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            aria-label="Download invoice"
+                            onClick={() =>
+                              downloadBillPdf(b, {
+                                tenant,
+                                room,
+                                property,
+                                monthLabel: monthLabel(b.bill_month),
+                              })
+                            }
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>

@@ -5,7 +5,7 @@ import logoMark from "@/assets/logo-mark.png";
 
 const linkClass = "mb-3 block text-[14.5px] text-ink/70 hover:text-ink";
 
-/** Shared marketing footer: ledger-column layout, reused across every public page. */
+/** Shared marketing footer reused across every public page. */
 export function MarketingFooter({ maxWidth = "1180px" }: { maxWidth?: string }) {
   return (
     <footer className="mx-auto px-6 pt-16 pb-10" style={{ maxWidth }}>
@@ -29,9 +29,6 @@ export function MarketingFooter({ maxWidth = "1180px" }: { maxWidth?: string }) 
             </a>
             <a href="/#how" className={linkClass}>
               How it works
-            </a>
-            <a href="/#pricing" className={linkClass}>
-              Pricing
             </a>
           </div>
           <div>
@@ -60,9 +57,6 @@ export function MarketingFooter({ maxWidth = "1180px" }: { maxWidth?: string }) 
             </Link>
             <Link to="/shipping-policy" className={linkClass}>
               Shipping Policy
-            </Link>
-            <Link to="/cancellation-and-refunds" className={linkClass}>
-              Cancellation and Refunds
             </Link>
           </div>
         </div>

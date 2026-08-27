@@ -9,7 +9,6 @@ import {
 } from "@/lib/electricity-split";
 import { isWhatsAppConfigured, sendTenantWhatsApp } from "@/lib/whatsapp.server";
 import { checkWhatsAppQuota } from "@/lib/whatsapp-quota.server";
-import { tierByKey } from "@/lib/pricing-plans";
 
 export type ChannelResult = { sent: boolean; reason?: string };
 export type BillNotifyResult = { email: ChannelResult; whatsapp: ChannelResult };
@@ -123,7 +122,7 @@ export async function notifyTenantAboutBill(
     propertyRes.data?.admin_id
       ? supabase
           .from("settings")
-          .select("upi_vpa, whatsapp_enabled, whatsapp_country_code, plan, plan_updated_at")
+          .select("upi_vpa, whatsapp_enabled, whatsapp_country_code")
           .eq("admin_id", propertyRes.data.admin_id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
@@ -196,12 +195,7 @@ export async function notifyTenantAboutBill(
   } else if (!adminId) {
     result.whatsapp = { sent: false, reason: "Property owner not found." };
   } else {
-    const quota = await checkWhatsAppQuota(
-      supabase,
-      adminId,
-      tierByKey(settingsRes.data.plan ?? "starter"),
-      settingsRes.data.plan_updated_at,
-    );
+    const quota = await checkWhatsAppQuota(supabase, adminId);
     if (!quota.allowed) {
       result.whatsapp = { sent: false, reason: quota.reason };
     } else {

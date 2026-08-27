@@ -40,6 +40,7 @@ export function PersonalReminderDialog({
 }) {
   const queryClient = useQueryClient();
   const createFn = useServerFn(createPersonalReminderFn);
+  const availableTenants = tenants ?? [];
 
   const [tenantId, setTenantId] = useState("");
   const [remindOn, setRemindOn] = useState(todayIso());
@@ -84,9 +85,9 @@ export function PersonalReminderDialog({
                 <SelectValue placeholder="Pick a tenant" />
               </SelectTrigger>
               <SelectContent>
-                {tenants.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.fullName}
+                {availableTenants.map((tenant) => (
+                  <SelectItem key={tenant.id} value={tenant.id}>
+                    {tenant.fullName}
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
 import { BrandingProvider } from "@/lib/branding";
+import { invalidateOwnerRouteAccess } from "@/lib/owner-route-auth";
 import { BRAND } from "@/lib/site";
 
 function NotFoundComponent() {
@@ -141,8 +142,16 @@ function RootComponent() {
     void import("@/integrations/supabase/client").then(({ supabase }) => {
       const { data: sub } = supabase.auth.onAuthStateChange((event) => {
         if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+
+        invalidateOwnerRouteAccess();
+        if (event === "SIGNED_OUT") {
+          queryClient.clear();
+          void router.navigate({ to: "/auth", replace: true });
+          return;
+        }
+
         router.invalidate();
-        if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
+        queryClient.invalidateQueries();
       });
       // The effect can be torn down before the import resolves; without this
       // the listener would outlive it and keep invalidating a stale router.

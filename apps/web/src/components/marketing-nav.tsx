@@ -11,14 +11,9 @@ type NavLink = { href: string; label: string };
 const DEFAULT_LINKS: NavLink[] = [
   { href: "/#features", label: "Features" },
   { href: "/#how", label: "How it works" },
-  { href: "/#pricing", label: "Pricing" },
 ];
 
-/**
- * Shared marketing nav: register-mark logo, ledger-style rule beneath it,
- * a rectangular "Get started" control, and a Sheet-based mobile
- * menu (kept from the prior accessibility fix — restyled, not re-logic'd).
- */
+/** Shared marketing nav with a Sheet-based mobile menu. */
 export function MarketingNav({ links = DEFAULT_LINKS }: { links?: NavLink[] }) {
   const [open, setOpen] = useState(false);
 
@@ -37,14 +32,14 @@ export function MarketingNav({ links = DEFAULT_LINKS }: { links?: NavLink[] }) {
             {BRAND}
           </Link>
           <div className="hidden items-center gap-8 text-sm font-medium md:flex">
-            {links.map((l) => (
-              <a key={l.href} href={l.href} className="text-ink/70 hover:text-ink">
-                {l.label}
+            {links.map((link) => (
+              <a key={link.href} href={link.href} className="text-ink/70 hover:text-ink">
+                {link.label}
               </a>
             ))}
             <a
               href={appUrl("/auth")}
-              className="border border-ink bg-ink px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-clay hover:border-clay"
+              className="border border-ink bg-ink px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:border-clay hover:bg-clay"
             >
               Get started
             </a>
@@ -67,10 +62,10 @@ export function MarketingNav({ links = DEFAULT_LINKS }: { links?: NavLink[] }) {
             {BRAND}
           </SheetTitle>
           <nav className="mt-6 flex flex-col gap-1 text-base font-medium">
-            {links.map((l) => (
-              <SheetClose key={l.href} asChild>
-                <a href={l.href} className="border-b border-line px-2 py-3">
-                  {l.label}
+            {links.map((link) => (
+              <SheetClose key={link.href} asChild>
+                <a href={link.href} className="border-b border-line px-2 py-3">
+                  {link.label}
                 </a>
               </SheetClose>
             ))}

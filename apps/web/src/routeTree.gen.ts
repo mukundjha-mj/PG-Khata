@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
-import { Route as CancellationAndRefundsRouteImport } from './routes/cancellation-and-refunds'
 import { Route as ConsoleRouteImport } from './routes/console'
 import { Route as ContactUsRouteImport } from './routes/contact-us'
 import { Route as PrivacyRouteImport } from './routes/privacy'
@@ -25,8 +24,6 @@ import { Route as AuthenticatedBillsRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedComplaintsRouteImport } from './routes/_authenticated/complaints'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedPaymentsRouteImport } from './routes/_authenticated/payments'
-import { Route as AuthenticatedPlanRouteImport } from './routes/_authenticated/plan'
-import { Route as AuthenticatedPlanHistoryRouteImport } from './routes/_authenticated/plan-history'
 import { Route as AuthenticatedPropertiesRouteImport } from './routes/_authenticated/properties'
 import { Route as AuthenticatedReadingsRouteImport } from './routes/_authenticated/readings'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
@@ -38,8 +35,6 @@ import { Route as SignupTokenRouteImport } from './routes/signup.$token'
 import { Route as AuthenticatedTenantTenantIdRouteImport } from './routes/_authenticated/tenant.$tenantId'
 import { Route as ApiPublicHooksComplaintSubmitRouteImport } from './routes/api/public/hooks/complaint-submit'
 import { Route as ApiPublicHooksGenerateBillsRouteImport } from './routes/api/public/hooks/generate-bills'
-import { Route as ApiPublicHooksPlanLifecycleRouteImport } from './routes/api/public/hooks/plan-lifecycle'
-import { Route as ApiPublicHooksRazorpayRouteImport } from './routes/api/public/hooks/razorpay'
 import { Route as ApiPublicHooksSendRemindersRouteImport } from './routes/api/public/hooks/send-reminders'
 import { Route as ApiPublicHooksTenantSignupRouteImport } from './routes/api/public/hooks/tenant-signup'
 import { Route as ApiPublicHooksWhatsappRouteImport } from './routes/api/public/hooks/whatsapp'
@@ -56,11 +51,6 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CancellationAndRefundsRoute = CancellationAndRefundsRouteImport.update({
-  id: '/cancellation-and-refunds',
-  path: '/cancellation-and-refunds',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConsoleRoute = ConsoleRouteImport.update({
@@ -123,17 +113,6 @@ const AuthenticatedPaymentsRoute = AuthenticatedPaymentsRouteImport.update({
   path: '/payments',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedPlanRoute = AuthenticatedPlanRouteImport.update({
-  id: '/plan',
-  path: '/plan',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedPlanHistoryRoute =
-  AuthenticatedPlanHistoryRouteImport.update({
-    id: '/plan-history',
-    path: '/plan-history',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedPropertiesRoute = AuthenticatedPropertiesRouteImport.update({
   id: '/properties',
   path: '/properties',
@@ -192,17 +171,6 @@ const ApiPublicHooksGenerateBillsRoute =
     path: '/api/public/hooks/generate-bills',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicHooksPlanLifecycleRoute =
-  ApiPublicHooksPlanLifecycleRouteImport.update({
-    id: '/api/public/hooks/plan-lifecycle',
-    path: '/api/public/hooks/plan-lifecycle',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicHooksRazorpayRoute = ApiPublicHooksRazorpayRouteImport.update({
-  id: '/api/public/hooks/razorpay',
-  path: '/api/public/hooks/razorpay',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiPublicHooksSendRemindersRoute =
   ApiPublicHooksSendRemindersRouteImport.update({
     id: '/api/public/hooks/send-reminders',
@@ -224,7 +192,6 @@ const ApiPublicHooksWhatsappRoute = ApiPublicHooksWhatsappRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/cancellation-and-refunds': typeof CancellationAndRefundsRoute
   '/console': typeof ConsoleRoute
   '/contact-us': typeof ContactUsRoute
   '/privacy': typeof PrivacyRoute
@@ -237,8 +204,6 @@ export interface FileRoutesByFullPath {
   '/complaints': typeof AuthenticatedComplaintsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/payments': typeof AuthenticatedPaymentsRoute
-  '/plan': typeof AuthenticatedPlanRoute
-  '/plan-history': typeof AuthenticatedPlanHistoryRoute
   '/properties': typeof AuthenticatedPropertiesRoute
   '/readings': typeof AuthenticatedReadingsRoute
   '/reports': typeof AuthenticatedReportsRoute
@@ -250,8 +215,6 @@ export interface FileRoutesByFullPath {
   '/tenant/$tenantId': typeof AuthenticatedTenantTenantIdRoute
   '/api/public/hooks/complaint-submit': typeof ApiPublicHooksComplaintSubmitRoute
   '/api/public/hooks/generate-bills': typeof ApiPublicHooksGenerateBillsRoute
-  '/api/public/hooks/plan-lifecycle': typeof ApiPublicHooksPlanLifecycleRoute
-  '/api/public/hooks/razorpay': typeof ApiPublicHooksRazorpayRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
   '/api/public/hooks/tenant-signup': typeof ApiPublicHooksTenantSignupRoute
   '/api/public/hooks/whatsapp': typeof ApiPublicHooksWhatsappRoute
@@ -259,7 +222,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/cancellation-and-refunds': typeof CancellationAndRefundsRoute
   '/console': typeof ConsoleRoute
   '/contact-us': typeof ContactUsRoute
   '/privacy': typeof PrivacyRoute
@@ -272,8 +234,6 @@ export interface FileRoutesByTo {
   '/complaints': typeof AuthenticatedComplaintsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/payments': typeof AuthenticatedPaymentsRoute
-  '/plan': typeof AuthenticatedPlanRoute
-  '/plan-history': typeof AuthenticatedPlanHistoryRoute
   '/properties': typeof AuthenticatedPropertiesRoute
   '/readings': typeof AuthenticatedReadingsRoute
   '/reports': typeof AuthenticatedReportsRoute
@@ -285,8 +245,6 @@ export interface FileRoutesByTo {
   '/tenant/$tenantId': typeof AuthenticatedTenantTenantIdRoute
   '/api/public/hooks/complaint-submit': typeof ApiPublicHooksComplaintSubmitRoute
   '/api/public/hooks/generate-bills': typeof ApiPublicHooksGenerateBillsRoute
-  '/api/public/hooks/plan-lifecycle': typeof ApiPublicHooksPlanLifecycleRoute
-  '/api/public/hooks/razorpay': typeof ApiPublicHooksRazorpayRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
   '/api/public/hooks/tenant-signup': typeof ApiPublicHooksTenantSignupRoute
   '/api/public/hooks/whatsapp': typeof ApiPublicHooksWhatsappRoute
@@ -296,7 +254,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/cancellation-and-refunds': typeof CancellationAndRefundsRoute
   '/console': typeof ConsoleRoute
   '/contact-us': typeof ContactUsRoute
   '/privacy': typeof PrivacyRoute
@@ -309,8 +266,6 @@ export interface FileRoutesById {
   '/_authenticated/complaints': typeof AuthenticatedComplaintsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/payments': typeof AuthenticatedPaymentsRoute
-  '/_authenticated/plan': typeof AuthenticatedPlanRoute
-  '/_authenticated/plan-history': typeof AuthenticatedPlanHistoryRoute
   '/_authenticated/properties': typeof AuthenticatedPropertiesRoute
   '/_authenticated/readings': typeof AuthenticatedReadingsRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
@@ -322,8 +277,6 @@ export interface FileRoutesById {
   '/_authenticated/tenant/$tenantId': typeof AuthenticatedTenantTenantIdRoute
   '/api/public/hooks/complaint-submit': typeof ApiPublicHooksComplaintSubmitRoute
   '/api/public/hooks/generate-bills': typeof ApiPublicHooksGenerateBillsRoute
-  '/api/public/hooks/plan-lifecycle': typeof ApiPublicHooksPlanLifecycleRoute
-  '/api/public/hooks/razorpay': typeof ApiPublicHooksRazorpayRoute
   '/api/public/hooks/send-reminders': typeof ApiPublicHooksSendRemindersRoute
   '/api/public/hooks/tenant-signup': typeof ApiPublicHooksTenantSignupRoute
   '/api/public/hooks/whatsapp': typeof ApiPublicHooksWhatsappRoute
@@ -333,7 +286,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
-    | '/cancellation-and-refunds'
     | '/console'
     | '/contact-us'
     | '/privacy'
@@ -346,8 +298,6 @@ export interface FileRouteTypes {
     | '/complaints'
     | '/dashboard'
     | '/payments'
-    | '/plan'
-    | '/plan-history'
     | '/properties'
     | '/readings'
     | '/reports'
@@ -359,8 +309,6 @@ export interface FileRouteTypes {
     | '/tenant/$tenantId'
     | '/api/public/hooks/complaint-submit'
     | '/api/public/hooks/generate-bills'
-    | '/api/public/hooks/plan-lifecycle'
-    | '/api/public/hooks/razorpay'
     | '/api/public/hooks/send-reminders'
     | '/api/public/hooks/tenant-signup'
     | '/api/public/hooks/whatsapp'
@@ -368,7 +316,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
-    | '/cancellation-and-refunds'
     | '/console'
     | '/contact-us'
     | '/privacy'
@@ -381,8 +328,6 @@ export interface FileRouteTypes {
     | '/complaints'
     | '/dashboard'
     | '/payments'
-    | '/plan'
-    | '/plan-history'
     | '/properties'
     | '/readings'
     | '/reports'
@@ -394,8 +339,6 @@ export interface FileRouteTypes {
     | '/tenant/$tenantId'
     | '/api/public/hooks/complaint-submit'
     | '/api/public/hooks/generate-bills'
-    | '/api/public/hooks/plan-lifecycle'
-    | '/api/public/hooks/razorpay'
     | '/api/public/hooks/send-reminders'
     | '/api/public/hooks/tenant-signup'
     | '/api/public/hooks/whatsapp'
@@ -404,7 +347,6 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
-    | '/cancellation-and-refunds'
     | '/console'
     | '/contact-us'
     | '/privacy'
@@ -417,8 +359,6 @@ export interface FileRouteTypes {
     | '/_authenticated/complaints'
     | '/_authenticated/dashboard'
     | '/_authenticated/payments'
-    | '/_authenticated/plan'
-    | '/_authenticated/plan-history'
     | '/_authenticated/properties'
     | '/_authenticated/readings'
     | '/_authenticated/reports'
@@ -430,8 +370,6 @@ export interface FileRouteTypes {
     | '/_authenticated/tenant/$tenantId'
     | '/api/public/hooks/complaint-submit'
     | '/api/public/hooks/generate-bills'
-    | '/api/public/hooks/plan-lifecycle'
-    | '/api/public/hooks/razorpay'
     | '/api/public/hooks/send-reminders'
     | '/api/public/hooks/tenant-signup'
     | '/api/public/hooks/whatsapp'
@@ -441,7 +379,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
-  CancellationAndRefundsRoute: typeof CancellationAndRefundsRoute
   ConsoleRoute: typeof ConsoleRoute
   ContactUsRoute: typeof ContactUsRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -454,8 +391,6 @@ export interface RootRouteChildren {
   SignupTokenRoute: typeof SignupTokenRoute
   ApiPublicHooksComplaintSubmitRoute: typeof ApiPublicHooksComplaintSubmitRoute
   ApiPublicHooksGenerateBillsRoute: typeof ApiPublicHooksGenerateBillsRoute
-  ApiPublicHooksPlanLifecycleRoute: typeof ApiPublicHooksPlanLifecycleRoute
-  ApiPublicHooksRazorpayRoute: typeof ApiPublicHooksRazorpayRoute
   ApiPublicHooksSendRemindersRoute: typeof ApiPublicHooksSendRemindersRoute
   ApiPublicHooksTenantSignupRoute: typeof ApiPublicHooksTenantSignupRoute
   ApiPublicHooksWhatsappRoute: typeof ApiPublicHooksWhatsappRoute
@@ -482,13 +417,6 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cancellation-and-refunds': {
-      id: '/cancellation-and-refunds'
-      path: '/cancellation-and-refunds'
-      fullPath: '/cancellation-and-refunds'
-      preLoaderRoute: typeof CancellationAndRefundsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/console': {
@@ -575,20 +503,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPaymentsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/plan': {
-      id: '/_authenticated/plan'
-      path: '/plan'
-      fullPath: '/plan'
-      preLoaderRoute: typeof AuthenticatedPlanRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/plan-history': {
-      id: '/_authenticated/plan-history'
-      path: '/plan-history'
-      fullPath: '/plan-history'
-      preLoaderRoute: typeof AuthenticatedPlanHistoryRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/properties': {
       id: '/_authenticated/properties'
       path: '/properties'
@@ -666,20 +580,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksGenerateBillsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/hooks/plan-lifecycle': {
-      id: '/api/public/hooks/plan-lifecycle'
-      path: '/api/public/hooks/plan-lifecycle'
-      fullPath: '/api/public/hooks/plan-lifecycle'
-      preLoaderRoute: typeof ApiPublicHooksPlanLifecycleRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/hooks/razorpay': {
-      id: '/api/public/hooks/razorpay'
-      path: '/api/public/hooks/razorpay'
-      fullPath: '/api/public/hooks/razorpay'
-      preLoaderRoute: typeof ApiPublicHooksRazorpayRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/public/hooks/send-reminders': {
       id: '/api/public/hooks/send-reminders'
       path: '/api/public/hooks/send-reminders'
@@ -709,8 +609,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedComplaintsRoute: typeof AuthenticatedComplaintsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedPaymentsRoute: typeof AuthenticatedPaymentsRoute
-  AuthenticatedPlanRoute: typeof AuthenticatedPlanRoute
-  AuthenticatedPlanHistoryRoute: typeof AuthenticatedPlanHistoryRoute
   AuthenticatedPropertiesRoute: typeof AuthenticatedPropertiesRoute
   AuthenticatedReadingsRoute: typeof AuthenticatedReadingsRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
@@ -725,8 +623,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedComplaintsRoute: AuthenticatedComplaintsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedPaymentsRoute: AuthenticatedPaymentsRoute,
-  AuthenticatedPlanRoute: AuthenticatedPlanRoute,
-  AuthenticatedPlanHistoryRoute: AuthenticatedPlanHistoryRoute,
   AuthenticatedPropertiesRoute: AuthenticatedPropertiesRoute,
   AuthenticatedReadingsRoute: AuthenticatedReadingsRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
@@ -743,7 +639,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
-  CancellationAndRefundsRoute: CancellationAndRefundsRoute,
   ConsoleRoute: ConsoleRoute,
   ContactUsRoute: ContactUsRoute,
   PrivacyRoute: PrivacyRoute,
@@ -756,8 +651,6 @@ const rootRouteChildren: RootRouteChildren = {
   SignupTokenRoute: SignupTokenRoute,
   ApiPublicHooksComplaintSubmitRoute: ApiPublicHooksComplaintSubmitRoute,
   ApiPublicHooksGenerateBillsRoute: ApiPublicHooksGenerateBillsRoute,
-  ApiPublicHooksPlanLifecycleRoute: ApiPublicHooksPlanLifecycleRoute,
-  ApiPublicHooksRazorpayRoute: ApiPublicHooksRazorpayRoute,
   ApiPublicHooksSendRemindersRoute: ApiPublicHooksSendRemindersRoute,
   ApiPublicHooksTenantSignupRoute: ApiPublicHooksTenantSignupRoute,
   ApiPublicHooksWhatsappRoute: ApiPublicHooksWhatsappRoute,

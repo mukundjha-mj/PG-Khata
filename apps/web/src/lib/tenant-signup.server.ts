@@ -2,6 +2,15 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { ADDRESS_PROOF_TYPES } from "@/lib/pg";
 import { isValidEmailFormat, toWhatsAppPhoneOrNull } from "@/lib/contact-validation";
 
+const ADDRESS_PROOF_BUCKET = "tenant-documents";
+const ADDRESS_PROOF_MAX_BYTES = 5 * 1024 * 1024;
+const ADDRESS_PROOF_EXTENSIONS = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "application/pdf": "pdf",
+} as const;
+
 export type PublicVacantRoom = {
   id: string;
   room_number: string;
@@ -75,11 +84,45 @@ export type TenantSignupInput = {
   emergency_contact_name?: string | undefined;
   emergency_contact_phone?: string | undefined;
   address_proof_type?: string | undefined;
+  address_proof_file?: File | undefined;
   joining_date?: string | undefined;
 };
 
 /** Friendly errors only - never the raw Postgres message, and never confirms whose record collided. */
 export class SignupError extends Error {}
+
+function validateAddressProof(input: TenantSignupInput) {
+  const proofType = input.address_proof_type?.trim() || null;
+  const proofFile = input.address_proof_file;
+
+  if (!proofType && !proofFile) return null;
+  if (!proofType) throw new SignupError("Choose the address proof type for the uploaded document.");
+  if (!(ADDRESS_PROOF_TYPES as readonly string[]).includes(proofType)) {
+    throw new SignupError("Choose a valid address proof type.");
+  }
+  if (!proofFile) throw new SignupError(`Upload your ${proofType} document.`);
+  if (!proofFile.size) throw new SignupError("The address proof file is empty.");
+  if (proofFile.size > ADDRESS_PROOF_MAX_BYTES) {
+    throw new SignupError("Address proof files must be 5 MB or smaller.");
+  }
+
+  const extension =
+    ADDRESS_PROOF_EXTENSIONS[proofFile.type as keyof typeof ADDRESS_PROOF_EXTENSIONS];
+  if (!extension) {
+    throw new SignupError("Upload a JPEG, PNG, WebP, or PDF address proof.");
+  }
+
+  return {
+    proofType: proofType as (typeof ADDRESS_PROOF_TYPES)[number],
+    proofFile,
+    extension,
+  };
+}
+
+async function removeAddressProof(path: string) {
+  const { error } = await supabaseAdmin.storage.from(ADDRESS_PROOF_BUCKET).remove([path]);
+  if (error) console.error("[tenant-signup] address proof cleanup failed", error);
+}
 
 export async function createSignupTenant(token: string, input: TenantSignupInput) {
   const link = await resolveSignupLink(token);
@@ -111,6 +154,7 @@ export async function createSignupTenant(token: string, input: TenantSignupInput
 
   const email = input.email?.trim() || null;
   if (email && !isValidEmailFormat(email)) throw new SignupError("Enter a valid email address.");
+  const addressProof = validateAddressProof(input);
 
   const room = await supabaseAdmin
     .from("rooms")
@@ -131,6 +175,21 @@ export async function createSignupTenant(token: string, input: TenantSignupInput
     throw new SignupError("That room just filled up. Please pick another room.");
   }
 
+  let address_proof_file_url: string | null = null;
+  if (addressProof) {
+    address_proof_file_url = `${link.adminId}/signup/${crypto.randomUUID()}.${addressProof.extension}`;
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from(ADDRESS_PROOF_BUCKET)
+      .upload(address_proof_file_url, addressProof.proofFile, {
+        contentType: addressProof.proofFile.type,
+        upsert: false,
+      });
+    if (uploadError) {
+      console.error("[tenant-signup] address proof upload failed", uploadError);
+      throw new SignupError("Could not upload the address proof. Please try again.");
+    }
+  }
+
   const { error } = await supabaseAdmin.from("tenants").insert({
     room_id: input.roomId,
     full_name,
@@ -140,16 +199,14 @@ export async function createSignupTenant(token: string, input: TenantSignupInput
     permanent_address: input.permanent_address?.trim() || null,
     emergency_contact_name: input.emergency_contact_name?.trim() || null,
     emergency_contact_phone,
-    address_proof_type: (ADDRESS_PROOF_TYPES as readonly string[]).includes(
-      input.address_proof_type ?? "",
-    )
-      ? (input.address_proof_type as (typeof ADDRESS_PROOF_TYPES)[number])
-      : null,
+    address_proof_type: addressProof?.proofType ?? null,
+    address_proof_file_url,
     joining_date: input.joining_date || new Date().toISOString().slice(0, 10),
     status: "active",
   });
 
   if (error) {
+    if (address_proof_file_url) await removeAddressProof(address_proof_file_url);
     if (error.code === "23505") {
       throw new SignupError(
         "A tenant with this phone number already exists. Contact the property owner if you believe this is an error.",

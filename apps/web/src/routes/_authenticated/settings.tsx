@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { isValidVpa } from "@/lib/upi";
 import { extractPhoneDigitsForEditing, isValidIndianMobileDigits } from "@/lib/contact-validation";
-import { getMyWhatsAppQuotaStatus } from "@/lib/plan.functions";
+import { getMyWhatsAppQuotaStatus } from "@/lib/whatsapp.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -424,8 +424,8 @@ function SettingsPage() {
                     ) : null}
                     <p className="text-xs text-muted-foreground">
                       {quota.limit === null
-                        ? "Your plan has no monthly WhatsApp limit."
-                        : "Resets at the start of next month, or immediately if you change plans."}
+                        ? "Your WhatsApp allowance is unlimited."
+                        : "Resets at the start of next month."}
                     </p>
                   </div>
                 ) : null}

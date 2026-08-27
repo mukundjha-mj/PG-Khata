@@ -13,7 +13,6 @@ import { sendTenantEmail } from "@/lib/email.server";
 import { buildBillNote, tryBuildUpiIntent } from "@/lib/upi";
 import { isWhatsAppConfigured, sendTenantWhatsApp } from "@/lib/whatsapp.server";
 import { checkWhatsAppQuota } from "@/lib/whatsapp-quota.server";
-import { tierByKey } from "@/lib/pricing-plans";
 
 /** Minimum gap between two overdue reminders for the same bill. */
 const OVERDUE_EVERY_DAYS = 3;
@@ -121,7 +120,7 @@ export async function runPaymentReminders(
     supabase
       .from("settings")
       .select(
-        "admin_id, reminder_days_before, remind_on_due_date, upi_vpa, upi_payee_name, brand_name, whatsapp_enabled, whatsapp_country_code, plan, plan_updated_at",
+        "admin_id, reminder_days_before, remind_on_due_date, upi_vpa, upi_payee_name, brand_name, whatsapp_enabled, whatsapp_country_code",
       ),
     supabase.from("tenants").select("id, full_name, email, phone, room_id, status"),
     supabase
@@ -256,12 +255,7 @@ export async function runPaymentReminders(
       if (!tenant.phone) {
         reasons.push("WhatsApp: no phone number on file");
       } else {
-        const quota = await checkWhatsAppQuota(
-          supabase,
-          property.admin_id,
-          tierByKey(settings.plan ?? "starter"),
-          settings.plan_updated_at,
-        );
+        const quota = await checkWhatsAppQuota(supabase, property.admin_id);
         if (!quota.allowed) {
           reasons.push(quota.reason);
         } else {
@@ -360,9 +354,7 @@ export async function sendManualReminders(
   const [settingsRes, tenantsRes, roomsRes] = await Promise.all([
     supabase
       .from("settings")
-      .select(
-        "upi_vpa, upi_payee_name, brand_name, whatsapp_enabled, whatsapp_country_code, plan, plan_updated_at",
-      )
+      .select("upi_vpa, upi_payee_name, brand_name, whatsapp_enabled, whatsapp_country_code")
       .eq("admin_id", adminId)
       .maybeSingle(),
     supabase
@@ -458,12 +450,7 @@ export async function sendManualReminders(
       if (!tenant.phone) {
         reasons.push("WhatsApp: no phone number on file");
       } else {
-        const quota = await checkWhatsAppQuota(
-          supabase,
-          adminId,
-          tierByKey(settings.plan ?? "starter"),
-          settings.plan_updated_at,
-        );
+        const quota = await checkWhatsAppQuota(supabase, adminId);
         if (!quota.allowed) {
           reasons.push(quota.reason);
         } else {
@@ -536,9 +523,7 @@ async function sendOneReminder(
       .maybeSingle(),
     supabase
       .from("settings")
-      .select(
-        "upi_vpa, upi_payee_name, brand_name, whatsapp_enabled, whatsapp_country_code, plan, plan_updated_at",
-      )
+      .select("upi_vpa, upi_payee_name, brand_name, whatsapp_enabled, whatsapp_country_code")
       .eq("admin_id", args.adminId)
       .maybeSingle(),
   ]);
@@ -644,12 +629,7 @@ async function sendOneReminder(
     } else if (!tenant.phone) {
       reasons.push("WhatsApp: no phone number on file");
     } else {
-      const quota = await checkWhatsAppQuota(
-        supabase,
-        args.adminId,
-        tierByKey(settings.plan ?? "starter"),
-        settings.plan_updated_at,
-      );
+      const quota = await checkWhatsAppQuota(supabase, args.adminId);
       if (!quota.allowed) {
         reasons.push(quota.reason);
       } else {

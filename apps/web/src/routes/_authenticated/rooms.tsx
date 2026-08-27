@@ -1,12 +1,10 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { usePropertyScope } from "@/lib/property-scope";
-import { usePlan } from "@/lib/use-plan";
-import { checkRoomLimit } from "@/lib/plan-limits";
 import { ROOM_TYPES, formatMoney, occupancyOf, type Room } from "@/lib/pg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,12 +78,10 @@ function RoomsPage() {
   const queryClient = useQueryClient();
   const { selectedPropertyId } = usePropertyScope();
   const propertyFilter = selectedPropertyId ?? "all";
-  const { tier } = usePlan();
   const { density, setDensity } = useDensity("rooms");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Room | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Room | null>(null);
-  const [limitReason, setLimitReason] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>({
     property_id: "",
     room_number: "",
@@ -164,6 +160,13 @@ function RoomsPage() {
   const remove = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("rooms").delete().eq("id", id);
+      const isTenantAssignmentError =
+        error?.code === "23503" || error?.message.includes("tenants_room_id_fkey");
+      if (isTenantAssignmentError) {
+        throw new Error(
+          "This room can't be deleted because tenants are assigned to it. Move them to another room first.",
+        );
+      }
       if (error) throw error;
     },
     onSuccess: () => {
@@ -175,12 +178,17 @@ function RoomsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  function openNew() {
-    const check = checkRoomLimit(tier, data?.rooms.length ?? 0);
-    if (!check.allowed) {
-      setLimitReason(check.reason);
+  function requestDelete(room: Room, activeTenantCount: number) {
+    if (activeTenantCount > 0) {
+      toast.error(
+        `Room ${room.room_number} can't be deleted because ${activeTenantCount} active tenant${activeTenantCount === 1 ? " is" : "s are"} assigned to it. Move them to another room first.`,
+      );
       return;
     }
+    setDeleteTarget(room);
+  }
+
+  function openNew() {
     setEditing(null);
     setDraft({
       property_id: propertyFilter !== "all" ? propertyFilter : (properties?.[0]?.id ?? ""),
@@ -307,7 +315,7 @@ function RoomsPage() {
                               variant="ghost"
                               size="icon"
                               aria-label={`Delete room ${room.room_number}`}
-                              onClick={() => setDeleteTarget(room)}
+                              onClick={() => requestDelete(room, occ)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -433,28 +441,13 @@ function RoomsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete room {deleteTarget?.room_number}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tenants assigned to this room will be removed too. This cannot be undone.
+              You can only delete an empty room. Move its assigned tenants to another room first.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => deleteTarget && remove.mutate(deleteTarget.id)}>
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={!!limitReason} onOpenChange={(o) => !o && setLimitReason(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>You've reached your plan's room limit</AlertDialogTitle>
-            <AlertDialogDescription>{limitReason}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Not now</AlertDialogCancel>
-            <AlertDialogAction asChild>
-              <Link to="/plan">See plans and upgrade</Link>
+              Delete room
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

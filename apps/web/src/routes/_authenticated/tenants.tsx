@@ -1,13 +1,11 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2, Search, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/lib/use-current-user";
 import { usePropertyScope } from "@/lib/property-scope";
-import { usePlan } from "@/lib/use-plan";
-import { checkTenantLimit } from "@/lib/plan-limits";
 import { FileDrop } from "@/components/file-drop";
 import { PhoneField } from "@/components/phone-field";
 import {
@@ -139,12 +137,10 @@ function TenantsPage() {
   const { selectedPropertyId } = usePropertyScope();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const { tier } = usePlan();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Tenant | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Tenant | null>(null);
   const [vacateTarget, setVacateTarget] = useState<Tenant | null>(null);
-  const [limitReason, setLimitReason] = useState<string | null>(null);
 
   const [draft, setDraft] = useState<Draft>(emptyDraft);
 
@@ -179,15 +175,6 @@ function TenantsPage() {
   }, [rooms]);
 
   const roomById = useMemo(() => new Map((rooms ?? []).map((r) => [r.id, r])), [rooms]);
-
-  const totalBedCapacity = useMemo(
-    () => (rooms ?? []).reduce((sum, r) => sum + (r.capacity ?? 1), 0),
-    [rooms],
-  );
-  const activeTenantCount = useMemo(
-    () => (tenants ?? []).filter((t) => t.status === "active").length,
-    [tenants],
-  );
 
   const debouncedSearch = useDebouncedValue(search, 250);
 
@@ -306,11 +293,6 @@ function TenantsPage() {
   });
 
   function openNew() {
-    const check = checkTenantLimit(tier, activeTenantCount, totalBedCapacity);
-    if (!check.allowed) {
-      setLimitReason(check.reason);
-      return;
-    }
     setEditing(null);
     setDraft({ ...emptyDraft, room_id: rooms?.[0]?.id ?? "" });
     setOpen(true);
@@ -766,21 +748,6 @@ function TenantsPage() {
               onClick={() => vacateTarget && vacate.mutate(vacateTarget)}
             >
               Mark vacated
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={!!limitReason} onOpenChange={(o) => !o && setLimitReason(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>You've reached your plan's tenant limit</AlertDialogTitle>
-            <AlertDialogDescription>{limitReason}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Not now</AlertDialogCancel>
-            <AlertDialogAction asChild>
-              <Link to="/plan">See plans and upgrade</Link>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

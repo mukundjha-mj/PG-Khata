@@ -40,9 +40,9 @@ type LinkState =
   | { status: "ready"; propertyName: string; vacantRooms: VacantRoom[] };
 
 // Mirrors the owner's "Add tenant" form (tenants.tsx) minus the fields only an
-// owner should set: status, vacated date, security deposit, rent override,
-// notes, and file uploads (address proof photo needs an authenticated upload
-// path - see tenant-signup.server.ts for the reasoning).
+// owner should set: status, vacated date, security deposit, rent override, and
+// notes. Address-proof uploads are handled by the protected server-side signup
+// endpoint, so anonymous visitors never receive direct storage access.
 //
 // Phone fields hold bare 10-digit numbers (no "+91") - PhoneField renders the
 // fixed prefix and the server re-derives the full WhatsApp number from these
@@ -80,6 +80,7 @@ function SignupPage() {
   const [state, setState] = useState<LinkState>({ status: "loading" });
   const [roomId, setRoomId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const [addressProofFile, setAddressProofFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -148,22 +149,37 @@ function SignupPage() {
       setSubmitError("Enter a valid email address.");
       return;
     }
+    if (draft.address_proof_type && !addressProofFile) {
+      setSubmitError(`Upload your ${draft.address_proof_type} document.`);
+      return;
+    }
+    if (!draft.address_proof_type && addressProofFile) {
+      setSubmitError("Choose the address proof type for the uploaded document.");
+      return;
+    }
     setSubmitting(true);
     setSubmitError(null);
     try {
+      const formData = new FormData();
+      formData.set("token", token);
+      formData.set("roomId", roomId);
+      formData.set("full_name", draft.full_name);
+      formData.set("phone", `+91${draft.phone}`);
+      formData.set("alternate_phone", draft.alternate_phone ? `+91${draft.alternate_phone}` : "");
+      formData.set("email", draft.email);
+      formData.set("joining_date", draft.joining_date);
+      formData.set("permanent_address", draft.permanent_address);
+      formData.set("emergency_contact_name", draft.emergency_contact_name);
+      formData.set(
+        "emergency_contact_phone",
+        draft.emergency_contact_phone ? `+91${draft.emergency_contact_phone}` : "",
+      );
+      formData.set("address_proof_type", draft.address_proof_type);
+      if (addressProofFile) formData.set("address_proof_file", addressProofFile);
+
       const res = await fetch("/api/public/hooks/tenant-signup", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          token,
-          roomId,
-          ...draft,
-          phone: `+91${draft.phone}`,
-          alternate_phone: draft.alternate_phone ? `+91${draft.alternate_phone}` : "",
-          emergency_contact_phone: draft.emergency_contact_phone
-            ? `+91${draft.emergency_contact_phone}`
-            : "",
-        }),
+        body: formData,
       });
       const body = (await res.json()) as { ok?: boolean; error?: string };
       if (!res.ok || !body.ok) {
@@ -324,7 +340,10 @@ function SignupPage() {
                     <Label>Address proof type</Label>
                     <Select
                       value={draft.address_proof_type}
-                      onValueChange={(v) => setDraft({ ...draft, address_proof_type: v })}
+                      onValueChange={(v) => {
+                        setDraft({ ...draft, address_proof_type: v });
+                        setAddressProofFile(null);
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select proof" />
@@ -337,6 +356,30 @@ function SignupPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="s-address-proof-file">
+                      Address proof document
+                      {draft.address_proof_type && <span className="text-destructive"> *</span>}
+                    </Label>
+                    <Input
+                      id="s-address-proof-file"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,application/pdf"
+                      required={Boolean(draft.address_proof_type)}
+                      onChange={(event) => setAddressProofFile(event.target.files?.[0] ?? null)}
+                      aria-describedby="s-address-proof-file-hint"
+                    />
+                    <p id="s-address-proof-file-hint" className="text-xs text-muted-foreground">
+                      {draft.address_proof_type
+                        ? `Upload your ${draft.address_proof_type} as a JPEG, PNG, WebP, or PDF (up to 5 MB).`
+                        : "Choose an address proof type, then upload a JPEG, PNG, WebP, or PDF (up to 5 MB)."}
+                    </p>
+                    {addressProofFile && (
+                      <p className="truncate text-xs text-muted-foreground">
+                        Selected: {addressProofFile.name}
+                      </p>
+                    )}
                   </div>
                 </div>
 

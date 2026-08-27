@@ -6,7 +6,7 @@ import { createFileRoute } from "@tanstack/react-router";
  * resolved link, never from client-supplied property/admin ids.
  *
  * GET  /api/public/hooks/tenant-signup?token=...  -> { propertyName, vacantRooms }
- * POST /api/public/hooks/tenant-signup            -> { token, roomId, full_name, phone, ... }
+ * POST /api/public/hooks/tenant-signup            -> multipart form data with tenant fields and an optional address_proof_file
  */
 export const Route = createFileRoute("/api/public/hooks/tenant-signup")({
   server: {
@@ -33,19 +33,31 @@ export const Route = createFileRoute("/api/public/hooks/tenant-signup")({
       POST: async ({ request }) => {
         const { createSignupTenant, SignupError } = await import("@/lib/tenant-signup.server");
 
-        let body: Record<string, unknown>;
+        const contentLength = Number(request.headers.get("content-length"));
+        if (Number.isFinite(contentLength) && contentLength > 6 * 1024 * 1024) {
+          return Response.json(
+            { error: "Address proof files must be 5 MB or smaller." },
+            { status: 413 },
+          );
+        }
+
+        let formData: FormData;
         try {
-          body = (await request.json()) as Record<string, unknown>;
+          formData = await request.formData();
         } catch {
           return Response.json({ error: "Malformed request." }, { status: 400 });
         }
 
-        const token = typeof body["token"] === "string" ? body["token"] : "";
-        const roomId = typeof body["roomId"] === "string" ? body["roomId"] : "";
-        const full_name = typeof body["full_name"] === "string" ? body["full_name"] : "";
-        const phone = typeof body["phone"] === "string" ? body["phone"] : "";
-        const str = (key: string) =>
-          typeof body[key] === "string" ? (body[key] as string) : undefined;
+        const str = (key: string) => {
+          const value = formData.get(key);
+          return typeof value === "string" ? value : undefined;
+        };
+        const token = str("token") ?? "";
+        const roomId = str("roomId") ?? "";
+        const full_name = str("full_name") ?? "";
+        const phone = str("phone") ?? "";
+        const proofValue = formData.get("address_proof_file");
+        const address_proof_file = proofValue instanceof File ? proofValue : undefined;
 
         try {
           await createSignupTenant(token, {
@@ -58,6 +70,7 @@ export const Route = createFileRoute("/api/public/hooks/tenant-signup")({
             emergency_contact_name: str("emergency_contact_name"),
             emergency_contact_phone: str("emergency_contact_phone"),
             address_proof_type: str("address_proof_type"),
+            address_proof_file,
             joining_date: str("joining_date"),
           });
           return Response.json({ ok: true });

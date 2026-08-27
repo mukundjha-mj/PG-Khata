@@ -834,6 +834,24 @@ export type Database = {
           },
         ];
       };
+      platform_config: {
+        Row: {
+          key: string;
+          updated_at: string;
+          value: string;
+        };
+        Insert: {
+          key: string;
+          updated_at?: string;
+          value: string;
+        };
+        Update: {
+          key?: string;
+          updated_at?: string;
+          value?: string;
+        };
+        Relationships: [];
+      };
       settings: {
         Row: {
           admin_id: string;
@@ -858,6 +876,8 @@ export type Database = {
           upi_vpa: string | null;
           whatsapp_country_code: string;
           whatsapp_enabled: boolean;
+          whatsapp_monthly_limit: number;
+          whatsapp_unlimited: boolean;
         };
         Insert: {
           admin_id?: string;
@@ -882,6 +902,8 @@ export type Database = {
           upi_vpa?: string | null;
           whatsapp_country_code?: string;
           whatsapp_enabled?: boolean;
+          whatsapp_monthly_limit?: number;
+          whatsapp_unlimited?: boolean;
         };
         Update: {
           admin_id?: string;
@@ -906,6 +928,8 @@ export type Database = {
           upi_vpa?: string | null;
           whatsapp_country_code?: string;
           whatsapp_enabled?: boolean;
+          whatsapp_monthly_limit?: number;
+          whatsapp_unlimited?: boolean;
         };
         Relationships: [
           {

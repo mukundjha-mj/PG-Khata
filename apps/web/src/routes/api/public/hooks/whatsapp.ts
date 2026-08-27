@@ -54,9 +54,8 @@ export const Route = createFileRoute("/api/public/hooks/whatsapp")({
           return Response.json({ error: "Malformed payload" }, { status: 400 });
         }
 
-        const { parseWhatsAppWebhookPayload, applyWhatsAppStatusUpdates } = await import(
-          "@/lib/whatsapp-webhook.server"
-        );
+        const { parseWhatsAppWebhookPayload, applyWhatsAppStatusUpdates } =
+          await import("@/lib/whatsapp-webhook.server");
         const { statuses, messages } = parseWhatsAppWebhookPayload(body);
 
         if (messages.length > 0) {

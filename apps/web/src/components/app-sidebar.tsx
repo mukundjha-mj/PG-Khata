@@ -29,8 +29,6 @@ const items: { title: string; url: string; icon: AnimatedIconName }[] = [
   { title: "Payments", url: "/payments", icon: "line-md:clipboard-check" },
   { title: "Readings", url: "/readings", icon: "line-md:gauge-twotone-loop" },
   { title: "Reports", url: "/reports", icon: "line-md:document-report-twotone" },
-  { title: "Plan", url: "/plan", icon: "line-md:confirm-circle" },
-  { title: "Plan history", url: "/plan-history", icon: "line-md:clipboard-check" },
   { title: "Settings", url: "/settings", icon: "line-md:cog-loop" },
 ];
 
