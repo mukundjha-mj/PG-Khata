@@ -41,7 +41,7 @@ export function MarketingNav({ links = DEFAULT_LINKS }: { links?: NavLink[] }) {
               href={appUrl("/auth")}
               className="border border-ink bg-ink px-5 py-2.5 text-sm font-semibold text-cream transition-colors hover:border-clay hover:bg-clay"
             >
-              Get started
+              Start billing for free
             </a>
           </div>
           <button
@@ -75,7 +75,7 @@ export function MarketingNav({ links = DEFAULT_LINKS }: { links?: NavLink[] }) {
               href={appUrl("/auth")}
               className="border border-ink bg-clay px-5 py-3 text-center text-sm font-semibold text-paper"
             >
-              Get started
+              Start billing for free
             </a>
             <a
               href={appUrl("/auth")}

@@ -8,29 +8,55 @@ import { BRAND, appUrl, siteUrl } from "@/lib/site";
 import { MarketingNav } from "@/components/marketing-nav";
 import { MarketingFooter } from "@/components/marketing-footer";
 
+const FAQS = [
+  {
+    question: "How does PGKhata automate PG rent collection?",
+    answer:
+      "On the 1st of every month, PGKhata drafts rent, electricity, and other charges for each active tenant. You review and approve the bills, then tenants receive a UPI payment link and you can track payment status in one dashboard.",
+  },
+  {
+    question: "Is PGKhata free for PG owners?",
+    answer:
+      "During the current rollout, PGKhata's property, room, tenant, billing, reporting, and document tools are available without a paid plan. A monthly WhatsApp delivery allowance is included while the rollout is active.",
+  },
+  {
+    question: "Do tenants need to install an app?",
+    answer:
+      "No. Tenants can open their bill, use its UPI payment link, and pay without downloading an app or creating an account.",
+  },
+] as const;
+
 export const Route = createFileRoute("/")({
   beforeLoad: () => {
     if (onAdminHost()) throw redirect({ to: "/console" });
   },
   head: () => ({
     meta: [
-      { title: `${BRAND} - PG Billing, Sorted.` },
+      { title: `${BRAND} | PG Billing & Rent Collection on Autopilot` },
       {
         name: "description",
-        content: `${BRAND} generates rent, electricity and other charges for every PG tenant on the 1st, sends the bill with a UPI pay link, and tracks who has paid.`,
+        content:
+          "PGKhata helps PG and hostel owners in India draft bills, send UPI payment links, track payments, and manage tenant records without chasing tenants every month.",
       },
-      { property: "og:title", content: `${BRAND} - PG Billing, Sorted.` },
+      { property: "og:title", content: `${BRAND}: PG billing on autopilot.` },
       {
         property: "og:description",
         content:
-          "Automatic monthly rent and electricity bills for PG and hostel owners, with UPI payments and collection tracking.",
+          "Generate rent and electricity bills, send UPI payment links, and track payments automatically, without chasing tenants every month.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: siteUrl("/") },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: `${BRAND} | PG Billing on Autopilot` },
+      {
+        name: "twitter:description",
+        content:
+          "Generate bills, send UPI payment links, and track payments for your PG from one dashboard.",
+      },
       { property: "og:image", content: siteUrl(fullLogo) },
       { property: "og:image:alt", content: `${BRAND} logo` },
       { name: "twitter:image", content: siteUrl(fullLogo) },
+      { name: "twitter:image:alt", content: `${BRAND} logo` },
     ],
     links: [{ rel: "canonical", href: siteUrl("/") }],
     scripts: [
@@ -41,8 +67,36 @@ export const Route = createFileRoute("/")({
           "@type": "SoftwareApplication",
           name: BRAND,
           url: siteUrl("/"),
+          image: siteUrl(fullLogo),
           applicationCategory: "BusinessApplication",
-          description: "Billing and tenant management for PG and hostel owners across India.",
+          operatingSystem: "Web",
+          areaServed: {
+            "@type": "Country",
+            name: "India",
+          },
+          description:
+            "PG billing, UPI rent collection, and tenant management software for PG and hostel owners in India.",
+          featureList: [
+            "Monthly rent and electricity bill drafting",
+            "UPI payment links and payment tracking",
+            "Tenant, room, and property records",
+            "Automatic overdue payment reminders",
+          ],
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: FAQS.map((faq) => ({
+            "@type": "Question",
+            name: faq.question,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: faq.answer,
+            },
+          })),
         }),
       },
     ],
@@ -53,68 +107,68 @@ export const Route = createFileRoute("/")({
 const painPoints = [
   {
     entry: "01",
-    title: "Manual reminders, every month",
-    body: "Typing out the same rent and electricity message to thirty different people, one chat at a time.",
+    title: "Typing 30 WhatsApp messages",
+    body: "Calculating electricity and writing individual rent messages for every room, one chat at a time.",
   },
   {
     entry: "02",
-    title: "Payments lost in the noise",
-    body: "Screenshots in a chat, cash in an envelope, no single place to see who has actually paid.",
+    title: "Hunting for payment proof",
+    body: "Screenshots in chats, cash envelopes, and bank statements with no single view of who has paid.",
   },
   {
     entry: "03",
-    title: "Tenant records in a register",
-    body: "Address proof, room history, deposits, scattered across a notebook and your phone gallery.",
+    title: "Scattered records",
+    body: "Deposits in a register and address proofs buried in your phone gallery.",
   },
 ];
 
 const features = [
   {
     title: "Tenants and rooms, organized",
-    body: "Name, phone, address proof, room number and size, deposit, every tenant's full record, searchable in seconds.",
+    body: "Name, phone, address proof, room number, rent, and deposit. Every tenant record is searchable in seconds.",
   },
   {
     title: "Bills sent automatically",
-    body: "On the 1st, every active tenant gets their rent, electricity and other charges, with email delivery you can rely on.",
+    body: "On the 1st, every active tenant gets rent, electricity, and other charges. Review, approve, and send.",
   },
   {
-    title: "A UPI pay link, built into the bill",
-    body: "Tenants tap and pay directly from the bill. Paid bills mark themselves, no follow up needed.",
+    title: "A UPI pay link, built right in",
+    body: "Tenants tap and pay from the bill. Paid bills mark themselves, so you do not chase screenshots.",
   },
   {
     title: "Reminders that do not need you",
-    body: "Overdue bills get a polite automatic nudge, before you even notice they are late.",
+    body: "Overdue bills get a polite automatic nudge before you even notice they are late.",
   },
   {
     title: "Your data, backed up daily",
-    body: "Every tenant record and payment history, backed up automatically, restorable in one click if anything goes wrong.",
+    body: "Every tenant record and payment history is backed up automatically and restorable in one click.",
   },
   {
     title: "See collections at a glance",
-    body: "Expected versus collected, occupancy, overdue tenants, the whole month's picture on one screen.",
+    body: "Expected versus collected, occupancy, and overdue tenants. See the whole month on one screen.",
   },
 ];
 
 const steps = [
   {
     step: "01",
-    title: "Add your property, rooms and tenants",
-    body: "Room numbers, sizes, rent, and each tenant's details, takes about 15 minutes for a typical PG.",
+    title: "Onboard your PG in minutes",
+    body: "Add your property, rooms, base rent, and tenant details. A typical PG is set up in under 15 minutes, and you only do it once.",
   },
   {
     step: "02",
-    title: "Bills draft themselves on the 1st",
-    body: "Rent, electricity and any extra charges are calculated for every tenant, review and approve before sending.",
+    title: "Review auto-generated bills",
+    body: "On the 1st, PGKhata drafts every tenant's rent, electricity, and extra charges. Review, approve, and send.",
   },
   {
     step: "03",
-    title: "Tenants get the bill, with a pay link",
-    body: "They tap, pay via UPI, and the bill marks itself paid. No app to download, nothing for them to log into.",
+    title: "Tenants pay via direct link",
+    body: "Every bill includes a UPI pay link. Tenants tap and pay. No app to download or account to create.",
   },
   {
     step: "04",
-    title: "You check one dashboard",
-    body: "See who has paid, who is overdue, and this month's total collection, from your phone, in under a minute.",
+    title: "Track it all on one screen",
+    body: "See who has paid, who is overdue, and your monthly collection from your phone in under a minute.",
   },
 ];
 
@@ -150,9 +204,12 @@ function Arrow() {
 
 function RefTag({ children }: { children: ReactNode }) {
   return (
-    <span className="mr-3 font-marketing-mono text-[13px] font-semibold tracking-[0.06em] text-clay">
-      {children}
-    </span>
+    <>
+      <span className="font-marketing-mono text-[13px] font-semibold tracking-[0.06em] text-clay">
+        {children}
+      </span>
+      <br />
+    </>
   );
 }
 
@@ -167,18 +224,18 @@ function LandingPage() {
         <div className="relative mx-auto grid max-w-[1180px] items-start gap-14 lg:grid-cols-[1fr_1.05fr]">
           <div>
             <h1 className="text-balance font-marketing-display text-[clamp(38px,5vw,66px)] leading-[1.05] font-bold tracking-[-0.01em] text-ink">
-              Rent day, without the reminders.
+              PG billing on autopilot.
             </h1>
             <p className="mt-6 mb-8 max-w-[460px] text-[18px] leading-relaxed text-ink/70">
-              {BRAND} generates every tenant&apos;s rent, electricity and other charges on the 1st,
-              then sends the bill with a UPI payment link. You just watch the money come in.
+              Generate rent and electricity bills, send UPI payment links, and track payments
+              automatically, without chasing tenants every month.
             </p>
             <div className="flex flex-wrap items-center gap-4">
               <a
                 href={appUrl("/auth")}
                 className="inline-flex items-center gap-2.5 border-2 border-ink bg-clay px-7 py-4 text-[15px] font-semibold text-paper shadow-[var(--marketing-shadow)] transition-transform hover:-translate-y-0.5"
               >
-                Get started
+                Start billing for free
                 <Arrow />
               </a>
               <a
@@ -252,11 +309,11 @@ function LandingPage() {
         <div className="reveal mx-auto max-w-[1180px]">
           <h2 className="font-marketing-display text-[clamp(22px,3.2vw,42px)] leading-[1.1] font-bold">
             <RefTag>Ref. Old Way</RefTag>
-            You did not start a PG business to become a bill sending machine.
+            Stop chasing bills.
           </h2>
-          <div className="mt-12 grid gap-px overflow-hidden border border-cream/15 md:grid-cols-3">
+          <ul className="mt-12 grid list-none gap-px overflow-hidden border border-cream/15 p-0 md:grid-cols-3">
             {painPoints.map((point) => (
-              <div
+              <li
                 key={point.entry}
                 className="border-cream/15 bg-ink p-8 md:border-r last:md:border-r-0"
               >
@@ -267,9 +324,9 @@ function LandingPage() {
                   {point.title}
                 </h3>
                 <p className="text-[14.5px] leading-relaxed text-cream/60">{point.body}</p>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
 
@@ -277,14 +334,14 @@ function LandingPage() {
         <div className="reveal mx-auto max-w-[1180px]">
           <h2 className="font-marketing-display text-[clamp(24px,3.4vw,44px)] font-bold text-ink">
             <RefTag>Ref. Statement</RefTag>
-            One dashboard. Every bill sent for you.
+            Every bill, handled.
           </h2>
           <p className="mt-4 max-w-[520px] text-[16px] leading-relaxed text-ink/60">
-            Everything a PG owner touches every month, rebuilt so it takes minutes, not evenings.
+            Everything a PG owner does every month, rebuilt to take minutes instead of evenings.
           </p>
-          <div className="mt-10 border-t-2 border-ink">
+          <ul className="mt-10 list-none border-t-2 border-ink p-0">
             {features.map((feature, index) => (
-              <div
+              <li
                 key={feature.title}
                 className="grid gap-4 border-b border-line py-6 sm:grid-cols-[1fr_1.4fr] sm:items-center"
               >
@@ -297,9 +354,9 @@ function LandingPage() {
                   </h3>
                 </div>
                 <p className="text-[14.5px] leading-relaxed text-ink/65">{feature.body}</p>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
 
@@ -307,11 +364,11 @@ function LandingPage() {
         <div className="reveal mx-auto max-w-[1180px]">
           <h2 className="font-marketing-display text-[clamp(22px,3.4vw,44px)] font-bold text-ink">
             <RefTag>Ref. Procedure</RefTag>
-            Set it up once. It runs every month after.
+            Set it once. Run it monthly.
           </h2>
-          <div className="mt-10 border-t-2 border-ink">
+          <ol className="mt-10 list-none border-t-2 border-ink p-0">
             {steps.map((step) => (
-              <div
+              <li
                 key={step.step}
                 className="grid items-center gap-6 border-b border-line py-8 sm:grid-cols-[100px_1fr]"
               >
@@ -324,22 +381,44 @@ function LandingPage() {
                   </h3>
                   <p className="max-w-[560px] text-[14.5px] text-ink/60">{step.body}</p>
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
+          </ol>
         </div>
       </section>
 
       <section className="px-6 pb-24">
         <div className="reveal mx-auto max-w-[1180px] border-2 border-ink bg-paper p-8 sm:p-10">
           <h2 className="font-marketing-display text-[clamp(22px,3.2vw,38px)] font-bold text-ink">
-            <RefTag>Ref. Access</RefTag>A simpler start for every owner.
+            <RefTag>Ref. Access</RefTag>Start managing your PG for free today.
           </h2>
           <p className="mt-4 max-w-[680px] text-[16px] leading-relaxed text-ink/65">
-            During our current rollout, property, room, tenant, billing, reporting, and document
-            tools are available without a paid plan. WhatsApp delivery uses a monthly account
-            allowance managed by PGKhata so we can run messaging responsibly.
+            Everything you need to run your property is currently available at zero cost. During our
+            rollout, property, room, tenant, billing, reporting, and document tools need no paid
+            plan. A monthly WhatsApp delivery allowance is included while PGKhata manages messaging
+            responsibly.
           </p>
+        </div>
+      </section>
+
+      <section id="faq" className="px-6 pb-24">
+        <div className="reveal mx-auto max-w-[1180px]">
+          <h2 className="font-marketing-display text-[clamp(22px,3.2vw,38px)] font-bold text-ink">
+            Questions, answered.
+          </h2>
+          <div className="mt-10 divide-y-2 divide-ink border-y-2 border-ink">
+            {FAQS.map((faq) => (
+              <article
+                key={faq.question}
+                className="py-7 sm:grid sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] sm:gap-10"
+              >
+                <h3 className="font-marketing-display text-[19px] font-bold text-ink">
+                  {faq.question}
+                </h3>
+                <p className="mt-3 text-[15px] leading-relaxed text-ink/65 sm:mt-0">{faq.answer}</p>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -349,15 +428,19 @@ function LandingPage() {
             Stop typing the same bill message thirty times a month.
           </h2>
           <p className="mt-5 mb-8 text-[16px] text-ink/60">
-            Set up your first property in minutes.
+            Set up your first property, add your tenants, and automate your entire billing process
+            today.
           </p>
           <a
             href={appUrl("/auth")}
             className="inline-flex items-center gap-2.5 border-2 border-ink bg-clay px-7 py-4 text-[15px] font-semibold text-paper shadow-[var(--marketing-shadow)] transition-transform hover:-translate-y-0.5"
           >
-            Get started
+            Start billing for free
             <Arrow />
           </a>
+          <p className="mt-4 text-[13px] text-ink/60">
+            Takes less than 15 minutes to set up. Free during our early rollout.
+          </p>
         </div>
       </section>
 
